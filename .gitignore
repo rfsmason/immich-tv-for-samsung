@@ -34,3 +34,6 @@ playwright/.cache/
 test-results/
 !.env.capture.example
 !.env.tizen.example
+
+# Cloudflare Wrangler working files
+.wrangler/

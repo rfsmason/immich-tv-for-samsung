@@ -1,0 +1,7 @@
+# Files in website/ that are not part of the public site (Cloudflare Wrangler
+# skips anything listed here when it uploads the static assets).
+.assetsignore
+README.md
+wrangler.jsonc
+# Wrangler's own working files, written here during every deploy.
+.wrangler

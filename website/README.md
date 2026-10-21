@@ -79,4 +79,16 @@ To replace the form, update both the iframe `src` (with `embed=true`) and the se
 
 ## Deployment
 
-No production host is configured here yet. The directory is suitable for static hosting on a future provider without coupling the TV application build or packaging process to that provider.
+The site is live at <https://immich-samsungtv.app/>. Cloudflare Workers Builds deploys it with static assets whenever `main` changes. Only `main` deploys; other branches and pull requests don't build.
+
+The Worker's build settings in the Cloudflare dashboard (Settings → Builds) must be:
+
+- **Root directory:** `website`. With the repository root, Cloudflare installs the TV app's development packages and tries to upload the whole repository, which fails because files in `node_modules/` exceed the 25 MiB asset limit.
+- **Build command:** empty, since the site has no build step.
+- **Deploy command:** `npx wrangler deploy`.
+
+`wrangler.jsonc` names the Worker and points its assets at this folder. Renaming the Worker in it would create a new Worker, so leave the name as it is.
+
+`.assetsignore` keeps files that belong to the repository rather than the site out of the upload: this README, `wrangler.jsonc`, the ignore file itself, and `.wrangler/`, where Wrangler writes temporary build files during every deploy. Add any new non-public file in this folder to it. To check what would be uploaded without deploying, run `WRANGLER_LOG=debug npx wrangler deploy --dry-run` here: it logs each ignored file.
+
+Social previews use absolute URLs (`og:url` and `og:image`), because link previews can't resolve a relative image path. Update them if the domain changes.

@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=1920, height=1080, initial-scale=1, user-scalable=no">
+    <title>Immich TV for Samsung</title>
+    <link rel="stylesheet" href="styles/main.css">
+  </head>
+  <body>
+    <section id="splash-screen" class="splash-screen" aria-labelledby="splash-title">
+      <div class="splash-brand">
+        <img class="splash-mark" src="assets/immich-tv-logo.png" alt="" width="126" height="126">
+        <div>
+          <p class="eyebrow brand-label">Immich TV</p>
+          <h1 id="splash-title">Immich TV for Samsung</h1>
+        </div>
+      </div>
+      <p id="splash-status" class="splash-status" aria-live="polite">Starting application...</p>
+      <p id="splash-error" class="splash-error" aria-live="polite"></p>
+      <p class="splash-support">Free to use. Supported by people who enjoy it.</p>
+    </section>
+
+    <main id="app-shell" class="app-shell" aria-label="Immich TV" hidden>
+      <nav id="top-nav" class="top-nav" aria-label="Primary navigation">
+        <div class="top-nav-brand" aria-hidden="true">
+          <img class="top-nav-brand-mark" src="assets/immich-tv-logo.png" alt="" width="38" height="38">
+          <span>Immich TV</span>
+        </div>
+        <button class="focusable top-nav-item" type="button" data-destination="home" aria-current="false">
+          <svg class="top-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 11.5 12 5l8 6.5V20h-6v-5h-4v5H4v-8.5z"></path>
+          </svg>
+          <span>Home</span>
+        </button>
+        <button class="focusable top-nav-item" type="button" data-destination="photos" aria-current="false">
+          <svg class="top-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 4h14v16H5V4zm2 2v12h10V6H7zm2 9 2.5-3 2 2.2L15 13l2 3H9z"></path>
+          </svg>
+          <span>Photos</span>
+        </button>
+        <button class="focusable top-nav-item" type="button" data-destination="albums" aria-current="false">
+          <svg class="top-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h16v12H4V6zm2 2v8h12V8H6zm2 10h8v2H8v-2z"></path>
+          </svg>
+          <span>Albums</span>
+        </button>
+        <button class="focusable top-nav-item" type="button" data-destination="search" aria-current="false">
+          <svg class="top-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10.5 5a5.5 5.5 0 0 1 4.38 8.83l4.15 4.14-1.41 1.41-4.14-4.15A5.5 5.5 0 1 1 10.5 5zm0 2a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"></path>
+          </svg>
+          <span>Search</span>
+        </button>
+        <button class="focusable top-nav-item" type="button" data-destination="settings" aria-current="false">
+          <svg class="top-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19.43 12.98c.04-.32.07-.65.07-.98s-.02-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46a.5.5 0 0 0-.61-.22l-2.49 1a7.28 7.28 0 0 0-1.69-.98L14.5 2.42A.5.5 0 0 0 14 2h-4a.5.5 0 0 0-.5.42L9.12 5.07c-.61.24-1.18.56-1.69.98l-2.49-1a.5.5 0 0 0-.61.22l-2 3.46a.5.5 0 0 0 .12.64l2.11 1.65a7.93 7.93 0 0 0 0 1.96l-2.11 1.65a.5.5 0 0 0-.12.64l2 3.46c.13.23.4.32.61.22l2.49-1c.51.4 1.08.74 1.69.98l.38 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.38-2.65c.61-.24 1.18-.56 1.69-.98l2.49 1c.23.08.49 0 .61-.22l2-3.46a.5.5 0 0 0-.12-.64l-2.12-1.65zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"></path>
+          </svg>
+          <span>Settings</span>
+        </button>
+        <button id="rail-refresh" class="focusable top-nav-item top-nav-refresh" type="button" aria-label="Refresh everything">
+          <svg class="top-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.45 5.08h-2.13A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h8V3l-3.35 3.35z"></path>
+          </svg>
+          <span>Refresh</span>
+        </button>
+      </nav>
+
+      <div class="shell-content">
+        <section id="home-screen" class="screen home-screen" aria-label="Home" tabindex="-1" hidden>
+        <div class="home-rails" aria-label="Library overview">
+          <section class="home-rail-section" aria-labelledby="home-recently-added-title">
+            <h2 id="home-recently-added-title" class="home-rail-title">Recently Added</h2>
+            <p id="home-recently-added-status" class="screen-status home-rail-status" data-state="idle" aria-live="polite">Loading...</p>
+            <div id="home-recently-added-rail" class="home-rail home-recent-rail" role="list" aria-label="Recently added photos and videos"></div>
+          </section>
+
+          <section class="home-rail-section" aria-labelledby="home-favorites-title">
+            <h2 id="home-favorites-title" class="home-rail-title">Favourites</h2>
+            <p id="home-favorites-status" class="screen-status home-rail-status" data-state="idle" aria-live="polite">Loading...</p>
+            <div id="home-favorites-rail" class="home-rail home-favorites-rail" role="list" aria-label="Favourites"></div>
+          </section>
+          <section class="home-rail-section" aria-labelledby="home-videos-title">
+            <h2 id="home-videos-title" class="home-rail-title">Videos</h2>
+            <p id="home-videos-status" class="screen-status home-rail-status" data-state="idle" aria-live="polite">Loading...</p>
+            <div id="home-videos-rail" class="home-rail home-videos-rail" role="list" aria-label="Videos"></div>
+          </section>
+
+          <section class="home-rail-section" aria-labelledby="home-people-title">
+            <h2 id="home-people-title" class="home-rail-title">People</h2>
+            <p id="home-people-status" class="screen-status home-rail-status" data-state="idle" aria-live="polite">Loading...</p>
+            <div id="home-people-rail" class="home-rail home-people-rail" role="list" aria-label="People"></div>
+          </section>
+
+          <section class="home-rail-section" aria-labelledby="home-recently-viewed-title">
+            <h2 id="home-recently-viewed-title" class="home-rail-title">Recently Viewed</h2>
+            <p id="home-recently-viewed-status" class="screen-status home-rail-status" data-state="idle" aria-live="polite">Loading...</p>
+            <div id="home-recently-viewed-rail" class="home-rail home-recent-rail" role="list" aria-label="Recently viewed photos and videos"></div>
+          </section>
+
+          <section class="home-rail-section" aria-labelledby="home-albums-title">
+            <h2 id="home-albums-title" class="home-rail-title">Albums</h2>
+            <p id="home-albums-status" class="screen-status home-rail-status" data-state="idle" aria-live="polite">Loading...</p>
+            <div id="home-albums-rail" class="home-rail home-albums-rail" role="list" aria-label="Albums"></div>
+          </section>
+
+          <section class="home-rail-section" aria-labelledby="home-memories-title">
+            <h2 id="home-memories-title" class="home-rail-title">Memories</h2>
+            <p id="home-memories-status" class="screen-status home-rail-status" data-state="idle" aria-live="polite">Loading...</p>
+            <div id="home-memories-rail" class="home-rail home-memories-rail" role="list" aria-label="Memories"></div>
+          </section>
+        </div>
+        </section>
+
+        <section id="memories-screen" class="screen memories-screen" aria-labelledby="memories-title" hidden>
+          <h1 id="memories-title" class="screen-heading-subtle">Memories</h1>
+          <p id="memories-status" class="screen-status" aria-live="polite" tabindex="-1"></p>
+          <button id="memories-retry" class="focusable" type="button" hidden>Retry</button>
+          <div id="memories-grid" class="albums-grid memories-grid" role="list" aria-label="Today's Memories"></div>
+        </section>
+
+        <section id="people-screen" class="screen people-screen" aria-labelledby="people-title" hidden>
+          <h1 id="people-title" class="screen-heading-subtle">People</h1>
+          <p id="people-status" class="screen-status" aria-live="polite" tabindex="-1"></p>
+          <button id="people-retry" class="focusable" type="button" hidden>Retry</button>
+          <div id="people-grid" class="people-grid" role="list" aria-label="People"></div>
+        </section>
+
+        <section id="albums-screen" class="screen albums-screen" aria-label="Albums" tabindex="-1" hidden>
+        <img id="albums-backdrop" class="screen-backdrop" alt="" aria-hidden="true">
+        <h1 id="albums-title" class="screen-heading-subtle">Albums</h1>
+        <p id="albums-status" class="screen-status top-level-summary" data-state="idle" aria-live="polite">Loading albums...</p>
+        <p class="screen-back-hint">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"></path></svg>
+          Press Back to return
+        </p>
+        <div id="albums-grid" class="albums-grid" role="list" aria-label="Immich albums"></div>
+        </section>
+
+        <section id="album-detail-screen" class="screen album-detail-screen" aria-labelledby="album-detail-title" tabindex="-1" hidden>
+        <img id="album-detail-backdrop" class="screen-backdrop" alt="" aria-hidden="true">
+        <header class="screen-header">
+          <div>
+            <h1 id="album-detail-title" class="screen-heading-subtle">Album</h1>
+          </div>
+          <div class="header-actions" role="group" aria-label="Collection controls">
+            <button id="collection-retry" class="focusable" type="button" hidden>Retry</button>
+          </div>
+        </header>
+
+        <p id="album-detail-summary" class="screen-status" data-state="idle" aria-live="polite">Loading album assets...</p>
+        <p class="screen-back-hint">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"></path></svg>
+          Press Back to return
+        </p>
+        <div id="album-assets-grid" class="album-assets-grid" role="list" aria-label="Album assets"></div>
+        <div
+          id="photos-timeline-rail"
+          class="photos-timeline-rail"
+          role="navigation"
+          aria-label="Photos timeline"
+          hidden
+        ></div>
+
+        <div id="asset-placeholder" class="asset-viewer" hidden>
+          <div class="asset-viewer-stage">
+            <img id="asset-viewer-image" class="asset-viewer-image" alt="" hidden>
+            <video id="asset-viewer-video" class="asset-viewer-video" preload="metadata" playsinline hidden></video>
+            <div id="asset-viewer-placeholder" class="asset-viewer-placeholder">
+              <span id="asset-viewer-spinner" class="asset-viewer-spinner" aria-hidden="true"></span>
+              <span id="asset-viewer-placeholder-message" class="asset-viewer-placeholder-message"></span>
+            </div>
+          </div>
+          <div id="asset-viewer-title" class="asset-viewer-metadata" aria-live="polite"></div>
+          <div id="asset-viewer-player" class="asset-viewer-player" hidden>
+            <div class="asset-viewer-player-times" aria-live="polite">
+              <span id="asset-viewer-elapsed">0:00</span>
+              <span id="asset-viewer-status" class="asset-viewer-status" data-player-state="loading">
+                <span class="asset-viewer-status-icon" aria-hidden="true"></span>
+                <span id="asset-viewer-status-text" class="asset-viewer-status-text">Loading</span>
+              </span>
+              <span id="asset-viewer-duration">0:00</span>
+            </div>
+            <div class="asset-viewer-progress" aria-hidden="true">
+              <span id="asset-viewer-buffered" class="asset-viewer-buffered"></span>
+              <span id="asset-viewer-progress-fill" class="asset-viewer-progress-fill"></span>
+            </div>
+          </div>
+          <p
+            id="asset-viewer-slideshow-status"
+            class="asset-viewer-slideshow-status"
+            aria-live="polite"
+            hidden
+          >Slideshow paused</p>
+          <div class="asset-viewer-controls" aria-label="Viewer controls">
+            <button
+              id="asset-viewer-play"
+              class="focusable icon-action asset-viewer-control asset-viewer-play"
+              type="button"
+              data-action="play-viewer-media"
+              aria-label="Play media"
+              title="Play media"
+              hidden
+            >
+              <svg class="asset-viewer-control-icon asset-viewer-play-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <g class="asset-viewer-live-photo-symbol">
+                  <circle cx="24" cy="24" r="14"></circle>
+                  <polygon points="21 16 33 24 21 32"></polygon>
+                </g>
+                <g class="asset-viewer-video-symbol">
+                  <path d="M9 12h30v24H9V12zm7 0v24m16-24v24"></path>
+                  <path d="M9 18h7m-7 6h7m-7 6h7m23-12h-7m7 6h-7m7 6h-7"></path>
+                  <polygon points="22 18 32 24 22 30"></polygon>
+                </g>
+                <g class="asset-viewer-pause-symbol">
+                  <rect x="17" y="14" width="5" height="20" rx="1"></rect>
+                  <rect x="26" y="14" width="5" height="20" rx="1"></rect>
+                </g>
+              </svg>
+            </button>
+            <button
+              id="asset-viewer-slideshow"
+              class="focusable icon-action asset-viewer-control asset-viewer-slideshow"
+              type="button"
+              data-action="toggle-viewer-slideshow"
+              aria-label="Start slideshow"
+              title="Start slideshow"
+            >
+              <svg class="asset-viewer-control-icon asset-viewer-slideshow-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <polygon class="asset-viewer-slideshow-play-symbol" points="17 14 29 24 17 34"></polygon>
+                <polygon class="asset-viewer-slideshow-next-symbol" points="29 14 41 24 29 34"></polygon>
+                <g class="asset-viewer-slideshow-pause-symbol">
+                  <rect x="17" y="14" width="5" height="20" rx="1"></rect>
+                  <rect x="26" y="14" width="5" height="20" rx="1"></rect>
+                </g>
+              </svg>
+            </button>
+            <button
+              id="asset-placeholder-back"
+              class="focusable icon-action asset-viewer-control asset-viewer-back"
+              type="button"
+              data-action="back-to-assets"
+              aria-label="Back to assets"
+              title="Back to assets"
+            >
+              <svg class="asset-viewer-control-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M18 13 7 24l11 11 2.8-2.8L14.6 26H40v-4H14.6l6.2-6.2L18 13z"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="asset-viewer-overlay">
+            <p id="asset-placeholder-summary" class="asset-viewer-count">Asset selected.</p>
+            <p id="asset-viewer-exif" class="asset-viewer-exif"></p>
+          </div>
+        </div>
+        </section>
+
+        <section id="search-people-screen" class="screen people-screen search-people-screen" aria-labelledby="search-people-title" hidden>
+          <h1 id="search-people-title" class="screen-heading-subtle">Choose people</h1>
+          <div class="search-people-actions">
+            <button id="search-people-done" class="focusable search-action" type="button">Done</button>
+            <button id="search-people-retry" class="focusable" type="button" hidden>Retry</button>
+          </div>
+          <p id="search-people-message" class="screen-status search-message" data-state="error" aria-live="polite" hidden></p>
+          <p id="search-people-status" class="screen-status" aria-live="polite" tabindex="-1"></p>
+          <div id="search-people-grid" class="people-grid search-people-grid" role="list" aria-label="People to choose"></div>
+        </section>
+
+        <section id="search-screen" class="screen search-screen" aria-label="Search" hidden>
+          <div id="search-panel" class="search-panel"></div>
+          <p id="search-message" class="screen-status search-message" aria-live="polite" data-state="idle"></p>
+        </section>
+
+        <section id="connection-screen" class="screen setup-panel" aria-label="Settings" aria-describedby="settings-summary connection-status" hidden>
+        <p id="settings-summary" class="screen-status top-level-summary" data-state="idle" aria-live="polite">Manage connection and display preferences.</p>
+
+        <form class="connection-form" id="connection-form">
+          <div class="settings-layout">
+            <nav class="settings-nav" aria-label="Settings sections">
+              <button
+                id="settings-section-connection"
+                class="focusable settings-section-button"
+                type="button"
+                data-settings-section="connection"
+                aria-controls="settings-panel-connection"
+                aria-selected="true"
+              >
+                <svg class="settings-section-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 7h16v10H4V7zm2 2v6h12V9H6zm2 10h8v2H8v-2z"></path>
+                </svg>
+                <span>Connection</span>
+              </button>
+              <button
+                id="settings-section-display"
+                class="focusable settings-section-button"
+                type="button"
+                data-settings-section="display"
+                aria-controls="settings-panel-display"
+                aria-selected="false"
+              >
+                <svg class="settings-section-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 4a8 8 0 0 1 8 8 8 8 0 0 1-8 8 8 8 0 0 1-8-8 8 8 0 0 1 8-8zm0 2v12a6 6 0 0 0 0-12z"></path>
+                </svg>
+                <span>Display</span>
+              </button>
+              <div class="settings-nav-actions" role="group" aria-label="Settings actions">
+                <button
+                  id="settings-save"
+                  class="focusable settings-section-button"
+                  type="button"
+                  data-action="save-settings"
+                >
+                  <svg class="settings-section-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 3h12l2 2v16H5V3zm2 2v5h9V5H7zm0 14h10v-7H7v7zm2-13h5v2H9V6z"></path>
+                  </svg>
+                  <span id="settings-save-label">Save</span>
+                </button>
+                <button
+                  id="connection-back"
+                  class="focusable settings-section-button"
+                  type="button"
+                  data-action="back-to-albums"
+                  hidden
+                >
+                  <svg class="settings-section-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M10 17l1.4-1.4L8.8 13H21v-2H8.8l2.6-2.6L10 7l-5 5 5 5zM3 5h2v14H3V5z"></path>
+                  </svg>
+                  <span>Exit</span>
+                </button>
+              </div>
+            </nav>
+
+            <div class="settings-main">
+              <section
+                id="settings-panel-connection"
+                class="settings-section-panel"
+                aria-labelledby="settings-section-connection"
+              >
+                <label class="field">
+                  <span class="field-label">Server URL</span>
+                  <input
+                    id="server-url"
+                    class="focusable"
+                    name="serverUrl"
+                    type="url"
+                    inputmode="url"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="http://192.168.0.10:2283"
+                  >
+                </label>
+
+                <label class="field">
+                  <span class="field-label">API key</span>
+                  <span class="secret-field">
+                    <input
+                      id="api-key"
+                      class="focusable"
+                      name="apiKey"
+                      type="password"
+                      autocomplete="off"
+                      spellcheck="false"
+                      placeholder="Immich API key"
+                    >
+                    <button
+                      id="api-key-visibility"
+                      class="focusable visibility-toggle"
+                      type="button"
+                      data-action="toggle-api-key"
+                      aria-controls="api-key"
+                      aria-pressed="false"
+                    >Show</button>
+                  </span>
+                </label>
+
+                <button class="focusable primary-action panel-action" type="submit" data-action="test-connection">Test connection</button>
+                <div class="connection-result" aria-live="polite">
+                  <p class="result-label">Connection status</p>
+                  <p id="connection-status" class="status">Enter an Immich server URL and API key.</p>
+                </div>
+              </section>
+
+              <section
+                id="settings-panel-display"
+                class="settings-section-panel"
+                aria-labelledby="settings-section-display"
+                hidden
+              >
+                <label class="field choice-field">
+                  <input id="autoplay-videos" class="focusable" name="autoplayVideos" type="checkbox">
+                  <span>
+                    <span class="field-label">Autoplay videos</span>
+                    <span class="field-hint">Start video assets automatically in the viewer.</span>
+                  </span>
+                </label>
+
+                <label class="field choice-field">
+                  <input id="show-viewer-date" class="focusable" name="showViewerDate" type="checkbox">
+                  <span>
+                    <span class="field-label">Show viewer date</span>
+                    <span class="field-hint">Display the captured date in the full-screen viewer.</span>
+                  </span>
+                </label>
+
+                <label class="field choice-field">
+                  <input id="show-viewer-time" class="focusable" name="showViewerTime" type="checkbox">
+                  <span>
+                    <span class="field-label">Show viewer time</span>
+                    <span class="field-hint">Display the captured time in the full-screen viewer.</span>
+                  </span>
+                </label>
+
+                <label class="field choice-field">
+                  <input id="show-viewer-exif" class="focusable" name="showViewerExif" type="checkbox">
+                  <span>
+                    <span class="field-label">Show viewer EXIF</span>
+                    <span class="field-hint">Display location metadata when Immich provides it.</span>
+                  </span>
+                </label>
+
+                <label class="field">
+                  <span class="field-label">Slideshow interval</span>
+                  <select id="slideshow-interval" class="focusable" name="slideshowIntervalSeconds">
+                    <option value="5">5 seconds</option>
+                    <option value="8">8 seconds</option>
+                    <option value="12">12 seconds</option>
+                    <option value="20">20 seconds</option>
+                  </select>
+                </label>
+              </section>
+
+              <section
+                id="settings-panel-unsaved"
+                class="settings-section-panel settings-unsaved-panel"
+                aria-labelledby="settings-unsaved-title"
+                hidden
+              >
+                <h2 id="settings-unsaved-title">Unsaved changes</h2>
+                <p class="settings-unsaved-copy">Save changes before exiting settings?</p>
+                <div class="actions settings-confirm-actions" role="group" aria-label="Unsaved changes controls">
+                  <button class="focusable primary-action" type="button" data-action="save-and-exit">Save and exit</button>
+                  <button class="focusable" type="button" data-action="discard-and-exit">Discard</button>
+                  <button class="focusable" type="button" data-action="cancel-exit">Cancel</button>
+                </div>
+              </section>
+            </div>
+          </div>
+        </form>
+
+        </section>
+      </div>
+
+    </main>
+
+    <section id="exit-dialog" class="exit-dialog" role="alertdialog" aria-modal="true" aria-labelledby="exit-dialog-title" aria-describedby="exit-dialog-copy" hidden>
+      <div class="exit-dialog-panel">
+        <h2 id="exit-dialog-title">Exit Immich TV?</h2>
+        <p id="exit-dialog-copy" class="exit-dialog-copy">Press Back to keep browsing.</p>
+        <div class="actions" role="group" aria-label="Exit controls">
+          <button id="exit-dialog-stay" class="focusable primary-action" type="button">Keep browsing</button>
+          <button id="exit-dialog-exit" class="focusable" type="button">Exit</button>
+        </div>
+      </div>
+    </section>
+
+    <script src="scripts/main.js"></script>
+  </body>
+</html>

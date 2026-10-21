@@ -1,0 +1,804 @@
+/* Colours come from the banner and logo in assets/: the navy of the
+   "Immich" wordmark, the blue of "TV" and the lupin purple of the photos.
+   Text colours are tuned to at least WCAG AA on white. */
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-soft: #f3f7fd;
+  --panel: #ffffff;
+  --panel-strong: #e8f0fb;
+  --text: #061225;
+  --muted: #3d4a62;
+  --quiet: #556178;
+  --line: rgba(6, 18, 37, 0.12);
+  --brand-sky: #018dfc;
+  --brand-blue: #0172fe;
+  --accent: #0062db;
+  --accent-strong: #004fb4;
+  --accent-soft: rgba(1, 114, 254, 0.1);
+  --purple: #6a3fcf;
+  --focus: #0062db;
+  --shadow: 0 18px 50px rgba(6, 18, 37, 0.1);
+  --shadow-strong: 0 24px 70px rgba(6, 18, 37, 0.18);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+  scroll-behavior: smooth;
+  /* Section links land below the sticky header, not underneath it. */
+  scroll-padding-top: 5.5rem;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 88% 6%, rgba(1, 141, 252, 0.1), transparent 30rem),
+    radial-gradient(circle at 6% 34%, rgba(106, 63, 207, 0.06), transparent 26rem), var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  z-index: 30;
+  transform: translateY(-200%);
+  border-radius: 4px;
+  background: var(--accent);
+  color: #ffffff;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.section,
+.site-footer {
+  width: min(1120px, calc(100% - 40px));
+  margin-inline: auto;
+}
+
+/* The header stays at the top while the page scrolls, so the navigation is
+   always in reach. It spans the full width for its background; its content
+   lines up with the 1120px column below. */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.85rem max(20px, calc((100% - 1120px) / 2));
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.brand:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.brand picture,
+.brand img {
+  display: block;
+}
+
+/* The logo is transparent outside its tile, so the shadow follows the
+   tile's own outline rather than a box. */
+.brand img {
+  filter: drop-shadow(0 2px 4px rgba(6, 18, 37, 0.18));
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.site-nav a {
+  border-radius: 4px;
+  padding: 0.55rem 0.75rem;
+  text-decoration: none;
+}
+
+.site-nav a:hover {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.site-nav a:focus-visible {
+  background: var(--accent-soft);
+  color: var(--text);
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.section {
+  padding: 5.5rem 0;
+}
+
+/* The banner leads the page; the copy sits centred beneath it. */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 1.5rem;
+  text-align: center;
+}
+
+.hero-banner {
+  display: block;
+  width: min(880px, 100%);
+  margin-bottom: 1.5rem;
+}
+
+/* The banner is a JPEG on white; multiply lets the page's soft tint show
+   through its white areas instead of a visible white rectangle. */
+.hero-banner img {
+  display: block;
+  width: 100%;
+  height: auto;
+  mix-blend-mode: multiply;
+}
+
+.hero-copy {
+  display: flex;
+  max-width: 48rem;
+  flex-direction: column;
+  align-items: center;
+}
+
+.eyebrow {
+  margin: 0 0 0.9rem;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 1.35rem;
+  font-size: clamp(2.6rem, 6vw, 4.6rem);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+h2 {
+  margin-bottom: 1rem;
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.hero-text {
+  max-width: 42rem;
+  color: var(--muted);
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
+  margin: 2rem 0 1.4rem;
+}
+
+.button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.7rem 1.1rem;
+  text-decoration: none;
+  font-weight: 800;
+  transition: background 160ms ease;
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.button.primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.button.primary:hover {
+  background: var(--accent-strong);
+}
+
+.button.secondary {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.button.secondary:hover {
+  background: var(--bg-soft);
+}
+
+.disclaimer {
+  max-width: 45rem;
+  color: var(--quiet);
+  font-size: 0.9rem;
+}
+
+.split,
+.privacy,
+.availability {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  gap: 3rem;
+  align-items: start;
+}
+
+/* Body copy only: eyebrow labels keep their own colour and size. */
+.split p:not(.eyebrow),
+.availability p:not(.eyebrow),
+.section-heading p:not(.eyebrow),
+.privacy-card,
+.feedback p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.section-heading {
+  max-width: 760px;
+  margin-bottom: 2rem;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.feature-grid article,
+.pillars > div,
+.privacy-card,
+.feedback-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 1.25rem;
+  box-shadow: 0 1px 2px rgba(6, 18, 37, 0.04);
+}
+
+.feature-grid article p,
+.pillars p {
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
+.samsung {
+  border-block: 1px solid var(--line);
+}
+
+.pillars {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.number {
+  display: block;
+  margin-bottom: 1.5rem;
+  color: var(--purple);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.privacy {
+  align-items: center;
+}
+
+.privacy-card {
+  border-color: rgba(1, 114, 254, 0.2);
+  background: linear-gradient(135deg, var(--panel-strong), var(--panel));
+}
+
+.privacy-card ul {
+  display: grid;
+  gap: 0.55rem;
+  margin: 1rem 0 0;
+  padding-left: 1.2rem;
+}
+
+/* Marks a feature that is built but not yet tested on a real TV. */
+.badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  padding: 0.1rem 0.55rem;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  vertical-align: 0.15em;
+}
+
+/* Keeps a badge on the same line as the word before it. */
+.nowrap {
+  white-space: nowrap;
+}
+
+.roadmap-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roadmap-list li {
+  border: 1px dashed rgba(1, 114, 254, 0.35);
+  border-radius: 8px;
+  background: var(--bg-soft);
+  padding: 1.1rem 1.25rem;
+}
+
+.roadmap-list p {
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
+.availability h3 {
+  margin-top: 1.75rem;
+}
+
+.requirements {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.availability,
+.feedback {
+  border-top: 1px solid var(--line);
+}
+
+.feedback {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2rem;
+}
+
+.feedback-intro {
+  max-width: 760px;
+}
+
+.feedback-card h3 {
+  margin-top: 0;
+}
+
+.feedback-form {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 900px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--bg-soft);
+}
+
+.feedback-form-link {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+.feedback-form-link:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.feedback-card .feedback-note {
+  margin-bottom: 0;
+  font-size: 0.9rem;
+  color: var(--quiet);
+}
+
+.site-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  border-top: 1px solid var(--line);
+  padding: 2rem 0 3rem;
+  color: var(--quiet);
+  font-size: 0.9rem;
+}
+
+.site-footer p {
+  max-width: 42rem;
+  margin-bottom: 0;
+}
+
+.site-footer a {
+  color: var(--accent);
+}
+
+.site-footer a:focus-visible {
+  border-radius: 2px;
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.demos .section-heading {
+  margin-bottom: 2rem;
+}
+
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.video-grid > li:first-child {
+  grid-column: 1 / -1;
+}
+
+.video-tile {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgba(6, 18, 37, 0.04);
+  text-decoration: none;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.video-tile:hover,
+.video-tile:focus-visible {
+  border-color: rgba(1, 114, 254, 0.5);
+  box-shadow: var(--shadow);
+  transform: translateY(-3px);
+}
+
+.video-tile:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.video-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--panel-strong);
+}
+
+.video-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 18px rgba(6, 18, 37, 0.28);
+  transform: translate(-50%, -50%);
+  transition:
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.video-play svg {
+  width: 1.6rem;
+  height: 1.6rem;
+  margin-left: 0.15rem;
+  fill: var(--brand-blue);
+}
+
+.video-tile:hover .video-play,
+.video-tile:focus-visible .video-play {
+  background: var(--brand-blue);
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.video-tile:hover .video-play svg,
+.video-tile:focus-visible .video-play svg {
+  fill: #ffffff;
+}
+
+.video-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 1.15rem 1.15rem;
+}
+
+.video-title {
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.video-desc {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.video-tile.featured {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+}
+
+.video-tile.featured .video-text {
+  justify-content: center;
+  padding: 1.5rem 1.75rem;
+}
+
+.video-tile.featured .video-title {
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+}
+
+.video-tile.featured .video-desc {
+  font-size: 1.05rem;
+}
+
+.video-tile.featured .video-play {
+  width: 4.75rem;
+  height: 4.75rem;
+}
+
+.video-note {
+  margin: 1.25rem 0 0;
+  color: var(--quiet);
+  font-size: 0.85rem;
+}
+
+.video-dialog {
+  width: min(1100px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 0;
+  box-shadow: var(--shadow-strong);
+}
+
+.video-dialog::backdrop {
+  background: rgba(6, 18, 37, 0.78);
+}
+
+.video-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.75rem 0.75rem 1.25rem;
+}
+
+.video-dialog-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.video-dialog-close {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.video-dialog-close:hover {
+  background: var(--bg-soft);
+}
+
+.video-dialog-close:focus-visible {
+  background: var(--bg-soft);
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.video-dialog-close svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  fill: currentColor;
+}
+
+.video-frame {
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.video-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.video-dialog-footer {
+  margin: 0;
+  padding: 0.7rem 1.25rem 0.85rem;
+  font-size: 0.9rem;
+}
+
+.video-dialog-footer a {
+  color: var(--accent);
+}
+
+.video-dialog-footer a:focus-visible {
+  border-radius: 2px;
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 880px) {
+  html {
+    scroll-padding-top: 7.5rem;
+  }
+
+  .site-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-block: 0.6rem 0.35rem;
+  }
+
+  .split,
+  .privacy,
+  .availability {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-grid,
+  .pillars,
+  .roadmap-list,
+  .video-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .video-tile.featured {
+    display: flex;
+  }
+
+  .site-footer {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 620px) {
+  .section,
+  .site-footer {
+    width: min(100% - 28px, 1120px);
+  }
+
+  .site-header {
+    padding-inline: 14px;
+  }
+
+  .site-nav {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  .section {
+    padding: 4rem 0;
+  }
+
+  .hero {
+    padding-top: 0.5rem;
+  }
+
+  h1 {
+    font-size: clamp(2.3rem, 11vw, 3.2rem);
+  }
+
+  .feature-grid,
+  .pillars,
+  .roadmap-list,
+  .video-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .button,
+  .video-tile,
+  .video-play {
+    transition: none;
+  }
+
+  .video-tile:hover,
+  .video-tile:focus-visible {
+    transform: none;
+  }
+}

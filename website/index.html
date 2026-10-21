@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Immich TV for Samsung - Unofficial Tizen client for Immich</title>
+    <meta
+      name="description"
+      content="An independent Samsung Tizen TV client for browsing your self-hosted Immich photo and video library with the Samsung Smart Remote."
+    >
+    <meta name="robots" content="index,follow">
+    <meta property="og:title" content="Immich TV for Samsung">
+    <meta
+      property="og:description"
+      content="An independent Samsung Tizen TV client for browsing your self-hosted Immich photo and video library with the Samsung Smart Remote."
+    >
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="assets/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Immich TV, Unofficial Samsung TV App">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+    <link rel="icon" href="assets/logo-32.png" sizes="32x32" type="image/png">
+    <link rel="icon" href="assets/logo-16.png" sizes="16x16" type="image/png">
+    <link rel="apple-touch-icon" href="assets/logo-180.png">
+    <link rel="stylesheet" href="styles.css">
+    <script src="videos.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header" aria-label="Site header">
+      <a class="brand" href="./" aria-label="Immich TV for Samsung home">
+        <picture>
+          <source srcset="assets/logo-96.webp" type="image/webp">
+          <img src="assets/logo-96.png" alt="" width="40" height="40">
+        </picture>
+        <span>Immich TV for Samsung</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a href="#demos">Demos</a>
+        <a href="#features">Features</a>
+        <a href="#privacy">Privacy</a>
+        <a href="#availability">Availability</a>
+        <a href="#feedback">Feedback</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero section">
+        <picture class="hero-banner">
+          <source
+            srcset="assets/banner-800.webp 800w, assets/banner-1600.webp 1600w"
+            sizes="(max-width: 940px) calc(100vw - 40px), 880px"
+            type="image/webp"
+          >
+          <img
+            src="assets/banner-800.jpg"
+            srcset="assets/banner-800.jpg 800w, assets/banner-1600.jpg 1600w"
+            sizes="(max-width: 940px) calc(100vw - 40px), 880px"
+            alt="Immich TV, Unofficial Samsung TV App"
+            width="1600"
+            height="581"
+            fetchpriority="high"
+          >
+        </picture>
+        <div class="hero-copy">
+          <p class="eyebrow">Independent Samsung Tizen client for Immich</p>
+          <h1>Browse your Immich library from the sofa.</h1>
+          <p class="hero-text">
+            Your timeline, albums, people, Memories and favourites on the big screen, with photos,
+            videos, Live Photos and slideshows, all driven by the Samsung Smart Remote.
+          </p>
+          <div class="hero-actions" aria-label="Project status">
+            <a class="button primary" href="#availability">Project status</a>
+            <a class="button secondary" href="#privacy">Privacy model</a>
+          </div>
+          <p class="disclaimer">
+            Immich TV for Samsung is an independent, unofficial Samsung Tizen client for Immich.
+            It is not affiliated with or endorsed by Immich, FUTO or Samsung.
+          </p>
+        </div>
+      </section>
+
+      <section class="section split" id="why">
+        <div>
+          <p class="eyebrow">Why it exists</p>
+          <h2>Immich deserves a TV experience that feels at home on the TV.</h2>
+        </div>
+        <p>
+          Samsung Tizen users often end up using browser workarounds, casting, or separate streaming
+          devices to show a self-hosted photo library on the biggest screen in the house. This project
+          keeps Immich as the backend and builds a focused, remote-first viewer for Samsung TVs.
+        </p>
+      </section>
+
+      <section class="section demos" id="demos">
+        <div class="section-heading">
+          <p class="eyebrow">See it in action</p>
+          <h2>Demo videos</h2>
+          <p>
+            Short walkthroughs recorded from the app, using a demo library rather than anyone&#8217;s personal photos.
+            Choose a video to play it here.
+          </p>
+        </div>
+        <ul class="video-grid">
+          <li>
+            <a
+              class="video-tile featured"
+              href="https://youtu.be/uFJbepHNbZ8"
+              data-video-id="uFJbepHNbZ8"
+              data-video-title="First Look &amp; Slideshow"
+              aria-label="Play First Look &amp; Slideshow demo"
+            >
+              <span class="video-thumb">
+                <img src="https://i.ytimg.com/vi/uFJbepHNbZ8/hqdefault.jpg" alt="" width="480" height="360" loading="eager" decoding="async">
+                <span class="video-play" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+                </span>
+              </span>
+              <span class="video-text">
+                <span class="video-title">First Look &amp; Slideshow</span>
+                <span class="video-desc">A tour of the app, recorded from the TV interface: Home, browsing with the Smart Remote and a full-screen slideshow.</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a
+              class="video-tile"
+              href="https://youtu.be/1v8Ug3xoChE"
+              data-video-id="1v8Ug3xoChE"
+              data-video-title="Photos &amp; Timeline"
+              aria-label="Play Photos &amp; Timeline demo"
+            >
+              <span class="video-thumb">
+                <img src="https://i.ytimg.com/vi/1v8Ug3xoChE/hqdefault.jpg" alt="" width="480" height="360" loading="lazy" decoding="async">
+                <span class="video-play" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+                </span>
+              </span>
+              <span class="video-text">
+                <span class="video-title">Photos &amp; Timeline</span>
+                <span class="video-desc">Scroll your whole library by date and jump straight to any month.</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a
+              class="video-tile"
+              href="https://youtu.be/eE3Ncej2mTc"
+              data-video-id="eE3Ncej2mTc"
+              data-video-title="Albums"
+              aria-label="Play Albums demo"
+            >
+              <span class="video-thumb">
+                <img src="https://i.ytimg.com/vi/eE3Ncej2mTc/hqdefault.jpg" alt="" width="480" height="360" loading="lazy" decoding="async">
+                <span class="video-play" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+                </span>
+              </span>
+              <span class="video-text">
+                <span class="video-title">Albums</span>
+                <span class="video-desc">Open an album, browse its photos and videos, and view them full screen.</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a
+              class="video-tile"
+              href="https://youtu.be/20XD48TcXJQ"
+              data-video-id="20XD48TcXJQ"
+              data-video-title="Memories"
+              aria-label="Play Memories demo"
+            >
+              <span class="video-thumb">
+                <img src="https://i.ytimg.com/vi/20XD48TcXJQ/hqdefault.jpg" alt="" width="480" height="360" loading="lazy" decoding="async">
+                <span class="video-play" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+                </span>
+              </span>
+              <span class="video-text">
+                <span class="video-title">Memories</span>
+                <span class="video-desc">Relive Immich&#8217;s &#8220;On this day&#8221; Memories from the sofa.</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a
+              class="video-tile"
+              href="https://youtu.be/0fvvx6qAzoo"
+              data-video-id="0fvvx6qAzoo"
+              data-video-title="People"
+              aria-label="Play People demo"
+            >
+              <span class="video-thumb">
+                <img src="https://i.ytimg.com/vi/0fvvx6qAzoo/hqdefault.jpg" alt="" width="480" height="360" loading="lazy" decoding="async">
+                <span class="video-play" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+                </span>
+              </span>
+              <span class="video-text">
+                <span class="video-title">People</span>
+                <span class="video-desc">Pick a person and see every photo and video they appear in.</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a
+              class="video-tile"
+              href="https://youtu.be/7h32ceBChKY"
+              data-video-id="7h32ceBChKY"
+              data-video-title="Video &amp; Live Photos"
+              aria-label="Play Video &amp; Live Photos demo"
+            >
+              <span class="video-thumb">
+                <img src="https://i.ytimg.com/vi/7h32ceBChKY/hqdefault.jpg" alt="" width="480" height="360" loading="lazy" decoding="async">
+                <span class="video-play" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+                </span>
+              </span>
+              <span class="video-text">
+                <span class="video-title">Video &amp; Live Photos</span>
+                <span class="video-desc">Play videos and bring Live Photos to life on the big screen.</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a
+              class="video-tile"
+              href="https://youtu.be/gctU6KizgTE"
+              data-video-id="gctU6KizgTE"
+              data-video-title="Settings"
+              aria-label="Play Settings demo"
+            >
+              <span class="video-thumb">
+                <img src="https://i.ytimg.com/vi/gctU6KizgTE/hqdefault.jpg" alt="" width="480" height="360" loading="lazy" decoding="async">
+                <span class="video-play" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+                </span>
+              </span>
+              <span class="video-text">
+                <span class="video-title">Settings</span>
+                <span class="video-desc">Connect to your Immich server and set display and slideshow preferences.</span>
+              </span>
+            </a>
+          </li>
+        </ul>
+        <p class="video-note">
+          Videos play from YouTube in its privacy-enhanced mode, and the player only loads when you choose a video.
+          Preview images are served by YouTube.
+        </p>
+      </section>
+
+      <dialog class="video-dialog" id="video-dialog" aria-labelledby="video-dialog-title">
+        <div class="video-dialog-header">
+          <h3 id="video-dialog-title">Demo video</h3>
+          <button class="video-dialog-close" type="button" data-close-video aria-label="Close video">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+          </button>
+        </div>
+        <div class="video-frame" data-video-frame></div>
+        <p class="video-dialog-footer">
+          <a data-video-link href="https://youtu.be/" target="_blank" rel="noopener">Watch on YouTube</a>
+        </p>
+      </dialog>
+
+      <section class="section" id="features">
+        <div class="section-heading">
+          <p class="eyebrow">What it does</p>
+          <h2>Built into the app today</h2>
+          <p>
+            Everything below is built and connects read-only to your existing Immich server.
+            Features marked <span class="badge">New</span> are complete but still being tested on a real TV.
+          </p>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <h3>Home</h3>
+            <p>Rails for Recently Added, Favourites, Videos, People, Recently Viewed, Albums and Memories.</p>
+          </article>
+          <article>
+            <h3>Photos</h3>
+            <p>Your whole library by date, with a rail to jump straight to any month.</p>
+          </article>
+          <article>
+            <h3>Albums</h3>
+            <p>Browse your albums and open any of them.</p>
+          </article>
+          <article>
+            <h3>Memories</h3>
+            <p>Today&#8217;s &#8220;On this day&#8221; Memories from Immich.</p>
+          </article>
+          <article>
+            <h3>People <span class="badge">New</span></h3>
+            <p>Everyone Immich has recognised, and all their photos and videos.</p>
+          </article>
+          <article>
+            <h3>Search <span class="badge">New</span></h3>
+            <p>Find photos by one or more people and a date range, using only the remote.</p>
+          </article>
+          <article>
+            <h3>Favourites, Videos and Recently <span class="nowrap">added <span class="badge">New</span></span></h3>
+            <p>Each opens as a full view of its own, not just a row on Home.</p>
+          </article>
+          <article>
+            <h3>Viewer and slideshow</h3>
+            <p>
+              Photos, videos and Live Photos full screen, with optional date, time and camera details,
+              and a slideshow every 5, 8, 12 or 20 seconds.
+            </p>
+          </article>
+          <article>
+            <h3>Settings</h3>
+            <p>Your server connection and display preferences.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section samsung" id="samsung">
+        <div class="section-heading">
+          <p class="eyebrow">Built for Samsung TVs</p>
+          <h2>Not a wrapped desktop website.</h2>
+        </div>
+        <div class="pillars">
+          <div>
+            <span class="number">01</span>
+            <h3>Remote-first navigation</h3>
+            <p>Directional focus, OK, Back, and Play/Pause are treated as core interaction rules.</p>
+          </div>
+          <div>
+            <span class="number">02</span>
+            <h3>Tested on a real TV</h3>
+            <p>
+              The main test device is a 2019 Samsung QE55Q950R running Tizen 5.0. The app is built for that
+              generation&#8217;s browser engine, not a modern desktop browser.
+            </p>
+          </div>
+          <div>
+            <span class="number">03</span>
+            <h3>Older hardware matters</h3>
+            <p>The app avoids loading full libraries or full-resolution images into memory just because a desktop can.</p>
+          </div>
+          <div>
+            <span class="number">04</span>
+            <h3>Read-only by design</h3>
+            <p>The app is for viewing. Uploading, editing, deleting and administration stay in Immich.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section privacy" id="privacy">
+        <div>
+          <p class="eyebrow">Privacy and self-hosting</p>
+          <h2>Your photos stay yours.</h2>
+        </div>
+        <div class="privacy-card">
+          <p>
+            The app talks directly from your TV to your own Immich server.
+            Your photos and videos don&#8217;t pass through anyone else&#8217;s servers.
+          </p>
+          <ul>
+            <li>No telemetry or advertising is built into the app.</li>
+            <li>No subscription is currently planned.</li>
+            <li>Your Immich server remains the system of record for media, accounts, and access.</li>
+            <li>You connect with an Immich API key today; easier pairing with your phone is planned.</li>
+            <li>The API key is stored on the TV, so use a key that only has read access.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section roadmap" id="roadmap">
+        <div class="section-heading">
+          <p class="eyebrow">Roadmap</p>
+          <h2>Next areas of work</h2>
+          <p>These are planned, not yet built, and not promised for any date.</p>
+        </div>
+        <ul class="roadmap-list">
+          <li>
+            <h3>Shared albums and partner libraries</h3>
+            <p>Content other people share with you.</p>
+          </li>
+          <li>
+            <h3>Photo-frame mode</h3>
+            <p>An ambient, screensaver-style slideshow.</p>
+          </li>
+          <li>
+            <h3>Easier sign-in</h3>
+            <p>Pair with your phone instead of typing an API key.</p>
+          </li>
+          <li>
+            <h3>Getting ready for release</h3>
+            <p>Reliability over long sessions, newer TVs, and Samsung store requirements.</p>
+          </li>
+        </ul>
+      </section>
+
+      <section class="section availability" id="availability">
+        <div>
+          <p class="eyebrow">Availability</p>
+          <h2>Not yet available to download.</h2>
+        </div>
+        <div>
+          <p>
+            There&#8217;s no public release yet. A Samsung store or beta release may follow once the app is ready.
+          </p>
+          <h3>What you&#8217;ll need</h3>
+          <ul class="requirements">
+            <li>An Immich server running version 3.2.0 or later.</li>
+            <li>
+              A 2019 or newer Samsung TV (Tizen 5.0 or later). So far the app has been tested on one model,
+              a 2019 QE55Q950R.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section feedback" id="feedback" aria-labelledby="feedback-title">
+        <div class="feedback-intro">
+          <p class="eyebrow">Help shape the release</p>
+          <h2 id="feedback-title">Would you use Immich on your Samsung TV?</h2>
+          <p>
+            We&#8217;re working through Samsung partner registration. Getting everything in place is
+            taking time and effort, and we don&#8217;t have a release date to share yet.
+          </p>
+          <p>
+            While that&#8217;s in progress, we&#8217;d love to hear from you. Your feedback will help us
+            gauge interest and decide what to prioritise next.
+          </p>
+        </div>
+        <div class="feedback-card">
+          <h3>Share your feedback and interest.</h3>
+          <p>A few words are plenty, whether you have a suggestion or simply want to say you&#8217;d use it.</p>
+          <iframe
+            class="feedback-form"
+            title="Immich TV for Samsung feedback and interest form"
+            src="https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=-ZuPvfwdM0OUL8XLmHwfcSfFmffWIZNLo4V36cXMuPFUNjBMM1dPTE9UQk9OVFAyM0dNQVlXUzc4Qy4u&amp;embed=true"
+            width="1120"
+            height="900"
+            loading="lazy"
+            allowfullscreen
+          ></iframe>
+          <p class="feedback-note">
+            Responses are collected through Microsoft Forms.
+            <a class="feedback-form-link" href="https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=-ZuPvfwdM0OUL8XLmHwfcSfFmffWIZNLo4V36cXMuPFUNjBMM1dPTE9UQk9OVFAyM0dNQVlXUzc4Qy4u" target="_blank" rel="noopener">Open form separately</a>.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Immich TV for Samsung is an independent, unofficial Samsung Tizen client for Immich.
+        It is not affiliated with or endorsed by Immich, FUTO or Samsung.
+      </p>
+      <p>
+        Developed and maintained by Rob Mason.
+        <a href="https://github.com/rfsmason/immich-tv-for-samsung">Source code on GitHub</a>.
+      </p>
+    </footer>
+  </body>
+</html>

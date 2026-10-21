@@ -1,0 +1,16 @@
+# Generated, vendored or machine-specific output
+dist/
+.tizen/
+.buildResult/
+coverage/
+node_modules/
+package-lock.json
+
+# Hand-formatted documents and markup
+*.md
+*.html
+
+captures/
+.capture-tools/
+playwright-report/
+test-results/

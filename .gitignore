@@ -1,0 +1,36 @@
+.DS_Store
+
+# JavaScript tooling
+node_modules/
+dist/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Tizen build/package output
+.buildResult/
+**/.buildResult/
+*.wgt
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.pem
+*.key
+profiles.xml
+.tizen/
+tizen-studio-data/
+
+# Desktop capture tooling and private output
+captures/
+.capture-tools/
+playwright-report/
+playwright/.cache/
+test-results/
+!.env.capture.example
+!.env.tizen.example

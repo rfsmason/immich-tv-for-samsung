@@ -1,0 +1,9 @@
+{
+  // website/wrangler.jsonc
+  "name": "immich-for-samsung-tizen-tv",
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "compatibility_date": "2026-10-15",
+  "assets": {
+    "directory": "../website"
+  }
+}

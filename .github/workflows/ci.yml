@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Lint and Chromium 63 compatibility checks
+        run: npm run lint
+
+      - name: Test with enforced coverage
+        run: npm run test:coverage
+
+      - name: Load desktop capture scenarios (no server or browser)
+        run: npm run capture -- --list
+
+      - name: Build
+        run: npm run build
+
+      - name: Static app and bundle compatibility checks
+        run: npm run check
+
+      - name: Stage Tizen package contents
+        run: npm run stage:tizen

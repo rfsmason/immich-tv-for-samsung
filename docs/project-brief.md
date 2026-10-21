@@ -1,0 +1,613 @@
+# Project Brief
+
+This document is the authoritative high-level product brief and roadmap for Immich TV for Samsung. Standing engineering instructions, compatibility constraints, architecture rules, testing requirements, and implementation practices live in `AGENTS.md`. Milestone-specific architecture decisions live in `docs/architecture/`.
+
+## Goal
+
+Build a native-feeling Samsung Tizen TV client for Immich.
+
+The app should be:
+
+- TV-first and usable with the Samsung Smart Remote.
+- Read-only at first.
+- A dedicated Tizen Web Application, not a wrapper around Immich Web.
+- Compatible with the Samsung QE55Q950RBTXXU, a 2019 Tizen 5.0 TV with a Chromium M63 web engine.
+
+## Product Shape
+
+Immich TV is a sofa-friendly viewer for an existing Immich library. Immich remains the system of record for authentication, library data, albums, assets, thumbnails, previews, videos, transcoding, people, memories, search indexing, and storage management. The TV client presents those capabilities through a remote-first television interface.
+
+The product should grow from a stable viewing foundation into a broader TV-native browsing experience: startup shell, Home, Photos, Albums, Memories, People, Search, Favorites, shared content, ambient playback, and consumer-friendly pairing.
+
+## Cross-Roadmap TV UX Principles
+
+The application UI should follow established Smart TV design principles throughout the roadmap:
+
+- **Design for the 10-foot experience.** Text, focus states, and controls must remain readable from normal sofa distance. Body-size interface text should not fall below the current TV-safe scale, and screens should be checked on the physical QE55Q950R rather than judged only from a desktop monitor.
+- **Prefer simple, low-clutter screens.** Each screen should have one clear purpose, generous spacing, and limited simultaneous choices. Text density should stay low; albums and assets should remain visual-first.
+- **Use deterministic remote navigation.** Up/Down/Left/Right/OK/Back must have predictable outcomes. Focus must always be visible, and top-level navigation should be reachable without hidden mouse, hover, or keyboard assumptions.
+- **Avoid duplicate location chrome.** When the persistent rail clearly communicates the active top-level destination, top-level screens should not repeat that destination as a large heading unless it adds meaning. Keep local headings for content-specific child screens, such as a selected album name, and for form-heavy screens such as Settings.
+- **Respect safe areas and overscan.** Functional controls, text, and focus indicators must stay comfortably inside the 1920x1080 TV canvas. Decorative backdrops may extend toward edges, but essential UI must not rely on edge pixels.
+- **Use TV-safe colour and contrast.** UI colours should work on default television picture settings, avoid harsh oversaturation, and maintain clear contrast in bright and dark rooms.
+- **Treat the TV as a shared device.** Avoid unnecessarily surfacing sensitive account or credential details. Settings and diagnostics should not expose secrets from across the room.
+- **Design for the whole household.** Navigation, labels, focus states, and errors should be usable by children, older users, and less technical family members, not only by the developer.
+
+## Milestones 1-7 - Core Viewing Foundation
+
+1. **Minimum deployable Tizen application - complete**
+   Deploy the smallest possible Samsung Tizen Web Application to the physical QE55Q950R and prove the toolchain, packaging, signing, installation, launch, and logging loop.
+
+2. **Immich connectivity and configurable credentials - complete**
+   Support configurable Immich server URL and API key, persist connection settings, and prove authenticated Samsung TV to Immich API communication.
+
+3. **Permanent TypeScript/Tizen application foundation - complete**
+   Establish the production application structure: TypeScript modules, Chromium M63 build target, tests, linting, type checking, CI, Tizen packaging, logging, storage, platform boundaries, and separated Immich API access.
+
+4. **Albums - complete**
+   Retrieve Immich albums and display them in a TV-friendly grid with deterministic Samsung remote navigation.
+
+5. **Album asset browsing with bounded resources - complete**
+   Open albums, retrieve paginated assets, display a bounded/virtualised thumbnail grid, represent image/video/Live Photo assets, and preserve predictable remote focus.
+
+6. **Full-screen asset viewer - complete on main**
+   View album assets full-screen with Left/Right navigation, Back to the asset grid, bounded preview loading, metadata overlays, video poster stills, video playback, Live Photo playback, and shared viewer controls.
+
+7. **Slideshow - complete**
+   Add slideshow mode over the full-screen viewer with configurable interval, automatic next asset, pause/resume, predictable manual navigation behaviour, Back/exit handling, and bounded media resource usage.
+
+## Current Scope / Status
+
+The current `main` branch contains Milestones 1-14: deployable Tizen app, Immich connectivity, TypeScript application foundation, albums, bounded album asset browsing, a full-screen asset viewer with image, video, and Live Photo support, slideshow mode with configurable interval, pause/resume, viewer control refinements, settings-screen rationalisation, startup splash, the permanent top-level application shell, the Photos / main timeline experience, Home, Memories, foundation hardening (Chromium 63 compatibility enforcement, request timeouts, lifecycle and exit handling, and the structural refactor), the Home polish (paged Home collections, fixed-focus rails, and See more), People, Search v1, and Favorites and Library Views.
+
+The application remains read-only.
+
+Milestone 10, Home, is complete on `main`; physical-TV acceptance of the six rails passed on 16 October 2026 (user confirmation, covered by the Milestone 11.5 acceptance checklist). Home is the normal startup destination when valid Immich connection settings exist.
+
+Milestone 11, Memories, is complete on `main`; physical Q950R acceptance passed on 16 October 2026 (user confirmation, covered by the Milestone 11.5 acceptance checklist). It adds a scrolling current-Memories child destination under Home and reuses the shared asset grid, viewer, slideshow, and playback.
+
+Milestone 11.5, Foundation Hardening and Structural Refactor, is complete on `main` (see [ADR 0012](architecture/0012-foundation-hardening.md)); physical Q950R acceptance passed on 16 October 2026 (user confirmation).
+
+Milestone 12, People, is complete on `main` (see [ADR 0013](architecture/0013-people.md)). Physical Q950R acceptance is pending: parked by user decision on 16 October 2026, to be run together with Milestone 13's, and it does not gate Milestone 13. It adds a paged People browser under Home, reached from the People rail's See more, and opens each person in the shared collection, viewer and slideshow. The seven Milestone 11.5 carry-over tidy-ups are done.
+
+Milestone 13, Search v1, is complete on `main` (see [ADR 0014](architecture/0014-search.md)); physical Q950R acceptance is pending and parked with Milestone 12's. Search replaces the placeholder with a remote-first criteria panel (people, From and To dates), a people picker, and results in the shared collection, viewer and slideshow.
+
+Development tooling: desktop screenshot and video capture against a demo library ([docs/capture.md](capture.md), [ADR 0015](architecture/0015-desktop-back-key.md)). It is not a milestone and does not replace physical-TV acceptance.
+
+Milestone 14, Favorites and Library Views, is complete on `main` (see [ADR 0016](architecture/0016-library-views.md)); physical Q950R acceptance is pending and will be run with Milestones 12 and 13. Favourites, Videos (a new Home rail) and Recently added open as library views in the shared collection, viewer and slideshow.
+
+## Post-MVP Product Roadmap
+
+### Milestone 8 - Application Shell, Splash and Top-Level Navigation - complete
+
+Create the permanent application-level navigation model before the number of first-class screens grows further.
+
+Add a polished Immich TV splash/startup experience. The splash screen should render immediately on launch, provide clean Immich TV branding, act as the visible state while settings and startup state are restored, route to the normal application as soon as valid configuration exists, route to setup as soon as configuration is missing or unusable, and surface understandable startup/reconnect failure rather than hanging indefinitely.
+
+#### Support reminder on splash
+
+The splash screen may include a small, understated message reminding users that the app is free to use and can be supported voluntarily.
+
+The support message must:
+
+- Not delay application startup.
+- Not introduce any artificial splash-screen wait time.
+- Not block or require user interaction.
+- Not be focusable.
+- Not behave like an advertisement or modal.
+- Remain visually secondary to the Immich TV branding.
+- Use calm, non-pressuring language.
+- Direct users to the Settings / Support Development area for any actual donation action.
+- Not display donation prices or purchase controls on the splash itself.
+
+Suggested wording:
+
+- "Enjoying the app? You can support development in Settings."
+- "Free to use. Supported by people who enjoy it."
+
+If the application can determine that the user has previously made a voluntary support purchase, the splash message should change to a thank-you acknowledgement instead of continuing to solicit support, for example:
+
+- "Thank you for supporting Immich TV."
+
+This acknowledgement should remain subtle and must not affect startup timing. The intent is to create a gentle visual reminder during an already-existing startup state, not to introduce an additional monetisation screen.
+
+The actual donation/support flow belongs in Settings / Support Development and should be implemented separately from the splash presentation. Until Settings has a Support Development area, the splash uses "Free to use. Supported by people who enjoy it.", which does not point to it.
+
+Establish top-level navigation for the intended primary destinations:
+
+- Home
+- Photos
+- Albums
+- Search
+- Settings
+
+People and Memories may be reached through Home/Search or later promoted to primary destinations if TV usability proves that preferable.
+
+Success criterion: the application has a polished startup experience and a navigation shell capable of supporting the rest of the roadmap without bolting unrelated screens onto the original Albums-first navigation.
+
+### Milestone 9 - Photos / Main Timeline - complete
+
+Add a first-class Photos experience for browsing the user's general Immich library without requiring assets to belong to an album.
+
+Implement chronological library browsing, newest-first default presentation unless current Immich behaviour strongly suggests otherwise, useful date grouping or date context, efficient API pagination, virtualised/windowed rendering, bounded thumbnail resources, consistent image/video/Live Photo representation, reuse of the existing full-screen viewer, and reuse of slideshow functionality.
+
+This milestone should establish reusable application/domain infrastructure for general asset collections so later Home, Search, People, Favorites, and other filtered views do not each invent their own asset-grid implementation.
+
+Success criterion: a realistically large Immich library can be browsed chronologically from the TV with bounded resource usage and the existing viewer/slideshow experience.
+
+### Milestone 10 - Home - complete
+
+Make Home the normal landing screen after successful startup.
+
+The implemented Home preview contains these bounded horizontal rails in order:
+
+1. Recently Added — newest date added to Immich first.
+2. Favourites.
+3. People.
+4. Recently Viewed — actual local TV viewing history, newest viewed first.
+5. Albums.
+6. Memories.
+
+Each rail contains at most 18 items. Lower rails scroll into view with remote focus. Selecting an asset opens the shared summary grid on that asset, which lazy-loads the rail's full collection (ADR 0009 update), then the shared viewer; selecting an album reuses album detail. These previews do not replace the later first-class People, Memories, or Favourites browsing milestones.
+
+All six Home rails and the People loading/retry flow are implemented, and physical-TV acceptance passed on 16 October 2026. Recently Viewed now records viewer entry and navigation across all sources, persists a bounded history scoped to server/user, and revalidates assets before display. It opens a bounded ordered history collection; resuming the original paginated browsing context remains a separate Continue Browsing feature.
+
+Build a reusable TV rail pattern where Up/Down moves between rails, Left/Right moves within a rail, focus remains obvious, lazy loading does not lose focus, each rail has bounded DOM/image/resource use, selecting an asset reuses the normal viewer, and selecting an album reuses the normal album flow.
+
+Success criterion: launching the application leads to a useful, polished overview of the user's library rather than directly into Albums.
+
+### Milestone 11 - Memories - complete
+
+Add first-class support for Immich Memories. Immich remains responsible for determining and generating memories; the TV client must not recreate memory-generation logic.
+
+Support retrieving current Memories through the documented Immich API, surfacing Memories on Home, opening a Memory, displaying title/date/context where available, navigating its assets, viewing assets using the existing viewer, and slideshow/playback using the existing viewer infrastructure.
+
+Implemented behaviour:
+
+- Home retains its 18-card preview of Memories available for the current local calendar date. A View all Memories tile at the end of that rail opens a child summary using the same five-column square-card layout as Albums. There is no separate Home button or summary navigation toolbar.
+- Discovery maps only covers and summary metadata; opening a Memory revalidates its ID with Immich search, preserving discovery's hidden-person filtering and the server's ordered asset sequence.
+- Memory grids use the existing shared collection controller. Images, videos, Live Photos, slideshow, viewer Back, and asset focus restoration all use the existing paths. Grid Back returns to Home for a preview entry or to the originating browser card for a browser entry.
+- Local viewing history records a `memory` source in the existing backward-compatible version 1 store.
+- The summary initially fills three rows, then loads more near the focused row. It retains at most three pages (45 summaries), windows the DOM and thumbnails, and reloads earlier pages when moving back up. Covers are released outside retention and on hide/reset/destroy. Connection changes clear the browser cache.
+- The summary uses the documented Memories statistics count to bound lazy loading even though the server filters empty Memories after paging. This requires the read-only Memories statistics permission. Current suggestions only; saved/historical filters are deferred. Embedded assets cannot be paged independently by this API; an unusually large manually assembled Memory can still produce a large metadata response. Media and DOM retention stay windowed.
+
+Architecture and verified API references: [ADR 0011](architecture/0011-memories.md).
+
+Success criterion: a user can discover a suggested Immich Memory from Home and comfortably view it on the television.
+
+### Milestone 11.5 - Foundation Hardening and Structural Refactor - complete
+
+#### Intent
+
+Milestones 1-11 delivered a working, well-bounded viewer, but a full codebase review on 15 October 2026 (at `main` `dd46ee9`) found two probable Chromium 63 runtime defects, a gap in how compatibility is enforced, several robustness gaps, and structural debt concentrated in a few very large modules.
+
+People (M12), Search (M13) and Favorites (M14) will all build on the shared collection grid and viewer. This milestone pays down that debt first, so those features land on a foundation that is correct on the TV, enforced by the build, and small enough to change safely.
+
+This is a hardening and refactoring milestone, not a feature milestone:
+
+- No new user-facing destinations or Immich capabilities.
+- Behaviour visible to the user must be preserved, except where an item below explicitly corrects a defect.
+- Each refactor must be behaviour-preserving and covered by tests before and after the move.
+- Work should land in small, coherent commits or PRs in the order given below, so the app stays deployable throughout.
+
+#### Baseline at review
+
+- Typecheck, lint, build, static checks and Tizen staging pass; 253 tests pass across 24 files.
+- Statement coverage is about 53%. Pure helpers are at 84-96%, but some screens are much lower:
+
+| Area | Statement coverage |
+|---|---|
+| Album detail screen (viewer, slideshow, playback) | 51% |
+| App shell | 12% |
+| Albums screen | 0% |
+| Settings / connection screen | 0% |
+
+- The shipped `dist/scripts/main.js` is 313 KB unminified. Minified it would be about 145 KB (about 36 KB gzipped).
+
+#### Issues to address
+
+**A. Chromium 63 compatibility (highest priority)**
+
+1. **Confirm the actual web engine first.** On the physical Q950R web inspector, record:
+   - `navigator.userAgent`
+   - `CSS.supports('gap', '1px')`
+   - `'toggleAttribute' in Element.prototype`
+
+   Record the results in `docs/toolchain.md`. Treat the TV's answers as authoritative for items A2-A4.
+2. **`Element.toggleAttribute` (Chrome 69+).** It is used in `src/screens/connection-screen.ts` (`updateDirtyStatus`) for the Settings unsaved-changes indicator. On Chromium 63 it would throw whenever the dirty state updates. Replace it with `setAttribute`/`removeAttribute` and add a Settings test that would catch the regression.
+3. **Unprefixed CSS `gap` (grid: Chrome 66+; flexbox: Chrome 84+).** `styles/main.css` has about 57 `gap` declarations and no `grid-gap` fallback.
+   - Grid containers need `grid-gap` alongside `gap`.
+   - Flex containers need margin-based spacing, because flex `gap` has no Chromium 63 equivalent.
+
+   The virtualised grid spacer heights (`--album-grid-gap`, `--asset-grid-gap`) and the JavaScript tile sizing that reads `columnGap` must remain consistent with the spacing actually rendered.
+4. **Enforce compatibility in the build, not just syntax.** Today esbuild's `chrome63` target only transpiles syntax. Meanwhile `tsconfig` includes the full modern `DOM` type library, and lint has no browser-compatibility rule.
+   - Add a Chrome 63 browserslist target and an API compatibility lint rule, for example `eslint-plugin-compat`. Vet its accuracy and maintenance as section 31 of `AGENTS.md` requires.
+   - Add a small CSS compatibility check that fails on known-unsupported properties without fallbacks (at minimum `gap` without `grid-gap`, `inset`, `aspect-ratio` and flex `gap`).
+   - Both checks run in `npm run lint` and CI. This satisfies section 23 of `AGENTS.md`.
+5. Note: `focus({ preventScroll })` is silently ignored on Chromium 63, since the option needs Chrome 64. Existing code already corrects scroll manually. Document this as a known platform behaviour rather than relying on the option.
+
+**B. Network and error robustness**
+
+1. **No request timeouts.**
+   - `requestJson` and `requestBlob` in `src/api/immich/client.ts` can hang forever on a stalled connection, leaving a loading state with no Retry.
+   - `AbortController` is not available on Chromium 63 (it needs Chrome 66), so implement a bounded timeout race that rejects with a typed network or timeout `AppError`.
+   - Late responses must be ignored by the existing generation guards.
+2. **Every 403 is reported as "Immich rejected the API key".** A key that is valid but lacks one permission (for example People) gets a misleading message. Add a distinct permission error kind. Map it to a household-friendly message naming the missing capability where the endpoint is known. Keep 401 as the invalid-key case. The existing special case for Memories statistics should become an instance of the general mechanism.
+3. **`AppError` drops `cause`.** The constructor accepts it but never stores it. Preserve it for diagnostics, without exposing it to user-facing messages.
+4. **The logger loses `Error` details.** `sanitize()` iterates enumerable keys, so `Error` objects (whose `message`, `name` and `stack` are not enumerable) are logged as `{}`. For example, the startup failure log currently carries no useful information. Serialise errors explicitly while keeping credential redaction.
+
+**C. Tizen application lifecycle and Back behaviour**
+
+1. **No lifecycle handling.** Nothing listens for `visibilitychange` (or the Tizen equivalent verified against Samsung's documentation), so video playback and slideshow timers keep running when the TV backgrounds the app.
+   - On hide: pause playback and slideshow.
+   - On return: leave them paused and in a predictable state.
+   - Implement this behind the existing `src/platform/tizen/` boundary.
+2. **Back at the root does nothing.** Back on the left-hand rail is currently ignored. Samsung expects Back at the top level to exit (or confirm exit). Implement this according to current Samsung TV guidance, verified for Tizen 5.0, through the platform abstraction. Keep the existing rule that Back from Settings with unsaved changes is guarded.
+
+**D. Structural refactor**
+
+1. **Split `src/screens/album-detail-screen.ts`.** It is about 3,400 lines and has a single 30-field mutable state object. It currently owns:
+   - album, Photos timeline, Home, People and Memory collections
+   - paging in both directions and the timeline rail
+   - the full-screen viewer, slideshow, video and Live Photo playback, and the random backdrop
+
+   Separate it into, at minimum:
+   - a collection grid controller (windowing, thumbnails, focus, paging)
+   - a Photos timeline extension (buckets, rail, date sections)
+   - a viewer/playback controller (preview window, slideshow, video, Live Photo, metadata)
+
+   The pieces should communicate through narrow typed interfaces. Replace overlapping mode flags (`mode`, `timelineMode`, `source.kind`, `remoteCollection`) with a discriminated union so that contradictory combinations cannot be represented. This must preserve ADR 0008's single shared viewer/collection rule; it is a decomposition, not a duplication.
+2. **Consolidate routing in `src/app/main.ts`.** It has a 9-state `ActiveScreen` union, a separate `memoryParent` variable, and about seven `display*`/`show*` functions that each hand-list every screen to hide. Replace these with:
+   - a small typed screen registry with a single "show only this screen" operation
+   - an explicit parent/back context
+
+   This stays within ADR 0007: no router framework, event bus or global state library.
+3. **Shared grid presentation.** The Albums, Memories and Home screens each re-implement tile sizing, spacer creation and focus scrolling. Extract one small shared helper and align `memories-screen.ts` with the project's prevailing code style.
+4. **Remove the vestigial Photos placeholder.** The `photos-screen` placeholder section and controller are still mounted and hidden on every transition, although Photos now runs through the shared collection screen.
+5. **Move presentation formatting out of the API client.** Month and weekday names and date-label formatting in `src/api/immich/client.ts` belong in domain or presentation code. The client should map to domain values, not display strings.
+
+**E. Build, tooling and reproducibility**
+
+1. **Ship a minified bundle.** Ship `main.js` minified, keeping an explicit unminified debug build option for on-TV diagnosis. Record the resulting size in the PR.
+2. **Run `npm run stage:tizen` in CI.** CI does not currently run it.
+3. **Add an enforced formatter**, or equivalent style lint, and a `format:check` CI step. `npm run format` is currently only `eslint --fix`, which allowed the style drift in `memories-screen.ts`.
+4. **Pin and document toolchain versions.** In `docs/toolchain.md`, pin the Tizen Studio, Tizen CLI, TV Extension and certificate extension versions actually in use, as section 32 of `AGENTS.md` requires.
+
+**F. Test coverage**
+
+Raise coverage where defects are most likely to escape. At minimum add tests for:
+
+- the Settings/connection screen, including dirty state, save, test connection and guarded exit
+- the Albums screen
+- shell navigation and Back at root
+- the routing registry
+- the extracted viewer/playback controller
+- the timeout and permission error paths
+
+Include a test that asserts no unsupported APIs reach the bundle, if the compatibility lint does not already guarantee it. Set and record a sensible minimum coverage target for the screens, without chasing a number for its own sake.
+
+**G. Documentation drift**
+
+1. The `README.md` "Current Status" still says "Milestone 5 planned" and describes an Albums-first app.
+2. `docs/toolchain.md` still contains a note from scaffold time saying `tizen`/`sdb` were "not available on PATH".
+3. ADR 0009's validation section quotes 182 tests.
+4. Add an ADR for the structural refactor (routing registry, controller decomposition and compatibility enforcement), for example `docs/architecture/0012-foundation-hardening.md`.
+
+#### Out of scope
+
+- People, Search, Favorites and any other new destination.
+- Pairing or changes to authentication (Milestone 17).
+- Visual redesign beyond the spacing corrections in item A3.
+- Adopting a UI framework or router library.
+
+#### Acceptance
+
+Passed on the physical Q950R on 16 October 2026 (user confirmation). The three engine console values for the table in [docs/toolchain.md](toolchain.md) are still to be recorded.
+
+- Items A1-A4 are verified on the physical Q950R. Grid spacing, Settings dirty-state indication and save all behave correctly on the TV.
+- Compatibility lint fails on a deliberately introduced Chrome 64+ API or unsupported CSS property, and passes on `main`.
+- A stalled Immich server produces a timed-out, retryable error state within a bounded time, with focus usable and Back working.
+- Backgrounding the app pauses video and slideshow. Back at the root exits as Samsung expects.
+- No individual screen module exceeds roughly 1,000 lines without a documented reason. `main.ts` has no repeated hide lists.
+- Typecheck, lint (including compatibility), format check, tests, build, static checks and `stage:tizen` all pass in CI.
+- Repeated navigation smoke test on the TV (Home → Photos → Albums → Memories → viewer → Back, plus a long slideshow) shows no regressions, missing images or runaway memory symptoms.
+- Physical-TV acceptance outstanding from M10 and M11 is completed or explicitly re-recorded as pending.
+
+Success criterion: the app is demonstrably correct on Tizen 5.0 / Chromium 63, compatibility regressions fail the build, network and lifecycle edge cases are handled, and the shared collection and viewer code is decomposed enough that People, Search and Favorites can be added without growing a single module further.
+
+### Milestone 12 - People - complete on main; physical-TV acceptance pending (parked, run with Milestone 13)
+
+Add first-class browsing by recognised person using Immich's existing facial recognition and People data.
+
+Support a TV-friendly grid/list of recognised people, portrait/face thumbnails where available, assigned names where available, deterministic remote navigation, selecting a person to retrieve that person's assets, and browsing results through the shared asset collection, viewer, and slideshow pipelines.
+
+The TV client must not implement face recognition or person management. Naming, merging, and editing people stays in Immich.
+
+#### Carry-over tidy-ups from the Milestone 11.5 review (16 October 2026)
+
+Complete these at the start of Milestone 12, in small separate commits, before People work depends on them. All seven are done (Milestone 12 branch).
+
+1. **Done - Minimum Immich version.** The app requires Immich v3.2.0 or later:
+   - Album detail, Favourites and People use the structured `/search/metadata` request (`filter`/`orderBy`/`cursor`), which was added in v3.2.0. On older servers these fail with a generic error.
+   - Document the minimum supported version in `README.md`.
+   - During Test connection, compare the server version (already fetched through `getServerVersion`) and show a clear, household-friendly warning when the server is older. Do not block saving.
+   - Keep the comparison in the connection service or Immich integration layer, not the UI.
+   - Add direct unit tests for `src/app/connection-service.ts`, which currently has none.
+2. **Done - Photos timeline search shape.**
+   - `buildTimelineAssetSearchBody` still sends the flat fields `page`, `visibility` and `order`, which are deprecated since v3.2.0.
+   - Album and Photos pages still read `assets.total`, which is deprecated since v3.0.0.
+
+   Migrate to the structured shape with cursor paging, and stop relying on `assets.total` (use timeline bucket counts or album asset counts where a total is needed). Verify against the current Immich source, write characterisation tests first, and preserve Photos behaviour.
+3. **Done - Cursor-only paging for structured searches.** `readNextSearchPage` falls back to the flat `nextPage` token. For structured requests, honour only `nextCursor`. A `page` token there would make `buildFilteredSearchBody` silently refetch the first page, and could loop. Immich currently returns only `nextCursor` for structured requests, so this is defensive: a one-line fix plus a test.
+4. **Done - API client size.** As People adds endpoints, split DTO types and validators out of `src/api/immich/client.ts` (about 1,040 lines) into separate integration-layer modules. Endpoint knowledge and mapping stay in the Immich integration layer.
+5. **Done - Duration labels in presentation.** Asset duration labels are still formatted in the API client (`asset.duration`). Move them to `src/presentation/`, as was done for date labels in Milestone 11.5 (item D5). The client should map to domain values only.
+6. **Done - Consistent month abbreviations.** "Sep" is used throughout. Viewer metadata uses "Sep" and the Photos timeline uses "Sept". Choose one convention and use it in both through the shared presentation helpers.
+7. **Done - Viewing-history writes.** The viewer re-records a visit for the current asset whenever paging re-renders it. Record only on an actual selection change. This is harmless today, because history de-duplicates, but it writes storage needlessly and matters more once People and Search use the viewer.
+
+#### Implemented behaviour
+
+- People is a child destination of Home. The People rail ends with See more when Immich has more people than the rail's 18; See more opens the People browser and Back restores the See more tile.
+- The browser is a six-column grid of circular faces with names beneath, in Immich's order (favourites, then named people by face count). It loads 30 people per page near remote focus, retains at most four pages (120 people), windows the DOM and faces, and reloads evicted pages when moving back. Loading, empty, error, timeout and Retry states are remote-operable.
+- Opening a person, from the rail or the browser, uses the shared collection with the person feed (structured search cursor). The header shows the person's name; no asset count is shown, so no extra API-key permission is needed. Grid Back returns to the originating tile or card; viewer Back returns to the last viewed asset.
+- Viewing history records a `person` source in the version 1 store. Hidden people are never requested.
+
+Success criterion: a user can select a recognised person and browse that person's photos/videos comfortably on the TV.
+
+### Milestone 13 - Search v1 - complete on main; physical-TV acceptance pending (parked with Milestone 12)
+
+Add a dedicated Search experience designed for remote control rather than desktop form entry.
+
+Initial search criteria:
+
+- One or more people
+- Date from
+- Date to
+- Combinations of those filters
+
+Search criteria should be represented internally as small composable filters so additional criteria can be added later without building a generic query-builder framework.
+
+Support selecting/clearing people, setting/clearing date boundaries, clearing/resetting search, executing search, useful empty/loading/error states, virtualised/windowed result browsing, shared asset collection infrastructure, and existing viewer/slideshow behaviour from search results.
+
+#### Implemented behaviour
+
+- The Search destination is a criteria panel with three rows: People, Taken (From and To) and actions. People are added in a picker that reuses the People grid; chips show the first four people plus "+N more", and OK on a chip removes it. All selected people must appear in a result ("Photos with all of these people"), up to ten.
+- Dates are edited with an inline day/month/year stepper with real month lengths and leap years; OK sets, Back cancels, Clear returns to Any date. From and To are inclusive local days. A reversed range is explained and blocks Show photos; dates are never swapped.
+- Show photos opens results in the shared collection with a short criteria summary as the title and a specific empty message. Back returns to Search with the criteria unchanged. Criteria last for the session and clear when connection settings change.
+- There is no result count, because Immich's statistics search needs the extra `asset.statistics` API-key permission.
+- Viewing history records a `search` source.
+
+Success criterion: a user can find assets for a person, a date range, or both using only the Samsung Smart Remote.
+
+### Milestone 14 - Favorites and Library Views - implemented; physical-TV acceptance pending (with Milestones 12 and 13)
+
+Add first-class Favorites browsing and evaluate other simple, useful Immich-backed library views that can reuse the generic asset collection infrastructure, such as:
+
+- Favorites
+- Videos
+- Recently added
+
+Favorites should also be available as a Home rail where appropriate. The application remains read-only; favoriting/unfavoriting is not required merely because Favorites can be viewed.
+
+Carry-over (16 October 2026): Recently Added paging. **Resolved in Milestone 14:** structured search cannot order by upload date, so Recently Added stays on timeline buckets; page tokens now name the month by `timeBucket` and carry the months fetched on the first page.
+
+- `getRecentlyAddedBucketPage` pages by a bucket's position in a month list that is re-fetched for every page. A new upload that creates a new month between page loads shifts the positions, and can duplicate or skip a month. Each page also costs two requests.
+- When Recently added becomes a library view, key the page token on the bucket's `timeBucket` value rather than its index, and reuse the fetched bucket list within a collection session.
+
+#### Implemented behaviour
+
+- Library views are reached from Home rails and their See more tiles; no left-rail destination was added. Home has a Videos rail directly after Favourites.
+- Favourites, Videos and Recently added open the shared collection on a typed library route with those headers. A rail item opens the view on that item, and Back returns to it; See more opens the view on its first item, and Back returns to See more.
+- Videos lists timeline videos newest first; Live Photo motion clips are hidden assets in Immich and never appear. Slideshow over Videos follows the existing rules: videos do not autoplay during a slideshow, so each shows its poster for the interval.
+- Viewing history records a `library` source. No counts are shown, so no extra API-key permission is needed.
+
+Success criterion: important common library subsets can be browsed without duplicating collection, viewer, or slideshow logic.
+
+### Milestone 15 - Shared Content
+
+Add appropriate support for Immich content shared with the current user.
+
+At implementation time, verify the current Immich API model for albums owned by the current user, albums shared with the user, and shared/partner library concepts exposed by the current API. Do not make assumptions based on old Immich behaviour.
+
+Shared content should integrate naturally with the existing Albums/Home/asset browsing experiences rather than becoming a separate application architecture.
+
+Success criterion: content legitimately available to the logged-in Immich user can be discovered and viewed consistently regardless of ownership.
+
+### Milestone 16 - Ambient / Screensaver Mode
+
+Build an ambient photo-frame/screensaver-style experience on top of the existing slideshow/viewer infrastructure.
+
+Potential sources should include selected album, Favorites, recent photos, all photos, and Memories where appropriate. Initial options may include interval, sequential or shuffle order, images-only or images-plus-video behaviour, metadata overlay, sensible avoidance of immediate repetition, and transition behaviour appropriate to Tizen performance.
+
+Do not create a separate image loading/playback engine. Ambient mode must continue to respect bounded media/resource usage during long-running sessions.
+
+Investigate Samsung/Tizen lifecycle and screensaver restrictions before deciding whether this can act as a true platform screensaver or should instead be an in-app ambient mode.
+
+Success criterion: the television can reliably display Immich content for an extended period without memory growth, crashes, or repeated manual intervention.
+
+### Milestone 17 - Consumer-Friendly Pairing and Authentication
+
+Replace or supplement manual API-key entry with an authentication experience suitable for ordinary TV users.
+
+Desired UX is conceptually:
+
+```text
+TV displays short code and/or QR code
+-> user opens a phone/browser
+-> user authenticates with Immich
+-> TV receives authorised credentials
+-> TV stores those credentials appropriately
+```
+
+Do not introduce an additional backend service unless investigation proves it is genuinely necessary.
+
+At this milestone revisit credential persistence, least-privilege permissions, logout/disconnect, server switching, API-key/query-string authentication currently required for HTML video playback, and whether current Immich authentication APIs provide a suitable pairing/device-authorisation mechanism.
+
+#### Authentication approach order
+
+When Milestone 17 is implemented, investigate authentication options in this order:
+
+1. Prefer a native Immich-supported device-authorisation or pairing flow if Immich provides one by then.
+2. If not available, investigate a reliable local/LAN pairing mechanism between phone/browser and TV that avoids any external service.
+3. If neither provides a suitable TV experience, implement a minimal pairing broker.
+
+Do not introduce a cloud service if Immich itself or a local pairing mechanism can solve the problem cleanly.
+
+#### Pairing broker fallback
+
+If a broker is required, design it as a minimal temporary rendezvous service rather than as a permanent identity provider.
+
+The intended model is:
+
+```text
+Phone/browser
+    |
+    | temporary pairing exchange
+    v
+Pairing broker
+    ^
+    |
+Samsung TV
+```
+
+After pairing completes, normal application traffic must return to:
+
+```text
+Samsung TV -> user's Immich server directly
+```
+
+The broker must never become a proxy for normal Immich API traffic.
+
+#### Hosted and self-hosted broker
+
+If a broker is implemented:
+
+- Provide a hosted public instance as the default convenience option.
+- Make the same broker software freely available for self-hosting.
+- Provide an official container image suitable for a simple Docker deployment.
+- Allow the TV app to use a custom broker URL instead of the hosted default.
+- Keep the hosted and self-hosted implementations protocol-compatible.
+- Do not require users to create a separate Immich TV account merely to pair a device.
+
+This is intentional because many Immich users already self-host infrastructure and may prefer not to use a third-party pairing service.
+
+The product should therefore support both:
+
+```text
+Default pairing service:
+https://pair.example.com
+
+Custom/self-hosted pairing service:
+https://pair.my-domain.example
+```
+
+The exact domain is not to be decided yet.
+
+#### Broker security model
+
+Prefer an end-to-end encrypted rendezvous design in which the broker cannot read the Immich credential being exchanged.
+
+A preferred conceptual flow is:
+
+1. TV creates a short-lived pairing session and ephemeral cryptographic key material.
+2. TV displays a QR code and/or short pairing code.
+3. User opens the pairing URL on a phone/browser.
+4. The phone/browser authenticates against the user's Immich server or obtains the required Immich credential.
+5. The credential is encrypted for the TV before being submitted to the broker.
+6. The broker temporarily stores or relays only the encrypted payload.
+7. The TV retrieves the payload and decrypts it locally.
+8. The pairing session is immediately destroyed or allowed to expire after a short TTL.
+9. Subsequent TV communication goes directly to Immich.
+
+The exact cryptographic protocol must be designed and reviewed at implementation time rather than improvised in the project brief.
+
+#### Hard architectural requirements
+
+If the broker architecture is implemented:
+
+- No photos, videos, thumbnails, metadata, or normal Immich API traffic may pass through the broker.
+- The broker must not act as an ongoing user identity provider.
+- No permanent user account with the broker should be required.
+- Plaintext Immich credentials must not be stored by the broker.
+- Pairing sessions must be short-lived.
+- Pairing records must expire automatically.
+- Pairing identifiers must have sufficient entropy and must not rely solely on a short human-readable code for security.
+- Rate limiting and abuse protection must be implemented.
+- Broker logs must not contain credentials or decrypted authentication material.
+- The broker URL must be configurable in the TV app.
+- Self-hosted and hosted brokers must use the same documented protocol.
+- Already-paired TVs must continue to function if the broker later becomes unavailable.
+- Pairing failure must never invalidate an existing working Immich connection.
+- Normal application operation must remain independent of the broker after pairing.
+
+#### Open-source boundary
+
+If the main Samsung TV client remains proprietary, the broker may still be released separately as freely available/open-source infrastructure.
+
+The intended product boundary may therefore be:
+
+- Samsung TV application: proprietary.
+- Pairing protocol: documented.
+- Pairing broker: freely available/open source.
+- Docker image: freely available.
+- Hosted broker: optional free convenience service.
+
+Do not make this source-licensing decision irreversible in the brief, but record it as the preferred direction if a broker becomes necessary.
+
+Success criterion: a normal Immich user can securely pair the Samsung TV client without manually entering a long API key using the remote, while preserving direct TV-to-Immich operation after pairing and allowing privacy-conscious users to self-host the pairing service if a broker architecture is required.
+
+### Milestone 18 - Product Hardening and Samsung Release Readiness
+
+Once the feature set and navigation model are stable, harden the application for long-term use and possible wider distribution.
+
+Include startup/reconnect resilience, graceful handling of Immich server/API compatibility problems, network interruption behaviour, suspend/resume and application lifecycle handling, long-running memory/resource testing, slow-network behaviour, settings schema migration/versioning, readability and accessibility review, testing on newer Samsung/Tizen versions where practical, icon/splash/application artwork, production logging/error behaviour, privacy/support documentation, release packaging, and Samsung TV application/store requirements if distribution is pursued.
+
+The physical QE55Q950R remains the minimum authoritative integration target, while this milestone should begin validating that the application behaves sensibly on newer supported Samsung TVs.
+
+Carry-over notes from the Milestone 11.5 review (16 October 2026):
+
+- **Stalled connections.** Chromium 63 cannot abort a `fetch`, so timed-out requests keep occupying the browser's connections to the server (about six per host) until the server or TCP closes them. Recovery after a stall can therefore lag, and queued requests' timeouts include time spent waiting for a connection. Cover this in network-interruption and slow-network testing, and consider backing off thumbnail concurrency after repeated timeouts.
+- **CSS compatibility check.** The check is rule-level. It decides flex versus grid only from rules with the same selector, so a `gap` on an element made flex by a different rule could pass with an ineffective `grid-gap` fallback. Strengthen it if layout CSS grows.
+- **Playback on hide.** The app pauses playback when hidden. Samsung's Multitasking guide suggests treating hide during playback like Return. Confirm the pause behaviour is acceptable for store review.
+- **CI status.** The Cloudflare "Workers Builds" check fails on every PR. Fix or disconnect that integration so release PRs show fully green.
+
+Carry-over notes from the Milestone 14 review (21 October 2026):
+
+- **Home thumbnail concurrency.** Each Home asset rail has its own thumbnail queue with up to eight requests in flight, so with the Videos rail Home can ask for far more thumbnails at once than the TV's roughly six connections per host can carry. The real risk is queuing: a thumbnail's 30-second timeout includes time spent waiting behind other rails, so on a slow server the lower rails can time out. Replace the per-rail queues with one queue shared across Home (ADR 0016, "Resource bounds and Home concurrency").
+
+Success criterion: the project is no longer merely a successful development application; it is technically and operationally suitable for sustained everyday use and, if desired, preparation for public distribution.
+
+## Cross-Roadmap Principles
+
+- Asset collections should converge on reusable domain/service/grid/windowing infrastructure.
+- Viewer behaviour should remain shared across Albums, Photos, Home, Memories, People, Search, Favorites, and shared content.
+- Slideshow should operate over generic ordered asset collections rather than being album-specific.
+- Video and Live Photo handling should remain shared.
+- Home is an aggregator of capabilities, not a second implementation of them.
+- Immich remains responsible for facial recognition, Memories generation, search indexing, transcoding, and library/storage management.
+- The client remains read-only unless a future explicit product decision changes that boundary.
+- Resource usage must remain bounded independently of library size.
+- Every feature must remain fully usable with the Samsung Smart Remote.
+- New Immich API usage must be verified against the current documented API before implementation.
+- Any future cloud component must be optional unless there is a compelling technical reason otherwise.
+- The application should continue to operate directly against the user's Immich server.
+- Hosted convenience services should not become mandatory dependencies for normal viewing.
+- Where a small supporting service is useful, prefer designs that can also be self-hosted by technically capable users.
+- Significant architectural decisions introduced by roadmap milestones should get an ADR under `docs/architecture/`.
+
+## UI Direction
+
+Immich now provides `@immich/ui`, a Svelte component library and design system for Immich-branded applications. The TV app should remain compatible with that direction without prematurely adopting the runtime package.
+
+When making UI decisions:
+
+- Prefer Immich-aligned visual language for colours, spacing, loading states, icons, typography, and control tone where it fits a TV interface.
+- Keep presentation styling in CSS and keep remote-control focus/navigation logic separate from visual treatment so components can be revisited later.
+- Do not introduce `@immich/ui`, Svelte, Tailwind, or another UI framework without a compatibility spike that proves build output, bundle size, and runtime behaviour on Tizen 5.0 / Chromium M63.
+- TV-first usability wins over matching Immich Web or Immich UI components exactly. Components that assume mouse, hover, dense desktop layouts, or ordinary keyboard navigation should be adapted rather than copied.
+- Avoid creating a large bespoke design system that would make later adoption of Immich UI harder. Use small, local patterns until repeated UI needs justify a shared abstraction.
+
+## Future Considerations
+
+- Additional search filters such as location, media type, album, Favorites, or Immich smart/free-text search if suitable current APIs exist.
+- Richer slideshow transitions and display options, provided they remain performant on Tizen 5.0.
+- Optional writable operations such as Favorite/unfavorite only if the read-only product boundary is intentionally reconsidered.
+- Wider platform/device support beyond Samsung Tizen after the Samsung TV product is stable.

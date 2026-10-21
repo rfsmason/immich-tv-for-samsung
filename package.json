@@ -1,0 +1,46 @@
+{
+  "name": "immich-tv-for-samsung",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "A Samsung Tizen TV client for browsing an Immich library from the sofa.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-app.mjs",
+    "build:debug": "node scripts/build-app.mjs --debug",
+    "check": "node scripts/check-static-app.mjs && node scripts/check-js-compat.mjs --bundle",
+    "format": "prettier --write . && eslint . --fix",
+    "format:check": "prettier --check .",
+    "lint": "eslint . && npm run lint:compat",
+    "lint:compat": "node scripts/check-css-compat.mjs && node scripts/check-js-compat.mjs",
+    "preview": "npm run build && node scripts/serve-preview.mjs --root dist",
+    "preview:restart": "node scripts/restart-preview.mjs",
+    "stage:tizen": "npm run build && node scripts/package-tizen.mjs --stage-only",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "tizen:deploy": "node scripts/deploy-tizen.mjs",
+    "tizen:devices": "sdb devices",
+    "tizen:package": "npm run build && node scripts/package-tizen.mjs",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.capture.json",
+    "capture": "node scripts/capture.mjs"
+  },
+  "engines": {
+    "node": ">=22.22.0 <23",
+    "npm": ">=10"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "5.0.3",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.12.0",
+    "eslint-plugin-compat": "7.0.2",
+    "happy-dom": "21.0.1",
+    "playwright": "1.64.1",
+    "prettier": "3.9.10",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^5.0.3"
+  },
+  "browserslist": [
+    "chrome 63"
+  ]
+}

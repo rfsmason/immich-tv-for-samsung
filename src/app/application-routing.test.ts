@@ -244,6 +244,42 @@ describe("application routing", () => {
     expect(active()).toBe(rail("home"));
   });
 
+  it("ignores remote keys behind the splash, then focuses Home in the rail on reveal", async () => {
+    let releaseMemories!: () => void;
+    await start({
+      overrides: {
+        loadMemories: vi.fn(
+          () =>
+            new Promise<[]>((resolve) => {
+              releaseMemories = () => resolve([]);
+            })
+        )
+      },
+      waitForReveal: false
+    });
+    await vi.waitFor(() => expect(releaseMemories).toBeTypeOf("function"));
+
+    // Back, then Down and OK (which would open Photos), then Back again
+    // (which would open the exit dialog), all while the splash is up.
+    for (const key of [remoteKeys.back, remoteKeys.down, remoteKeys.enter, remoteKeys.back]) {
+      const event = pressKey(key);
+      expect(event.defaultPrevented).toBe(true);
+    }
+    expect(byId("exit-dialog").hidden).toBe(true);
+    expect(byId("splash-screen").hidden).toBe(false);
+    expect(byId("home-screen").hidden).toBe(false);
+
+    releaseMemories();
+    await vi.waitFor(() => expect(byId("splash-screen").hidden).toBe(true));
+    expect(active()).toBe(rail("home"));
+    expect(byId("exit-dialog").hidden).toBe(true);
+    expect(byId("album-detail-screen").hidden).toBe(true);
+
+    // Keys work normally once Home is showing.
+    pressKey(remoteKeys.down);
+    expect(active()).toBe(rail("photos"));
+  });
+
   it("shows Home after 10 seconds even if a rail is still loading", async () => {
     vi.useFakeTimers();
     try {

@@ -414,7 +414,8 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
   function showHomeBehindSplash(): void {
     let revealed = false;
     const reveal = () => {
-      if (revealed || destroyed) {
+      // Only Home, and only once: by now something else may be showing.
+      if (revealed || destroyed || route?.kind !== "destination" || route.destination !== "home") {
         return;
       }
 

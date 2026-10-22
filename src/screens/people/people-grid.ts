@@ -45,9 +45,9 @@ export type PeopleGridElements = {
 };
 
 export type PeopleGridOptions = {
-  // Adds a screen's own state to a card, such as the picker's selection.
-  // Adds a screen's own state to a card. It runs again on cards that stay on
-  // screen, so it must also remove that state when it no longer applies.
+  // Adds a screen's own state to a card, such as the picker's selection. It
+  // runs again on cards that stay on screen, so it must also remove that state
+  // when it no longer applies.
   decorateCard?(card: HTMLButtonElement, person: Person): void;
   documentRef?: Document;
   elements: PeopleGridElements;

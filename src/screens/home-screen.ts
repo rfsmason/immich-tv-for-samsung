@@ -103,6 +103,18 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
   elements.recentlyViewedRail.addEventListener("click", handleRailClick);
   elements.memoriesRail.addEventListener("click", handleRailClick);
 
+  // Waits for the latest load: if Home reloads meanwhile (a refresh, or a
+  // resume), it waits for that one too.
+  function whenLoaded(): Promise<void> {
+    const current = state.homeLoad;
+
+    if (!current) {
+      return Promise.resolve();
+    }
+
+    return current.then(() => (state.homeLoad === current ? undefined : whenLoaded()));
+  }
+
   return {
     destroy() {
       documentRef.removeEventListener("keydown", handleDocumentKeydown);
@@ -167,9 +179,7 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
       resetHomeRails(state);
       state.refreshPending = true;
     },
-    whenLoaded() {
-      return state.homeLoad || Promise.resolve();
-    },
+    whenLoaded,
     show() {
       elements.root.hidden = false;
 

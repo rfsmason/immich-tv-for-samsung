@@ -98,6 +98,75 @@ describe("Home loading order", () => {
     controller.destroy();
   });
 
+  it("waits for the latest load when Home reloads before the first one finishes", async () => {
+    const pending: Array<() => void> = [];
+    const hold =
+      <T>(value: T) =>
+      () =>
+        new Promise<T>((resolve) => {
+          pending.push(() => resolve(value));
+        });
+    const releaseAll = async () => {
+      while (pending.length) {
+        pending.shift()!();
+        await flush();
+      }
+    };
+    const documentRef = new TestDocument();
+    const service = {
+      loadAlbums: vi.fn(hold([])),
+      loadAssetThumbnailUrl: vi.fn(async () => null),
+      loadFavoriteAssets: vi.fn(hold(emptyPage)),
+      loadMemories: vi.fn(hold([])),
+      loadMemoriesTotal: vi.fn(async () => 0),
+      loadPeoplePage: vi.fn(hold({ hasMore: false, page: 1, people: [], total: 0 })),
+      loadPersonThumbnailUrl: vi.fn(async () => null),
+      loadRecentlyAddedAssets: vi.fn(hold(emptyPage)),
+      loadVideoAssets: vi.fn(hold(emptyPage)),
+      revokeThumbnailUrl: vi.fn()
+    };
+    const controller = mountHomeScreen({
+      documentRef: documentRef as unknown as Document,
+      history: { loadAssets: vi.fn(hold(emptyPage)) },
+      onBrowseAlbums: vi.fn(),
+      onBrowseMemories: vi.fn(),
+      onBrowsePeople: vi.fn(),
+      onOpenAlbum: vi.fn(),
+      onOpenAssetCollection: vi.fn(),
+      onOpenMemory: vi.fn(),
+      onOpenPerson: vi.fn(),
+      onReturnToShell: vi.fn(),
+      service: service as unknown as AlbumService
+    });
+    let loaded = false;
+
+    controller.show();
+    void controller.whenLoaded().then(() => {
+      loaded = true;
+    });
+    await flush();
+
+    // A reload starts while the first load is still running: its first two
+    // rails (Recently Added, Favourites) are still waiting.
+    expect(pending).toHaveLength(2);
+    controller.refresh();
+    await flush();
+    expect(service.loadRecentlyAddedAssets).toHaveBeenCalledTimes(2);
+    expect(pending).toHaveLength(4);
+
+    // Finishing the first load's requests isn't enough: the newer load is
+    // still running, so Home isn't ready yet.
+    pending.shift()!();
+    pending.shift()!();
+    await flush();
+    expect(loaded).toBe(false);
+
+    await releaseAll();
+    expect(service.loadMemories).toHaveBeenCalled();
+    expect(loaded).toBe(true);
+    controller.destroy();
+  });
+
   it("ranks thumbnails by the focused rail, then distance, then nearness to the focused tile", () => {
     const state = {
       activeRail: "recently-added",

@@ -8,11 +8,13 @@ import {
 } from "../asset-thumbnail-window";
 import { isCurrentGeneration } from "../async-generation";
 import {
+  type HomeRailId,
   type HomeScreenElements,
   type HomeScreenOptions,
   type HomeScreenState,
   createAlbumThumbnailState,
-  createPersonThumbnailState
+  createPersonThumbnailState,
+  homeThumbnailPriority
 } from "./home-model";
 
 // Bounded thumbnail lifecycle for Home rails: load near focus, restore after
@@ -31,6 +33,7 @@ export function loadRecentlyAddedThumbnails(
     onThumbnailLoaded: (asset, index, url) =>
       renderAssetRailThumbnail(elements.recentlyAddedRail, asset, index, url),
     options,
+    railId: "recently-added",
     state,
     thumbnailState: state.recentlyAddedThumbnails
   });
@@ -49,6 +52,7 @@ export function loadRecentlyViewedThumbnails(
     onThumbnailLoaded: (asset, index, url) =>
       renderAssetRailThumbnail(elements.recentlyViewedRail, asset, index, url),
     options,
+    railId: "recently-viewed",
     state,
     thumbnailState: state.recentlyViewedThumbnails
   });
@@ -67,6 +71,7 @@ export function loadFavoritesThumbnails(
     onThumbnailLoaded: (asset, index, url) =>
       renderAssetRailThumbnail(elements.favoritesRail, asset, index, url),
     options,
+    railId: "favorites",
     state,
     thumbnailState: state.favoriteThumbnails
   });
@@ -85,6 +90,7 @@ export function loadVideoThumbnails(
     onThumbnailLoaded: (asset, index, url) =>
       renderAssetRailThumbnail(elements.videosRail, asset, index, url),
     options,
+    railId: "videos",
     state,
     thumbnailState: state.videoThumbnails
   });
@@ -119,6 +125,7 @@ export function loadMemoryThumbnails(
       }
     },
     options,
+    railId: "memories",
     state,
     thumbnailState: state.memoryThumbnails
   });
@@ -130,6 +137,7 @@ export function loadAssetRailThumbnails(input: {
   generation: number;
   onThumbnailLoaded(asset: AlbumAsset, index: number, url: string): void;
   options: HomeScreenOptions;
+  railId: HomeRailId;
   state: HomeScreenState;
   thumbnailState: AssetThumbnailState;
 }): void {
@@ -155,9 +163,20 @@ export function loadAssetRailThumbnails(input: {
     loadThumbnailUrl: (asset) => input.options.service.loadAssetThumbnailUrl(asset),
     onThumbnailLoaded: input.onThumbnailLoaded,
     revokeThumbnailUrl: input.options.service.revokeThumbnailUrl,
+    schedule: (index, run) => scheduleHomeThumbnail(input.state, input.railId, index, run),
     state: input.thumbnailState,
     window
   });
+}
+
+// Every Home thumbnail goes through the one Home-wide queue (ADR 0016).
+function scheduleHomeThumbnail(
+  state: HomeScreenState,
+  railId: HomeRailId,
+  index: number,
+  run: () => Promise<unknown>
+): void {
+  state.thumbnailScheduler.schedule(() => homeThumbnailPriority(state, railId, index), run);
 }
 
 export function loadAlbumThumbnails(
@@ -184,38 +203,52 @@ export function loadAlbumThumbnails(
     }
 
     state.albumThumbnails.thumbnailRequests[album.id] = generation;
-    options.service
-      .loadThumbnailUrl(album)
-      .then((url) => {
-        if (!url) {
-          if (state.albumThumbnails.thumbnailRequests[album.id] === generation) {
-            delete state.albumThumbnails.thumbnailRequests[album.id];
-          }
-          return;
-        }
-
-        if (
-          !isCurrentGeneration(state, generation) ||
-          elements.root.hidden ||
-          state.albumThumbnails.thumbnailRequests[album.id] !== generation ||
-          !state.albumThumbnails.retainedAlbumIds[album.id]
-        ) {
-          options.service.revokeThumbnailUrl(url);
-          if (state.albumThumbnails.thumbnailRequests[album.id] === generation) {
-            delete state.albumThumbnails.thumbnailRequests[album.id];
-          }
-          return;
-        }
-
-        delete state.albumThumbnails.thumbnailRequests[album.id];
-        state.albumThumbnails.thumbnailUrls[album.id] = url;
-        renderAlbumThumbnail(elements, album, index, url);
-      })
-      .catch(() => {
+    scheduleHomeThumbnail(state, "albums", index, () => {
+      // Still wanted? The request may have waited in the queue.
+      if (
+        state.albumThumbnails.thumbnailRequests[album.id] !== generation ||
+        !state.albumThumbnails.retainedAlbumIds[album.id]
+      ) {
         if (state.albumThumbnails.thumbnailRequests[album.id] === generation) {
           delete state.albumThumbnails.thumbnailRequests[album.id];
         }
-      });
+
+        return Promise.resolve();
+      }
+
+      return options.service
+        .loadThumbnailUrl(album)
+        .then((url) => {
+          if (!url) {
+            if (state.albumThumbnails.thumbnailRequests[album.id] === generation) {
+              delete state.albumThumbnails.thumbnailRequests[album.id];
+            }
+            return;
+          }
+
+          if (
+            !isCurrentGeneration(state, generation) ||
+            elements.root.hidden ||
+            state.albumThumbnails.thumbnailRequests[album.id] !== generation ||
+            !state.albumThumbnails.retainedAlbumIds[album.id]
+          ) {
+            options.service.revokeThumbnailUrl(url);
+            if (state.albumThumbnails.thumbnailRequests[album.id] === generation) {
+              delete state.albumThumbnails.thumbnailRequests[album.id];
+            }
+            return;
+          }
+
+          delete state.albumThumbnails.thumbnailRequests[album.id];
+          state.albumThumbnails.thumbnailUrls[album.id] = url;
+          renderAlbumThumbnail(elements, album, index, url);
+        })
+        .catch(() => {
+          if (state.albumThumbnails.thumbnailRequests[album.id] === generation) {
+            delete state.albumThumbnails.thumbnailRequests[album.id];
+          }
+        });
+    });
   }
 }
 
@@ -242,38 +275,52 @@ export function loadPersonThumbnails(
     }
 
     state.personThumbnails.thumbnailRequests[person.id] = generation;
-    options.service
-      .loadPersonThumbnailUrl(person)
-      .then((url) => {
-        if (!url) {
-          if (state.personThumbnails.thumbnailRequests[person.id] === generation) {
-            delete state.personThumbnails.thumbnailRequests[person.id];
-          }
-          return;
-        }
-
-        if (
-          !isCurrentGeneration(state, generation) ||
-          elements.root.hidden ||
-          state.personThumbnails.thumbnailRequests[person.id] !== generation ||
-          !state.personThumbnails.retainedPersonIds[person.id]
-        ) {
-          options.service.revokeThumbnailUrl(url);
-          if (state.personThumbnails.thumbnailRequests[person.id] === generation) {
-            delete state.personThumbnails.thumbnailRequests[person.id];
-          }
-          return;
-        }
-
-        delete state.personThumbnails.thumbnailRequests[person.id];
-        state.personThumbnails.thumbnailUrls[person.id] = url;
-        renderPersonThumbnail(elements, person, index, url);
-      })
-      .catch(() => {
+    scheduleHomeThumbnail(state, "people", index, () => {
+      // Still wanted? The request may have waited in the queue.
+      if (
+        state.personThumbnails.thumbnailRequests[person.id] !== generation ||
+        !state.personThumbnails.retainedPersonIds[person.id]
+      ) {
         if (state.personThumbnails.thumbnailRequests[person.id] === generation) {
           delete state.personThumbnails.thumbnailRequests[person.id];
         }
-      });
+
+        return Promise.resolve();
+      }
+
+      return options.service
+        .loadPersonThumbnailUrl(person)
+        .then((url) => {
+          if (!url) {
+            if (state.personThumbnails.thumbnailRequests[person.id] === generation) {
+              delete state.personThumbnails.thumbnailRequests[person.id];
+            }
+            return;
+          }
+
+          if (
+            !isCurrentGeneration(state, generation) ||
+            elements.root.hidden ||
+            state.personThumbnails.thumbnailRequests[person.id] !== generation ||
+            !state.personThumbnails.retainedPersonIds[person.id]
+          ) {
+            options.service.revokeThumbnailUrl(url);
+            if (state.personThumbnails.thumbnailRequests[person.id] === generation) {
+              delete state.personThumbnails.thumbnailRequests[person.id];
+            }
+            return;
+          }
+
+          delete state.personThumbnails.thumbnailRequests[person.id];
+          state.personThumbnails.thumbnailUrls[person.id] = url;
+          renderPersonThumbnail(elements, person, index, url);
+        })
+        .catch(() => {
+          if (state.personThumbnails.thumbnailRequests[person.id] === generation) {
+            delete state.personThumbnails.thumbnailRequests[person.id];
+          }
+        });
+    });
   }
 }
 

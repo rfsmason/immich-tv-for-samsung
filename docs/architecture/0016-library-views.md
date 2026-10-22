@@ -69,12 +69,14 @@ Against Immich `main` at `f293f09` and release v3.3.3:
 
 - Each library view is the shared collection grid: windowed DOM, bounded thumbnails, 120-asset pages, bounded viewer previews, and no new timers or media.
 - Home now has seven rails, each bounded to 18 items.
-- **Concurrency is unchanged per rail but not Home-wide.** Every asset rail keeps its own thumbnail queue with at most eight requests in flight. Home has always loaded each rail's thumbnails on load, including rails below the fold; that hasn't changed, and Videos behaves the same way. So the Videos rail adds one more bounded queue (at most 8 in flight, 18 in total) and one more JSON request at Home load. A test pins the Videos rail's 8-in-flight and 18-total bounds.
-- A single Home-wide thumbnail cap, or deferring rails below the fold, would need a shared queue. It's recorded as a Milestone 18 carry-over in `docs/project-brief.md` rather than changed here.
+- **Home loads in screen order (update, 22 October 2026, from TV testing).** With seven rails, every rail requested its data at once and each started its own thumbnail queue of up to eight, so Home could ask for 50+ thumbnails against the TV's roughly six connections per server; the order things arrived in was effectively random, and Albums and People had no limit at all. Now:
+  - **Rail data** loads in `homeRailOrder` (Recently Added, Favourites, Videos, People, Recently Viewed, Albums, Memories), two rails at a time (`homeRailDataConcurrency`). `loadHome` resolves once every rail has loaded or failed; the app uses that to reveal Home at launch (ADR 0007 update).
+  - **Thumbnails** for every rail, Albums and People included, share one Home-wide queue (`src/screens/priority-scheduler.ts`) of at most six requests in flight (`homeThumbnailRequestLimit`). When a slot frees, the next request is the one closest to the focused rail (the rail above before the one below), then nearest that rail's focused tile (`homeThumbnailPriority`). Priorities are read at that moment, so moving down Home re-prioritises at once. A queued request re-checks that it's still wanted before it starts. Each rail's own queue and retention rules are unchanged.
+  - This resolves the Milestone 18 carry-over: lower rails no longer wait out their timeouts behind other rails' requests.
+  - Tests pin the order, the two-at-a-time data loading, the six-request cap and the priority rule.
 
 ## Later
 
 - A Library hub, should Home become crowded.
 - More views (screenshots, panoramas, Live Photos only, "On this day" beyond Memories), each a feed plus a header.
 - Playing videos fully during a slideshow.
-- A Home-wide thumbnail cap.

@@ -571,7 +571,7 @@ Carry-over notes from the Milestone 11.5 review (16 October 2026):
 
 Carry-over notes from the Milestone 14 review (21 October 2026):
 
-- **Home thumbnail concurrency.** Each Home asset rail has its own thumbnail queue with up to eight requests in flight, so with the Videos rail Home can ask for far more thumbnails at once than the TV's roughly six connections per host can carry. The real risk is queuing: a thumbnail's 30-second timeout includes time spent waiting behind other rails, so on a slow server the lower rails can time out. Replace the per-rail queues with one queue shared across Home (ADR 0016, "Resource bounds and Home concurrency").
+- **Home thumbnail concurrency. Resolved on 22 October 2026:** Home now loads rail data in screen order and shares one six-request thumbnail queue across every rail, nearest the focused rail first (ADR 0016, "Resource bounds and Home concurrency").
 
 Success criterion: the project is no longer merely a successful development application; it is technically and operationally suitable for sustained everyday use and, if desired, preparation for public distribution.
 
@@ -611,3 +611,4 @@ When making UI decisions:
 - Richer slideshow transitions and display options, provided they remain performant on Tizen 5.0.
 - Optional writable operations such as Favorite/unfavorite only if the read-only product boundary is intentionally reconsidered.
 - Wider platform/device support beyond Samsung Tizen after the Samsung TV product is stable.
+- An animated version of the Immich TV logo for the splash screen, built from the existing artwork, provided it stays smooth and light on Tizen 5.0.

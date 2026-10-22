@@ -66,21 +66,34 @@ export function mountPeoplePicker(options: PeoplePickerOptions): PeoplePickerCon
   }
 
   const grid = mountPeopleGrid({
+    // Runs again on cards that stay on screen, so it clears as well as sets.
     decorateCard(card, person) {
-      if (!isSelected(person.id)) {
-        card.setAttribute("aria-pressed", "false");
+      const chosen = isSelected(person.id);
+      const check = card.querySelector(".person-check");
+
+      card.setAttribute("aria-pressed", chosen ? "true" : "false");
+
+      if (!chosen) {
+        card.removeAttribute("data-selected");
+
+        if (check) {
+          card.removeChild(check);
+        }
+
         return;
       }
 
-      const check = documentRef.createElement("span");
-
-      check.className = "person-check";
-      check.setAttribute("aria-hidden", "true");
-      check.textContent = "✓";
-      card.setAttribute("aria-pressed", "true");
       card.setAttribute("data-selected", "true");
       card.setAttribute("aria-label", `${card.getAttribute("aria-label") || ""}, selected`);
-      card.appendChild(check);
+
+      if (!check) {
+        const mark = documentRef.createElement("span");
+
+        mark.className = "person-check";
+        mark.setAttribute("aria-hidden", "true");
+        mark.textContent = "✓";
+        card.appendChild(mark);
+      }
     },
     documentRef,
     elements: {

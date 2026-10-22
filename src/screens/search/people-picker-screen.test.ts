@@ -14,7 +14,7 @@ const person = (index: number): Person => ({
 const choice = (index: number) => ({ id: `person-${index}`, name: `Person ${index}` });
 let controller: PeoplePickerController | null = null;
 
-function setup(total = 200) {
+function setup(total = 200, withFaces = false) {
   const people = Array.from({ length: total }, (_, index) => person(index));
   const loadPeoplePage = vi.fn(async (page: number, size: number): Promise<PeoplePage> => ({
     hasMore: page * size < total,
@@ -28,7 +28,9 @@ function setup(total = 200) {
     onDone,
     service: {
       loadPeoplePage,
-      loadPersonThumbnailUrl: vi.fn(async () => null),
+      loadPersonThumbnailUrl: vi.fn(async ({ id }: Pick<Person, "id">) =>
+        withFaces ? `blob:${id}` : null
+      ),
       revokeThumbnailUrl: vi.fn()
     }
   });
@@ -65,6 +67,53 @@ afterEach(() => {
 });
 
 describe("Search people picker", () => {
+  it("keeps cards and their faces when focus moves, so faces don't flicker", async () => {
+    const f = setup(200, true);
+    controller!.open([]);
+    await f.settled();
+    await vi.waitFor(() => expect(f.card("person-1")?.querySelector("img")).toBeTruthy());
+    const card = f.card("person-1")!;
+    const face = card.querySelector("img");
+
+    await f.press(remoteKeys.right);
+    await f.press(remoteKeys.down, 2);
+    await f.press(remoteKeys.up);
+
+    expect(f.focusedId()).toBe("person-7");
+    expect(f.card("person-1")).toBe(card);
+    expect(card.querySelector("img")).toBe(face);
+    expect(card.getAttribute("data-person-index")).toBe("1");
+  });
+
+  it("marks and unmarks a person on the same card, without rebuilding it", async () => {
+    const f = setup();
+    controller!.open([]);
+    await f.settled();
+    await f.press(remoteKeys.right);
+    const card = f.card("person-1")!;
+
+    pressKey(remoteKeys.enter);
+    expect(f.card("person-1")).toBe(card);
+    expect(card.getAttribute("data-selected")).toBe("true");
+    expect(card.getAttribute("aria-pressed")).toBe("true");
+    expect(card.querySelectorAll(".person-check")).toHaveLength(1);
+    expect(card.getAttribute("aria-label")).toBe("Person 1, selected");
+
+    pressKey(remoteKeys.enter);
+    expect(f.card("person-1")).toBe(card);
+    expect(card.hasAttribute("data-selected")).toBe(false);
+    expect(card.getAttribute("aria-pressed")).toBe("false");
+    expect(card.querySelector(".person-check")).toBeNull();
+    expect(card.getAttribute("aria-label")).toBe("Person 1");
+    expect(document.activeElement).toBe(card);
+  });
+
+  it("shows that Back finishes the picker, like Done", () => {
+    setup();
+    const hints = byId("search-people-screen").querySelector(".key-hints")?.textContent || "";
+    expect(hints.replace(/\s+/g, " ").trim()).toBe("OK Select Back Done");
+  });
+
   it("only focuses its status line once it has text, so focus is never lost while loading", async () => {
     // An empty status line is hidden by the stylesheet and cannot take focus.
     const f = setup();

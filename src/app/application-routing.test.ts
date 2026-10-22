@@ -129,7 +129,13 @@ function createServices(
   return { albumService, connectionService, logger };
 }
 
-function start(options: Parameters<typeof createServices>[0] & { history?: AlbumAsset[] } = {}) {
+async function start(
+  options: Parameters<typeof createServices>[0] & {
+    history?: AlbumAsset[];
+    // false for a startup that should leave the splash up (a failure).
+    waitForReveal?: boolean;
+  } = {}
+) {
   const services = createServices(options);
   const history = options.history || [];
   const viewingHistory = {
@@ -149,6 +155,11 @@ function start(options: Parameters<typeof createServices>[0] & { history?: Album
     viewingHistory
   });
   application.start();
+  // Home opens behind the splash and appears once its rails have loaded;
+  // Settings (no connection) appears at once.
+  if (options.waitForReveal !== false) {
+    await vi.waitFor(() => expect(byId("splash-screen").hidden).toBe(true));
+  }
 
   return { ...services, viewingHistory };
 }
@@ -195,7 +206,7 @@ afterEach(() => {
 
 describe("application routing", () => {
   it("reaches Refresh with Down after the rail has opened Settings", async () => {
-    start();
+    await start();
     await homeLoaded();
     for (let step = 0; step < 4; step += 1) pressKey(remoteKeys.down);
     expect(byId("connection-screen").hidden).toBe(false);
@@ -208,22 +219,101 @@ describe("application routing", () => {
     expect(active()).toBe(rail("settings"));
   });
 
+  it("keeps the splash up until every Home rail has loaded, then focuses Home in the rail", async () => {
+    let releaseMemories!: () => void;
+    await start({
+      overrides: {
+        loadMemories: vi.fn(
+          () =>
+            new Promise<[]>((resolve) => {
+              releaseMemories = () => resolve([]);
+            })
+        )
+      },
+      waitForReveal: false
+    });
+
+    await vi.waitFor(() => expect(releaseMemories).toBeTypeOf("function"));
+    expect(byId("splash-screen").hidden).toBe(false);
+    expect(byId("app-shell").hidden).toBe(true);
+    expect(byId("splash-status").textContent).toBe("Loading your library...");
+
+    releaseMemories();
+    await vi.waitFor(() => expect(byId("splash-screen").hidden).toBe(true));
+    expect(byId("app-shell").hidden).toBe(false);
+    expect(active()).toBe(rail("home"));
+  });
+
+  it("ignores remote keys behind the splash, then focuses Home in the rail on reveal", async () => {
+    let releaseMemories!: () => void;
+    await start({
+      overrides: {
+        loadMemories: vi.fn(
+          () =>
+            new Promise<[]>((resolve) => {
+              releaseMemories = () => resolve([]);
+            })
+        )
+      },
+      waitForReveal: false
+    });
+    await vi.waitFor(() => expect(releaseMemories).toBeTypeOf("function"));
+
+    // Back, then Down and OK (which would open Photos), then Back again
+    // (which would open the exit dialog), all while the splash is up.
+    for (const key of [remoteKeys.back, remoteKeys.down, remoteKeys.enter, remoteKeys.back]) {
+      const event = pressKey(key);
+      expect(event.defaultPrevented).toBe(true);
+    }
+    expect(byId("exit-dialog").hidden).toBe(true);
+    expect(byId("splash-screen").hidden).toBe(false);
+    expect(byId("home-screen").hidden).toBe(false);
+
+    releaseMemories();
+    await vi.waitFor(() => expect(byId("splash-screen").hidden).toBe(true));
+    expect(active()).toBe(rail("home"));
+    expect(byId("exit-dialog").hidden).toBe(true);
+    expect(byId("album-detail-screen").hidden).toBe(true);
+
+    // Keys work normally once Home is showing.
+    pressKey(remoteKeys.down);
+    expect(active()).toBe(rail("photos"));
+  });
+
+  it("shows Home after 10 seconds even if a rail is still loading", async () => {
+    vi.useFakeTimers();
+    try {
+      await start({
+        overrides: { loadMemories: vi.fn(() => new Promise<never>(() => undefined)) },
+        waitForReveal: false
+      });
+      await vi.advanceTimersByTimeAsync(9000);
+      expect(byId("splash-screen").hidden).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(byId("splash-screen").hidden).toBe(true);
+      expect(active()).toBe(rail("home"));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("starts on Home with the rail focused, or on Settings without a connection", async () => {
-    start();
+    await start();
     expect(byId("home-screen").hidden).toBe(false);
     expect(active()).toBe(rail("home"));
     expect(rail("home").getAttribute("aria-current")).toBe("page");
     application!.destroy();
 
     loadAppMarkup();
-    start({ connected: false });
+    await start({ connected: false });
     expect(byId("connection-screen").hidden).toBe(false);
     expect(byId("home-screen").hidden).toBe(true);
     expect(byId("connection-back").hidden).toBe(true);
   });
 
   it("continues a rail with more items in its summary from See more", async () => {
-    start({
+    await start({
       overrides: {
         loadFavoriteAssets: vi.fn(async () => ({
           assets: assets.slice(0, 2),
@@ -273,7 +363,7 @@ describe("application routing", () => {
     ] as const)(
       "Home %s item → view → viewer → Back → Back restores each level",
       async (railId, title, pageLoader) => {
-        const { albumService, viewingHistory } = start({ overrides: moreThanShown });
+        const { albumService, viewingHistory } = await start({ overrides: moreThanShown });
         await focusHomeRail(railId, 1);
         pressKey(remoteKeys.enter);
 
@@ -298,7 +388,7 @@ describe("application routing", () => {
     it.each(["recently-added", "favorites", "videos"] as const)(
       "%s See more opens the view on its first item, and Back returns to See more",
       async (railId) => {
-        start({ overrides: moreThanShown });
+        await start({ overrides: moreThanShown });
         await focusHomeRail(railId, 2);
         expect(active()?.getAttribute("aria-label")).toMatch(/^See more /);
         pressKey(remoteKeys.enter);
@@ -317,7 +407,7 @@ describe("application routing", () => {
   });
 
   it("Refresh on the rail reloads everything and starts again on Home, as at launch", async () => {
-    const { albumService } = start();
+    const { albumService } = await start();
     await homeLoaded();
     pressKey(remoteKeys.right);
     const launchTile = homeTile();
@@ -350,7 +440,7 @@ describe("application routing", () => {
   });
 
   it("Photos has no Back control; Left and Back return to the rail", async () => {
-    start();
+    await start();
     pressKey(remoteKeys.down);
     await vi.waitFor(() =>
       expect(byId("album-assets-grid").querySelectorAll("[data-asset-index]")).toHaveLength(2)
@@ -370,7 +460,7 @@ describe("application routing", () => {
       name: `Album ${index}`,
       thumbnailAssetId: null
     }));
-    start({ overrides: { loadAlbums: vi.fn(async () => manyAlbums) } });
+    await start({ overrides: { loadAlbums: vi.fn(async () => manyAlbums) } });
     await focusHomeRail("albums", 18);
     expect(active()?.getAttribute("aria-label")).toBe("See more Albums");
     pressKey(remoteKeys.enter);
@@ -381,7 +471,7 @@ describe("application routing", () => {
   });
 
   it("does not offer See more on a rail that already shows everything", async () => {
-    start();
+    await start();
     await homeLoaded();
     for (const railId of ["recently-added", "favorites", "albums"]) {
       expect(byId(`home-${railId}-rail`).querySelector('[aria-label^="See more"]')).toBeNull();
@@ -389,7 +479,7 @@ describe("application routing", () => {
   });
 
   it("keeps each Home rail's own selection when moving between rails", async () => {
-    start();
+    await start();
     await focusHomeRail("recently-added", 2);
     pressKey(remoteKeys.down);
     expect(homeTile()).toEqual(["favorites", "0"]);
@@ -401,7 +491,7 @@ describe("application routing", () => {
   });
 
   it("Home → Album → viewer → Back → Back restores the originating album tile", async () => {
-    start();
+    await start();
     await focusHomeRail("albums", 1);
     pressKey(remoteKeys.enter);
 
@@ -429,7 +519,7 @@ describe("application routing", () => {
   });
 
   it("Home → People → viewer → Back → Back restores the person tile", async () => {
-    const { albumService, viewingHistory } = start();
+    const { albumService, viewingHistory } = await start();
     await focusHomeRail("people");
     pressKey(remoteKeys.enter);
 
@@ -465,7 +555,7 @@ describe("application routing", () => {
       people: everyone.slice((page - 1) * size, page * size),
       total: everyone.length
     }));
-    const { albumService, viewingHistory } = start({ overrides: { loadPeoplePage } });
+    const { albumService, viewingHistory } = await start({ overrides: { loadPeoplePage } });
     await focusHomeRail("people", 18);
     expect(active()?.getAttribute("aria-label")).toBe("See more People");
     pressKey(remoteKeys.enter);
@@ -513,7 +603,7 @@ describe("application routing", () => {
   ])(
     "Home → %s opens its summary on the chosen item, then the viewer, then Back to the tile",
     async (railId) => {
-      start();
+      await start();
       await focusHomeRail(railId);
       pressKey(remoteKeys.right);
       pressKey(remoteKeys.enter);
@@ -535,7 +625,7 @@ describe("application routing", () => {
   );
 
   it("lazy loads a Home collection beyond its rail without repeating rail items", async () => {
-    const { albumService } = start();
+    const { albumService } = await start();
     await focusHomeRail("favorites");
     pressKey(remoteKeys.enter);
 
@@ -558,7 +648,7 @@ describe("application routing", () => {
 
   it("opens Recently Viewed on the chosen item with its whole bounded history", async () => {
     const history = Array.from({ length: 30 }, (_, index) => asset(`h${index}`));
-    const { viewingHistory } = start({ history });
+    const { viewingHistory } = await start({ history });
     await focusHomeRail("recently-viewed", 2);
     pressKey(remoteKeys.enter);
 
@@ -570,7 +660,7 @@ describe("application routing", () => {
   });
 
   it("Home → Memory preview → viewer → Back → Back restores the Memory tile", async () => {
-    const { albumService } = start();
+    const { albumService } = await start();
     await focusHomeRail("memories");
     pressKey(remoteKeys.enter);
 
@@ -585,7 +675,7 @@ describe("application routing", () => {
   });
 
   it("Home → View all Memories → Memory → Back → Back restores the card, then the View all tile", async () => {
-    start();
+    await start();
     await focusHomeRail("memories", 1);
     pressKey(remoteKeys.enter);
 
@@ -612,7 +702,7 @@ describe("application routing", () => {
   });
 
   it("hides Memory children when the rail changes destination from inside a Memory", async () => {
-    start();
+    await start();
     await focusHomeRail("memories", 1);
     pressKey(remoteKeys.enter);
     await vi.waitFor(() =>
@@ -636,7 +726,7 @@ describe("application routing", () => {
   });
 
   it("Albums → Album → Back restores the album tile", async () => {
-    start();
+    await start();
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.down);
     expect(active()).toBe(rail("albums"));
@@ -659,7 +749,7 @@ describe("application routing", () => {
   });
 
   it("collapses the rail whenever focus is in Photos, and expands it back on the rail", async () => {
-    start();
+    await start();
     pressKey(remoteKeys.down);
     expect(active()).toBe(rail("photos"));
     await vi.waitFor(() =>
@@ -689,7 +779,7 @@ describe("application routing", () => {
   const searchControl = () => active()?.getAttribute("data-search-control") ?? null;
 
   it("opens Search from the rail on Add people, and Left returns to the rail", async () => {
-    start();
+    await start();
     await openSearch();
 
     expect(byId("home-screen").hidden).toBe(true);
@@ -699,7 +789,7 @@ describe("application routing", () => {
   });
 
   it("Search → picker → results → viewer → Back → Back restores each step and keeps the criteria", async () => {
-    const { albumService, viewingHistory } = start();
+    const { albumService, viewingHistory } = await start();
     await openSearch();
     pressKey(remoteKeys.enter);
 
@@ -741,7 +831,7 @@ describe("application routing", () => {
   });
 
   it("explains empty search results, and Back returns to the unchanged criteria", async () => {
-    start({
+    await start({
       overrides: {
         loadSearchAssetsPage: vi.fn(async () => ({ assets: [], nextPageToken: null, total: null }))
       }
@@ -780,7 +870,7 @@ describe("application routing", () => {
         nextPageToken: null,
         total: null
       }));
-    start({ overrides: { loadSearchAssetsPage } });
+    await start({ overrides: { loadSearchAssetsPage } });
     await openSearch();
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
@@ -802,7 +892,7 @@ describe("application routing", () => {
 
   it("forgets Search criteria after connection settings are saved", async () => {
     // Without saved settings the app opens Settings, whose Save always applies.
-    start({ connected: false });
+    await start({ connected: false });
     await openSearch();
     pressKey(remoteKeys.enter);
     await vi.waitFor(() => expect(active()?.getAttribute("data-person-id")).toBe("person-1"));
@@ -821,8 +911,8 @@ describe("application routing", () => {
     expect(byId("search-panel").textContent).not.toContain("Alex");
   });
 
-  it("guards unsaved Settings on the rail and on root Back, and Back from Settings returns to the previous destination", () => {
-    start();
+  it("guards unsaved Settings on the rail and on root Back, and Back from Settings returns to the previous destination", async () => {
+    await start();
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.down);
@@ -857,8 +947,8 @@ describe("application routing", () => {
     expect(active()).toBe(rail("search"));
   });
 
-  it("asks before exiting on root Back and exits through the lifecycle", () => {
-    start();
+  it("asks before exiting on root Back and exits through the lifecycle", async () => {
+    await start();
     pressKey(remoteKeys.back);
 
     expect(byId("exit-dialog").hidden).toBe(false);
@@ -868,7 +958,7 @@ describe("application routing", () => {
   });
 
   it("pauses an open slideshow when the TV hides the app", async () => {
-    start();
+    await start();
     await focusHomeRail("recently-added");
     pressKey(remoteKeys.enter);
     pressKey(remoteKeys.enter);
@@ -882,7 +972,7 @@ describe("application routing", () => {
   });
 
   it("returns Home and refreshes after Settings are saved", async () => {
-    const { albumService } = start({ connected: false });
+    const { albumService } = await start({ connected: false });
     byId("settings-save").focus();
     pressKey(remoteKeys.enter);
 
@@ -890,12 +980,13 @@ describe("application routing", () => {
     await vi.waitFor(() => expect(albumService.loadAlbums).toHaveBeenCalled());
   });
 
-  it("reports a startup failure on the splash and logs it without credentials", () => {
+  it("reports a startup failure on the splash and logs it without credentials", async () => {
     const failure = new Error("Storage unavailable");
-    const services = start({
+    const services = await start({
       loadSettings: () => {
         throw failure;
-      }
+      },
+      waitForReveal: false
     });
 
     expect(byId("splash-error").textContent).toBe("Storage unavailable");

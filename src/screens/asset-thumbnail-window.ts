@@ -28,6 +28,9 @@ export type ReconcileAssetThumbnailOptions<T extends ThumbnailItem = AlbumAsset>
   loadThumbnailUrl(asset: T): Promise<string | null>;
   onThumbnailLoaded(asset: T, index: number, url: string): void;
   revokeThumbnailUrl(url: string): void;
+  // Optional: hands each request to a scheduler shared with other queues (for
+  // example every Home rail), which decides when it starts.
+  schedule?(index: number, run: () => Promise<void>): void;
   state: AssetThumbnailState<T>;
   window: AssetIndexWindow;
 };
@@ -103,20 +106,8 @@ function pumpThumbnailQueue<T extends ThumbnailItem>(
 
     options.state.activeThumbnailRequests += 1;
 
-    options
-      .loadThumbnailUrl(request.asset)
-      .then(
-        (url) => {
-          handleThumbnailLoaded(options, request.asset, request.index, url);
-        },
-        () => {
-          if (options.state.thumbnailRequests[request.asset.id] === request.generation) {
-            delete options.state.thumbnailRequests[request.asset.id];
-          }
-          // Missing thumbnails should not prevent remote-control browsing.
-        }
-      )
-      .then(
+    const run = () =>
+      loadThumbnail(options, request).then(
         () => {
           completeThumbnailRequest(options);
         },
@@ -124,7 +115,42 @@ function pumpThumbnailQueue<T extends ThumbnailItem>(
           completeThumbnailRequest(options);
         }
       );
+
+    if (options.schedule) {
+      options.schedule(request.index, run);
+    } else {
+      void run();
+    }
   }
+}
+
+// A scheduled request can wait; it only loads if it is still wanted then.
+function loadThumbnail<T extends ThumbnailItem>(
+  options: ReconcileAssetThumbnailOptions<T>,
+  request: AssetThumbnailRequest<T>
+): Promise<void> {
+  if (
+    options.state.thumbnailRequests[request.asset.id] !== request.generation ||
+    !options.state.retainedAssetIds[request.asset.id]
+  ) {
+    if (options.state.thumbnailRequests[request.asset.id] === request.generation) {
+      delete options.state.thumbnailRequests[request.asset.id];
+    }
+
+    return Promise.resolve();
+  }
+
+  return options.loadThumbnailUrl(request.asset).then(
+    (url) => {
+      handleThumbnailLoaded(options, request.asset, request.index, url);
+    },
+    () => {
+      if (options.state.thumbnailRequests[request.asset.id] === request.generation) {
+        delete options.state.thumbnailRequests[request.asset.id];
+      }
+      // Missing thumbnails should not prevent remote-control browsing.
+    }
+  );
 }
 
 function completeThumbnailRequest<T extends ThumbnailItem>(

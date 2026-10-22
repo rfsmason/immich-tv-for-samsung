@@ -14,6 +14,9 @@ export type ShellContentFocusController = {
 
 export type DestinationActivationOptions = {
   bypassGuard?: boolean;
+  // false keeps the splash up and leaves focus alone, so a destination can
+  // load behind it; revealApp() then shows it.
+  reveal?: boolean;
 };
 
 export type ApplicationShellOptions = {
@@ -43,6 +46,9 @@ type ApplicationShellElements = {
 
 type ApplicationShellState = {
   activeDestination: TopLevelDestinationId | null;
+  // A destination is loading behind the splash (activated with reveal false);
+  // remote keys are ignored until revealApp().
+  loadingBehindSplash: boolean;
   contentFocusController: ShellContentFocusController | null;
   previousTopLevelDestination: TopLevelDestinationId | null;
 };
@@ -58,8 +64,11 @@ export type ApplicationShellController = {
   focusActiveContent(): void;
   focusActiveDestinationNav(): void;
   hideSplash(): void;
+  // Hides the splash and focuses the active destination in the rail.
+  revealApp(): void;
   routeBackFromSettings(options?: DestinationActivationOptions): void;
   setContentFocusController(controller: ShellContentFocusController | null): void;
+  setSplashStatus(message: string): void;
   showSplashError(message: string): void;
 };
 
@@ -150,6 +159,7 @@ export function mountApplicationShell(
   const state: ApplicationShellState = {
     activeDestination: null,
     contentFocusController: null,
+    loadingBehindSplash: false,
     previousTopLevelDestination: null
   };
 
@@ -212,6 +222,22 @@ export function mountApplicationShell(
     activateDestination(destination, elements, options, state);
   };
 
+  // While a destination loads behind the splash, remote keys must not reach
+  // it: Back would focus the hidden rail, OK could open another destination,
+  // and a second Back would open the exit dialog under the splash. Listening
+  // on the window in the capture phase runs before every document listener.
+  const keyTarget: EventTarget = documentRef.defaultView || documentRef;
+  const handleKeysBehindSplash = (event: Event) => {
+    if (!state.loadingBehindSplash) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  };
+
+  keyTarget.addEventListener("keydown", handleKeysBehindSplash, true);
+  keyTarget.addEventListener("keyup", handleKeysBehindSplash, true);
   documentRef.addEventListener("keydown", handleRootBack, true);
   documentRef.addEventListener("keydown", handleRailKeydown);
   documentRef.addEventListener("focusin", handleFocusIn);
@@ -225,6 +251,8 @@ export function mountApplicationShell(
       elements.root.setAttribute("data-rail", "compact");
     },
     destroy() {
+      keyTarget.removeEventListener("keydown", handleKeysBehindSplash, true);
+      keyTarget.removeEventListener("keyup", handleKeysBehindSplash, true);
       documentRef.removeEventListener("keydown", handleRootBack, true);
       documentRef.removeEventListener("keydown", handleRailKeydown);
       documentRef.removeEventListener("focusin", handleFocusIn);
@@ -250,7 +278,18 @@ export function mountApplicationShell(
       focusDestinationNav(elements, state.activeDestination);
     },
     hideSplash() {
+      state.loadingBehindSplash = false;
       hideSplash(elements);
+    },
+    // Does nothing once the splash has gone, so it can't move focus later.
+    revealApp() {
+      if (elements.splash.hidden) {
+        return;
+      }
+
+      state.loadingBehindSplash = false;
+      hideSplash(elements);
+      focusDestinationNav(elements, state.activeDestination);
     },
     routeBackFromSettings(activationOptions = {}) {
       const destination = getSettingsBackDestination(state.previousTopLevelDestination);
@@ -260,7 +299,11 @@ export function mountApplicationShell(
     setContentFocusController(controller) {
       state.contentFocusController = controller;
     },
+    setSplashStatus(message) {
+      elements.splashStatus.textContent = message;
+    },
     showSplashError(message) {
+      state.loadingBehindSplash = false;
       elements.splashStatus.textContent = "Startup needs attention.";
       elements.splashError.textContent = message;
       elements.splash.removeAttribute("data-state");
@@ -396,7 +439,15 @@ function activateDestination(
   }
 
   state.activeDestination = destination;
-  hideSplash(elements);
+  const reveal = activationOptions.reveal !== false;
+
+  if (reveal) {
+    state.loadingBehindSplash = false;
+    hideSplash(elements);
+  } else if (!elements.splash.hidden) {
+    state.loadingBehindSplash = true;
+  }
+
   resetPageScroll();
 
   topLevelDestinations.forEach((screenDestination) => {
@@ -410,7 +461,10 @@ function activateDestination(
   });
 
   updateRailSelection(elements, destination);
-  focusDestinationNav(elements, destination);
+  if (reveal) {
+    focusDestinationNav(elements, destination);
+  }
+
   options.onDestinationActivated?.(destination);
 }
 

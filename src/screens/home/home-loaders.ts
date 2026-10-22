@@ -2,11 +2,14 @@ import { localMemoryDate } from "../../domain/home";
 import { toUserMessage } from "../../errors/app-error";
 import { beginAsyncGeneration, isCurrentGeneration } from "../async-generation";
 import {
+  type HomeRailId,
   type HomeScreenElements,
   type HomeScreenOptions,
   type HomeScreenState,
   albumLimit,
   favoriteAssetLimit,
+  homeRailDataConcurrency,
+  homeRailOrder,
   videoAssetLimit,
   memoryLimit,
   personLimit,
@@ -19,14 +22,16 @@ import { focusActiveRailItem } from "./home-navigation";
 import { renderHome } from "./home-rails";
 import { cleanupHomeThumbnails } from "./home-thumbnails";
 
-// Independent loading of each Home rail with focus restoration by item id.
+// Loading of each Home rail with focus restoration by item id. Rails load in
+// screen order, a few at a time, so the rails on screen fill first (ADR 0016).
 
+// Resolves once every rail of this load has loaded or failed.
 export function loadHome(
   elements: HomeScreenElements,
   options: HomeScreenOptions,
   state: HomeScreenState,
   shouldFocus: boolean
-): void {
+): Promise<void> {
   const generation = beginAsyncGeneration(state);
   const previousRecentlyAddedAssetId = readRailFocusId(state.recentlyAdded);
   const previousRecentlyViewedAssetId = readRailFocusId(state.recentlyViewed);
@@ -54,34 +59,77 @@ export function loadHome(
   cleanupHomeThumbnails(options, state);
   renderHome(elements, options, state, generation);
 
-  void loadRecentlyAddedRail(
-    elements,
-    options,
-    state,
-    generation,
-    previousRecentlyAddedAssetId,
-    shouldFocus
+  const railLoaders: Record<HomeRailId, () => Promise<void>> = {
+    albums: () =>
+      loadAlbumsRail(elements, options, state, generation, previousAlbumId, shouldFocus),
+    favorites: () =>
+      loadFavoritesRail(elements, options, state, generation, previousFavoriteAssetId, shouldFocus),
+    memories: () =>
+      loadMemoriesRail(elements, options, state, generation, previousMemoryId, shouldFocus),
+    people: () =>
+      loadPeopleRail(elements, options, state, generation, previousPersonId, shouldFocus),
+    "recently-added": () =>
+      loadRecentlyAddedRail(
+        elements,
+        options,
+        state,
+        generation,
+        previousRecentlyAddedAssetId,
+        shouldFocus
+      ),
+    "recently-viewed": () =>
+      loadRecentlyViewedRail(
+        elements,
+        options,
+        state,
+        generation,
+        previousRecentlyViewedAssetId,
+        shouldFocus
+      ),
+    videos: () =>
+      loadVideosRail(elements, options, state, generation, previousVideoAssetId, shouldFocus)
+  };
+
+  return runInOrder(
+    homeRailOrder.map((railId) => railLoaders[railId]),
+    homeRailDataConcurrency,
+    () => isCurrentGeneration(state, generation)
   );
-  void loadFavoritesRail(
-    elements,
-    options,
-    state,
-    generation,
-    previousFavoriteAssetId,
-    shouldFocus
-  );
-  void loadVideosRail(elements, options, state, generation, previousVideoAssetId, shouldFocus);
-  void loadPeopleRail(elements, options, state, generation, previousPersonId, shouldFocus);
-  void loadRecentlyViewedRail(
-    elements,
-    options,
-    state,
-    generation,
-    previousRecentlyViewedAssetId,
-    shouldFocus
-  );
-  void loadAlbumsRail(elements, options, state, generation, previousAlbumId, shouldFocus);
-  void loadMemoriesRail(elements, options, state, generation, previousMemoryId, shouldFocus);
+}
+
+// Starts tasks in order, at most `limit` at a time. Once `shouldContinue`
+// turns false (a newer load began), no further task starts. Resolves when the
+// started tasks have finished.
+function runInOrder(
+  tasks: Array<() => Promise<void>>,
+  limit: number,
+  shouldContinue: () => boolean
+): Promise<void> {
+  return new Promise((resolve) => {
+    let next = 0;
+    let active = 0;
+
+    const startMore = () => {
+      while (shouldContinue() && active < limit && next < tasks.length) {
+        const task = tasks[next]!;
+
+        next += 1;
+        active += 1;
+        task()
+          .catch(() => undefined)
+          .then(() => {
+            active -= 1;
+            startMore();
+          });
+      }
+
+      if (active === 0 && (next >= tasks.length || !shouldContinue())) {
+        resolve();
+      }
+    };
+
+    startMore();
+  });
 }
 
 export async function loadRecentlyAddedRail(

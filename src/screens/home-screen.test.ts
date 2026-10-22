@@ -3,6 +3,7 @@ import type { AlbumService } from "../app/album-service";
 import type { AlbumAsset, AlbumAssetPage } from "../domain/album";
 import type { Memory, PeoplePage, Person } from "../domain/home";
 import { mountHomeScreen } from "./home-screen";
+import { homeThumbnailRequestLimit } from "./home/home-model";
 
 import { TestDocument } from "../test/document";
 
@@ -233,7 +234,8 @@ describe("Home remote activation", () => {
         f.service.loadAssetThumbnailUrl.mock.calls.filter(([item]) => item.id.startsWith("video-"))
           .length;
 
-      await vi.waitFor(() => expect(videoRequests()).toBe(8));
+      // Every Home rail shares one queue, capped at homeThumbnailRequestLimit.
+      await vi.waitFor(() => expect(videoRequests()).toBe(homeThumbnailRequestLimit));
       while (pending.length) {
         pending.shift()!();
         await Promise.resolve();

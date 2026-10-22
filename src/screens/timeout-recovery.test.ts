@@ -231,7 +231,9 @@ describe("stalled Immich server", () => {
     destroyers.push(screen.destroy);
 
     screen.show();
-    await expireRequests();
+    // Rails load two at a time in screen order, so stalled requests time out
+    // in successive rounds rather than all at once.
+    await vi.advanceTimersByTimeAsync(defaultRequestTimeouts.jsonMs * 8);
 
     for (const rail of ["recently-added", "favorites", "people", "albums", "memories"]) {
       expect(byId(`home-${rail}-status`).getAttribute("data-state")).toBe("error");

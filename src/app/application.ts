@@ -61,10 +61,15 @@ export type Application = {
   start(): void;
 };
 
+// The longest the splash waits for Home's rails at launch (see
+// showHomeBehindSplash).
+const homeRevealLimitMs = 10000;
+
 export function composeApplication(dependencies: ApplicationDependencies): Application {
   const { albumService, connectionService, lifecycle, logger, settingsStore, viewingHistory } =
     dependencies;
   const documentRef = dependencies.documentRef || document;
+  let destroyed = false;
   let route: AppRoute | null = null;
 
   const exitConfirmation = mountExitConfirmation({
@@ -401,6 +406,30 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     collectionScreen.refreshPhotos();
   }
 
+  // At launch, Home loads behind the splash and appears once every rail has
+  // loaded or failed, so it opens complete instead of filling in. A server that
+  // stalls rather than refusing would keep rails waiting for their request
+  // timeouts, so after homeRevealLimitMs Home appears anyway and its last rails
+  // finish on screen. It is revealed once, so a late finish can't move focus.
+  function showHomeBehindSplash(): void {
+    let revealed = false;
+    const reveal = () => {
+      if (revealed || destroyed) {
+        return;
+      }
+
+      revealed = true;
+      documentRef.defaultView?.clearTimeout(limit);
+      shell.revealApp();
+      homeScreen.relayout();
+    };
+    const limit = documentRef.defaultView?.setTimeout(reveal, homeRevealLimitMs);
+
+    shell.setSplashStatus("Loading your library...");
+    shell.activateDestination("home", { reveal: false });
+    void homeScreen.whenLoaded().then(reveal);
+  }
+
   function showSettings(): void {
     shell.expandRail();
     shell.setContentFocusController(null);
@@ -515,6 +544,7 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
 
   return {
     destroy() {
+      destroyed = true;
       exitConfirmation.destroy();
       shell.destroy();
       homeScreen.destroy();
@@ -529,7 +559,7 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     start() {
       try {
         if (albumService.loadSettings()) {
-          showHome();
+          showHomeBehindSplash();
         } else {
           showSettings();
         }

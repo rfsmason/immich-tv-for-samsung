@@ -3,6 +3,7 @@ import type { ViewingHistoryService } from "../../app/viewing-history-service";
 import type { Album, AlbumAsset } from "../../domain/album";
 import type { Memory, Person } from "../../domain/home";
 import type { AssetThumbnailState } from "../asset-thumbnail-window";
+import type { PriorityScheduler } from "../priority-scheduler";
 
 // Home screen data: the seven rails, their bounded item lists and thumbnail
 // state, and small lookups shared by the Home modules (ADR 0009).
@@ -15,6 +16,14 @@ export const favoriteAssetLimit = 18;
 export const videoAssetLimit = 18;
 export const memoryLimit = 18;
 export const personLimit = 18;
+
+// Loading order (ADR 0016). Rail data loads in screen order, two rails at a
+// time, and every rail's thumbnails share one queue of at most six requests,
+// about as many connections as the TV keeps open to one server, so the rails
+// on screen fill first and lower rails never wait out their timeouts behind
+// the rest.
+export const homeRailDataConcurrency = 2;
+export const homeThumbnailRequestLimit = 6;
 
 export type HomeRailId =
   "recently-added" | "favorites" | "videos" | "people" | "recently-viewed" | "albums" | "memories";
@@ -98,6 +107,10 @@ export type AlbumThumbnailState = {
 
 export type HomeScreenState = {
   activeRail: HomeRailId;
+  // Settles once every rail of the latest load has loaded or failed.
+  homeLoad: Promise<void> | null;
+  // One queue for every rail's thumbnails; see homeThumbnailPriority.
+  thumbnailScheduler: PriorityScheduler;
   // A refresh asked for while Home was hidden; it runs on the next show.
   refreshPending: boolean;
   albumThumbnails: AlbumThumbnailState;
@@ -263,6 +276,22 @@ export function readAssetRailTitle(railId: HomeAssetRailId): string {
   }
 
   return "Recently Viewed";
+}
+
+// Thumbnail order across Home: the rail with focus first, then rails by
+// distance from it (the one above before the one below), and within a rail,
+// tiles nearest its focused tile first.
+export function homeThumbnailPriority(
+  state: HomeScreenState,
+  railId: HomeRailId,
+  index: number
+): number {
+  const rail = homeRailOrder.indexOf(railId);
+  const active = homeRailOrder.indexOf(state.activeRail);
+  const railRank = Math.abs(rail - active) * 2 + (rail > active ? 1 : 0);
+  const tileDistance = Math.abs(index - getRailState(state, railId).focusedIndex);
+
+  return railRank * 1000 + tileDistance;
 }
 
 export function getRailState(

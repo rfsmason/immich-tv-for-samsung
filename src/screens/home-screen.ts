@@ -1,6 +1,7 @@
 import { getKeyCode, remoteKeys } from "../platform/tizen/keys";
 import { createAssetThumbnailState } from "./asset-thumbnail-window";
 import { invalidateAsyncGeneration } from "./async-generation";
+import { createPriorityScheduler } from "./priority-scheduler";
 import { loadHome, loadRecentlyViewedRail } from "./home/home-loaders";
 import {
   type HomeScreenElements,
@@ -11,6 +12,7 @@ import {
   createRailState,
   getAssetRailState,
   hasLoadedAnyHomeRail,
+  homeThumbnailRequestLimit,
   isHomeLoading,
   readRailFocusId,
   resetHomeRails
@@ -22,7 +24,7 @@ import {
   isHomeRailNavigationActive,
   moveHomeFocus
 } from "./home/home-navigation";
-import { renderHome } from "./home/home-rails";
+import { alignHomeRails, renderHome } from "./home/home-rails";
 import { cleanupHomeThumbnails } from "./home/home-thumbnails";
 
 // Home: six independently loading, bounded rails that open the shared
@@ -34,10 +36,15 @@ export type HomeScreenController = {
   focusContent(lastViewedAssetId?: string): void;
   hide(): void;
   refresh(): void;
+  // Re-aligns the rails, for example once Home first becomes visible: a
+  // hidden Home has no layout to align against.
+  relayout(): void;
   // Forgets the rails and their focus, as at launch; Home loads afresh when
   // next shown.
   reset(): void;
   show(): void;
+  // Resolves once every rail of the latest load has loaded or failed.
+  whenLoaded(): Promise<void>;
 };
 
 export function mountHomeScreen(options: HomeScreenOptions): HomeScreenController {
@@ -61,7 +68,9 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
     recentlyViewed: createRailState(),
     recentlyViewedThumbnails: createAssetThumbnailState(),
     videos: createRailState(),
-    videoThumbnails: createAssetThumbnailState()
+    videoThumbnails: createAssetThumbnailState(),
+    homeLoad: null,
+    thumbnailScheduler: createPriorityScheduler(homeThumbnailRequestLimit)
   };
 
   const handleDocumentKeydown = (event: KeyboardEvent) => {
@@ -147,7 +156,10 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
         return;
       }
 
-      loadHome(elements, options, state, false);
+      state.homeLoad = loadHome(elements, options, state, false);
+    },
+    relayout() {
+      alignHomeRails(elements, state);
     },
     reset() {
       invalidateAsyncGeneration(state);
@@ -155,12 +167,15 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
       resetHomeRails(state);
       state.refreshPending = true;
     },
+    whenLoaded() {
+      return state.homeLoad || Promise.resolve();
+    },
     show() {
       elements.root.hidden = false;
 
       if (state.refreshPending || (!hasLoadedAnyHomeRail(state) && !isHomeLoading(state))) {
         state.refreshPending = false;
-        loadHome(elements, options, state, false);
+        state.homeLoad = loadHome(elements, options, state, false);
         return;
       }
 

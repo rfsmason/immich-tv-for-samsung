@@ -18,7 +18,9 @@ const mocks = vi.hoisted(() => {
       showStaticAssetCollection: vi.fn(),
       showPerson: vi.fn(),
       showPhotos: vi.fn(),
-      requestExit: vi.fn(() => true)
+      requestExit: vi.fn(() => true),
+      relayout: vi.fn(),
+      whenLoaded: vi.fn(() => Promise.resolve())
     };
   }
   const home = controller();
@@ -84,7 +86,14 @@ async function fixture() {
   vi.clearAllMocks();
   vi.stubGlobal(
     "window",
-    Object.assign(new EventTarget(), { localStorage: {}, fetch, scrollTo: vi.fn() })
+    // main.ts waits for the splash to be drawn; run those callbacks at once.
+    Object.assign(new EventTarget(), {
+      localStorage: {},
+      fetch,
+      requestAnimationFrame: (callback: () => void) => callback(),
+      scrollTo: vi.fn(),
+      setTimeout: (callback: () => void) => callback()
+    })
   );
   vi.stubGlobal("document", { body: { scrollTop: 0 }, documentElement: { scrollTop: 0 } });
   let active: TopLevelDestinationId | null = null;
@@ -103,6 +112,8 @@ async function fixture() {
       collapseRail: vi.fn(),
       setContentFocusController: vi.fn(),
       hideSplash: vi.fn(),
+      revealApp: vi.fn(),
+      setSplashStatus: vi.fn(),
       showSplashError: vi.fn(),
       destroy: vi.fn()
     };

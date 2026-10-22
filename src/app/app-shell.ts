@@ -14,6 +14,9 @@ export type ShellContentFocusController = {
 
 export type DestinationActivationOptions = {
   bypassGuard?: boolean;
+  // false keeps the splash up and leaves focus alone, so a destination can
+  // load behind it; revealApp() then shows it.
+  reveal?: boolean;
 };
 
 export type ApplicationShellOptions = {
@@ -58,8 +61,11 @@ export type ApplicationShellController = {
   focusActiveContent(): void;
   focusActiveDestinationNav(): void;
   hideSplash(): void;
+  // Hides the splash and focuses the active destination in the rail.
+  revealApp(): void;
   routeBackFromSettings(options?: DestinationActivationOptions): void;
   setContentFocusController(controller: ShellContentFocusController | null): void;
+  setSplashStatus(message: string): void;
   showSplashError(message: string): void;
 };
 
@@ -252,6 +258,10 @@ export function mountApplicationShell(
     hideSplash() {
       hideSplash(elements);
     },
+    revealApp() {
+      hideSplash(elements);
+      focusDestinationNav(elements, state.activeDestination);
+    },
     routeBackFromSettings(activationOptions = {}) {
       const destination = getSettingsBackDestination(state.previousTopLevelDestination);
 
@@ -259,6 +269,9 @@ export function mountApplicationShell(
     },
     setContentFocusController(controller) {
       state.contentFocusController = controller;
+    },
+    setSplashStatus(message) {
+      elements.splashStatus.textContent = message;
     },
     showSplashError(message) {
       elements.splashStatus.textContent = "Startup needs attention.";
@@ -396,7 +409,12 @@ function activateDestination(
   }
 
   state.activeDestination = destination;
-  hideSplash(elements);
+  const reveal = activationOptions.reveal !== false;
+
+  if (reveal) {
+    hideSplash(elements);
+  }
+
   resetPageScroll();
 
   topLevelDestinations.forEach((screenDestination) => {
@@ -410,7 +428,10 @@ function activateDestination(
   });
 
   updateRailSelection(elements, destination);
-  focusDestinationNav(elements, destination);
+  if (reveal) {
+    focusDestinationNav(elements, destination);
+  }
+
   options.onDestinationActivated?.(destination);
 }
 

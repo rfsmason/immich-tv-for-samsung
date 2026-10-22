@@ -2200,12 +2200,16 @@ button.asset-viewer-slideshow[data-slideshow-progress="running"]::after {
   font-weight: 800;
 }
 
+/* The image is rounded itself as well as clipped by .person-face: Chromium 63
+   can drop a parent's rounded clip while the parent animates its focus
+   transform, which showed faces square for a moment on the TV. */
 .person-face-image {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  border-radius: 50%;
   object-fit: cover;
 }
 
@@ -2416,6 +2420,34 @@ button.asset-viewer-slideshow[data-slideshow-progress="running"]::after {
 .search-people-actions > .focusable {
   min-height: 78px;
   padding: 0 32px;
+}
+
+/* Quiet reminders of what the remote's keys do here. Back finishes the picker
+   and keeps the selection, just like Done, so it saves scrolling back up. */
+.key-hints {
+  display: flex;
+  align-items: center;
+  margin: 0 0 0 16px;
+  color: var(--text-muted);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.key-hint + .key-hint {
+  margin-left: 32px;
+}
+
+.key-cap {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 3px 12px;
+  border: 2px solid rgba(201, 206, 223, 0.45);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
 }
 
 .search-people-grid {

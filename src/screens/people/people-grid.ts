@@ -25,7 +25,7 @@ import {
   scrollIntoContainer
 } from "../grid-presentation";
 import { createPageWindow, type PageWindowDirection } from "../page-window";
-import { createPersonCard, setPersonCardFace } from "./person-card";
+import { createPersonCard, personCardLabel, setPersonCardFace } from "./person-card";
 
 // A paged, windowed grid of people in Immich's order (ADR 0013, ADR 0014):
 // the People browser and the Search people picker. Pages load near remote
@@ -46,6 +46,8 @@ export type PeopleGridElements = {
 
 export type PeopleGridOptions = {
   // Adds a screen's own state to a card, such as the picker's selection.
+  // Adds a screen's own state to a card. It runs again on cards that stay on
+  // screen, so it must also remove that state when it no longer applies.
   decorateCard?(card: HTMLButtonElement, person: Person): void;
   documentRef?: Document;
   elements: PeopleGridElements;
@@ -123,14 +125,24 @@ export function mountPeopleGrid(options: PeopleGridOptions): PeopleGridControlle
     scrollIntoContainer(elements.grid, card, 12);
   }
 
-  function appendSpacer(rowCount: number): void {
-    if (rowCount) {
-      elements.grid.appendChild(
-        createGridSpacer(documentRef, "person-grid-spacer", "--person-spacer-rows", rowCount)
-      );
-    }
+  const topSpacer = createGridSpacer(documentRef, "person-grid-spacer", "--person-spacer-rows", 0);
+  const bottomSpacer = createGridSpacer(
+    documentRef,
+    "person-grid-spacer",
+    "--person-spacer-rows",
+    0
+  );
+
+  function spacerFor(spacer: HTMLElement, rowCount: number): HTMLElement[] {
+    spacer.style.setProperty("--person-spacer-rows", String(rowCount));
+
+    return rowCount ? [spacer] : [];
   }
 
+  // Cards that stay in the rendered window keep their element, and with it
+  // their decoded face: only rows entering or leaving the window change.
+  // Rebuilding every card on each remote press re-created all the faces and
+  // replayed the focus animation, which flickered on the TV.
   function render(): void {
     const people = pages.items();
 
@@ -142,23 +154,57 @@ export function mountPeopleGrid(options: PeopleGridOptions): PeopleGridControlle
       rowsBefore: gridRenderRows.before
     });
 
-    elements.grid.textContent = "";
-    appendSpacer(rendered.topSpacerRows);
+    const existing: Record<string, HTMLButtonElement> = {};
+    elements.grid.querySelectorAll<HTMLButtonElement>(".person-card").forEach((card) => {
+      existing[card.getAttribute("data-person-id") || ""] = card;
+    });
+
+    const nodes: HTMLElement[] = spacerFor(topSpacer, rendered.topSpacerRows);
 
     for (let index = rendered.startIndex; index < rendered.endIndex; index += 1) {
-      const card = createPersonCard(documentRef, people[index]!, index);
-      options.decorateCard?.(card, people[index]!);
-      const url = faces.thumbnailUrls[people[index]!.id];
+      const person = people[index]!;
+      let card = existing[person.id];
+
+      if (card) {
+        card.setAttribute("data-person-index", String(index));
+        card.setAttribute("aria-label", personCardLabel(person));
+      } else {
+        card = createPersonCard(documentRef, person, index);
+      }
+
+      options.decorateCard?.(card, person);
+      const url = faces.thumbnailUrls[person.id];
 
       if (url) {
         setPersonCardFace(card, url);
       }
 
-      elements.grid.appendChild(card);
+      nodes.push(card);
     }
 
-    appendSpacer(rendered.bottomSpacerRows);
+    nodes.push(...spacerFor(bottomSpacer, rendered.bottomSpacerRows));
+    placeChildren(nodes);
     loadFacesNearFocus(people);
+  }
+
+  // Puts exactly `nodes` in the grid, in order, without moving nodes that are
+  // already in place (moving a node would reload its image and drop focus).
+  function placeChildren(nodes: HTMLElement[]): void {
+    const wanted = new Set<Node>(nodes);
+
+    Array.prototype.slice.call(elements.grid.childNodes).forEach((child: Node) => {
+      if (!wanted.has(child)) {
+        elements.grid.removeChild(child);
+      }
+    });
+
+    nodes.forEach((node, position) => {
+      const current = elements.grid.childNodes[position] || null;
+
+      if (current !== node) {
+        elements.grid.insertBefore(node, current);
+      }
+    });
   }
 
   function showFace(person: Person, url: string): void {

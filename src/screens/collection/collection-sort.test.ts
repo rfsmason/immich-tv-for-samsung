@@ -29,8 +29,9 @@ describe("collection sort control", () => {
 
     control.render("oldest-first");
     expect(button.hidden).toBe(false);
-    expect(button.textContent).toBe("Oldest first");
+    expect(button.getAttribute("data-sort-order")).toBe("oldest-first");
     expect(button.getAttribute("aria-label")).toBe("Sort order: oldest first");
+    expect(button.title).toBe("Oldest first");
 
     control.render(null);
     expect(button.hidden).toBe(true);

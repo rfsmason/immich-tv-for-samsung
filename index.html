@@ -147,7 +147,19 @@
           </div>
           <div class="header-actions" role="group" aria-label="Collection controls">
             <button id="collection-retry" class="focusable" type="button" hidden>Retry</button>
-            <button id="collection-sort-order" class="focusable collection-sort-order" type="button" hidden>Newest first</button>
+            <button
+              id="collection-sort-order"
+              class="focusable collection-sort-order"
+              type="button"
+              data-sort-order="newest-first"
+              aria-label="Sort order: newest first"
+              title="Newest first"
+              hidden
+            >
+              <svg class="collection-sort-order-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M24 9v29M13 27l11 11 11-11"></path>
+              </svg>
+            </button>
           </div>
         </header>
 

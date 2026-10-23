@@ -220,7 +220,7 @@ describe("album grid remote navigation", () => {
     // the first item.
     f.press(keys.up);
     expect(f.documentRef.activeElement).toBe(f.byId("collection-sort-order"));
-    expect(f.byId("collection-sort-order").textContent).toBe("Newest first");
+    expect(f.byId("collection-sort-order").getAttribute("data-sort-order")).toBe("newest-first");
     f.press(keys.down);
     expect(f.focused()).toBe("0");
     f.press(keys.right);

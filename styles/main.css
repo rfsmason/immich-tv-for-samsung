@@ -345,10 +345,29 @@ button.top-nav-item[aria-current="page"] {
   margin-left: 18px;
 }
 
-/* Wide enough for either label, so reversing the order never resizes it. */
-.collection-sort-order {
-  min-width: 230px;
-  padding: 0 28px;
+/* An arrow: down for newest first, up for oldest first. Square, so it
+   overrides the minimum width of text buttons. */
+.header-actions button.collection-sort-order {
+  width: 78px;
+  min-width: 78px;
+  padding: 0;
+}
+
+.collection-sort-order-icon {
+  display: block;
+  width: 38px;
+  height: 38px;
+  margin: 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+  pointer-events: none;
+}
+
+.collection-sort-order[data-sort-order="oldest-first"] .collection-sort-order-icon {
+  transform: rotate(180deg);
 }
 
 .setup-panel {

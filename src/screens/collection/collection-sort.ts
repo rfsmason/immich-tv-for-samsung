@@ -5,11 +5,12 @@ import type { AppSettingsStore } from "../../storage/app-settings-store";
 import { focusWithoutPageScroll } from "../grid-presentation";
 import type { CollectionSource } from "./collection-model";
 
-// The collection header's sort order button (ADR 0017). It reads "Newest
-// first" or "Oldest first"; OK reverses the order and reloads from the start
-// with focus kept on the button. Up from the grid's first row reaches it and
-// Down returns to the first item. Memories, Recently Viewed and Recently
-// Added keep their own order and show no button.
+// The collection header's sort order button (ADR 0017): a down arrow for
+// newest first, an up arrow for oldest first, with the order in its label.
+// OK reverses the order and reloads from the start with focus kept on the
+// button. Up from the grid's first row reaches it and Down returns to the
+// first item. Memories, Recently Viewed and Recently Added keep their own
+// order and show no button.
 
 export type SortableCollectionKind = SavedSortOrderKind | "album";
 
@@ -80,12 +81,15 @@ export function createCollectionSortControl(
     },
     isFocused,
     render(order) {
+      const oldestFirst = order === "oldest-first";
+
       button.hidden = order === null;
-      button.textContent = order === "oldest-first" ? "Oldest first" : "Newest first";
+      button.setAttribute("data-sort-order", oldestFirst ? "oldest-first" : "newest-first");
       button.setAttribute(
         "aria-label",
-        `Sort order: ${order === "oldest-first" ? "oldest first" : "newest first"}`
+        `Sort order: ${oldestFirst ? "oldest first" : "newest first"}`
       );
+      button.title = oldestFirst ? "Oldest first" : "Newest first";
     }
   };
 }

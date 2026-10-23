@@ -123,10 +123,10 @@ describe("collection sort order", () => {
 
     f.press(keys.up);
     expect(f.documentRef.activeElement).toBe(f.sortButton());
-    expect(f.sortButton().textContent).toBe("Newest first");
+    expect(f.sortButton().getAttribute("data-sort-order")).toBe("newest-first");
 
     f.press(keys.enter);
-    expect(f.sortButton().textContent).toBe("Oldest first");
+    expect(f.sortButton().getAttribute("data-sort-order")).toBe("oldest-first");
     await vi.waitFor(() =>
       expect(
         f
@@ -160,7 +160,7 @@ describe("collection sort order", () => {
     );
     await f.settled();
     expect(f.documentRef.activeElement).toBe(f.sortButton());
-    expect(f.sortButton().textContent).toBe("Oldest first");
+    expect(f.sortButton().getAttribute("data-sort-order")).toBe("oldest-first");
     expect(f.settingsStore.save).not.toHaveBeenCalled();
 
     // The reversal lasts while the connection does.
@@ -187,7 +187,7 @@ describe("collection sort order", () => {
       title: "Favourites"
     });
     expect(f.sortButton().hidden).toBe(false);
-    expect(f.sortButton().textContent).toBe("Newest first");
+    expect(f.sortButton().getAttribute("data-sort-order")).toBe("newest-first");
     expect(f.settings().sortOrders.favorites).toBe("oldest-first");
 
     // Oldest first cannot start from the rail's newest items.
@@ -203,7 +203,7 @@ describe("collection sort order", () => {
       { kind: "favorites", order: "oldest-first" },
       { kind: "page", page: 1 }
     );
-    expect(f.sortButton().textContent).toBe("Oldest first");
+    expect(f.sortButton().getAttribute("data-sort-order")).toBe("oldest-first");
     expect(f.byId("album-assets-grid").children[0]?.getAttribute("data-asset-id")).toBe("old0");
   });
 
@@ -258,7 +258,7 @@ describe("collection sort order", () => {
     resolveFirst!(page([asset("stale")]));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(f.sortButton().textContent).toBe("Newest first");
+    expect(f.sortButton().getAttribute("data-sort-order")).toBe("newest-first");
     const ids = f
       .byId("album-assets-grid")
       .children.map((tile) => tile.getAttribute("data-asset-id"));

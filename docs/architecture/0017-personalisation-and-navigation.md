@@ -72,7 +72,7 @@ Immich facts were checked against `immich-app/immich` `main` at `1cf5bb4`:
   - responses for a photo no longer shown are dropped;
   - the last three photos' faces are cached, and the cache is cleared whenever the viewer resets (hidden, closed or a new collection);
   - nothing is prefetched.
-- A photo without faces says "No faces tagged" in the viewer's status line. A 403 shows "Face tags need the face.read permission on your Immich API key." once and turns Faces off for the session.
+- A photo without faces says "No faces tagged" in the viewer's status line. A 403 shows "Face tags need the face.read permission on your Immich API key." and turns Faces off for the session. The button stays, unpressed, so focus is never left on a hidden control; pressing it again repeats the message without asking Immich. If Faces is ever hidden while focused (a video or a slideshow), focus moves to Slideshow.
 - The README lists every permission the app needs, taken from the endpoints it calls and their `@Authenticated` decorators.
 
 ### Screen backdrops

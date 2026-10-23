@@ -96,6 +96,9 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       },
       isSlideshowPlaying: () => state.viewerSlideshow.playing,
       loadFaces: (assetId) => options.service.loadAssetFaces(assetId),
+      // Slideshow is always shown; a pending Play focus still moves on to
+      // Play once a video's control appears.
+      onFocusedButtonHidden: () => elements.assetViewerSlideshow.focus(),
       settingsStore: options.settingsStore
     }),
     isOpen: () => collection.isOpen(),

@@ -493,24 +493,57 @@ describe("viewer face tags", () => {
     expect(f.elements.assetViewerFaces.hidden).toBe(true);
   });
 
-  it("explains a missing face.read permission once, then turns Faces off for the session", async () => {
-    const f = fixture([asset("a"), asset("b")], { showFaceTags: true }, async () => {
+  it("explains a missing face.read permission and turns Faces off, keeping the button and its focus", async () => {
+    const f = fixture([asset("a"), asset("b")], {}, async () => {
       throw new AppError("permission", "Refused", { feature: "Face tags", status: 403 });
     });
+    const message = "Face tags need the face.read permission on your Immich API key.";
     await openOn(f);
     f.decodeImage();
+    // The usual case: Faces is pressed, and the refusal arrives while it has focus.
+    f.elements.assetViewerFaces.focus();
+    f.press(remoteKeys.enter);
     await flush();
 
-    expect(f.elements.assetViewerFacesStatus.textContent).toBe(
-      "Face tags need the face.read permission on your Immich API key."
-    );
-    expect(f.elements.assetViewerFaces.hidden).toBe(true);
+    expect(f.elements.assetViewerFacesStatus.textContent).toBe(message);
+    expect(f.elements.assetViewerFaces.hidden).toBe(false);
+    expect(f.elements.assetViewerFaces.getAttribute("aria-pressed")).toBe("false");
+    expect(f.documentRef.activeElement).toBe(f.elements.assetViewerFaces);
 
+    // Off for the session: the next photo asks nothing and shows no message.
     f.press(remoteKeys.right);
     await flush();
     f.decodeImage();
     await flush();
     expect(f.service.loadAssetFaces).toHaveBeenCalledTimes(1);
     expect(f.elements.assetViewerFacesStatus.hidden).toBe(true);
+
+    // Pressing Faces again explains why, without asking Immich again.
+    f.elements.assetViewerFaces.focus();
+    f.press(remoteKeys.enter);
+    expect(f.elements.assetViewerFacesStatus.textContent).toBe(message);
+    expect(f.elements.assetViewerFacesStatus.hidden).toBe(false);
+    expect(f.service.loadAssetFaces).toHaveBeenCalledTimes(1);
+  });
+
+  it("moves focus off Faces when it hides for a video or a slideshow", async () => {
+    const f = fixture([asset("photo"), asset("clip", { type: "video" }), asset("next")]);
+    await openOn(f);
+
+    f.elements.assetViewerFaces.focus();
+    f.press(remoteKeys.right);
+    expect(f.elements.assetViewerFaces.hidden).toBe(true);
+    expect(f.documentRef.activeElement).not.toBe(f.elements.assetViewerFaces);
+    expect([f.elements.assetViewerSlideshow, f.elements.assetViewerPlay]).toContain(
+      f.documentRef.activeElement
+    );
+
+    f.press(remoteKeys.right);
+    await flush();
+    expect(f.elements.assetViewerFaces.hidden).toBe(false);
+    f.elements.assetViewerFaces.focus();
+    f.elements.assetViewerSlideshow.dispatchEvent(new Event("click"));
+    expect(f.elements.assetViewerFaces.hidden).toBe(true);
+    expect(f.documentRef.activeElement).toBe(f.elements.assetViewerSlideshow);
   });
 });

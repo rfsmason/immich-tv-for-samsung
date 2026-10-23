@@ -39,6 +39,9 @@ export type ViewerFaces = {
 
 type ViewerFacesOptions = {
   currentAsset(): AlbumAsset | null;
+  // The Faces button had focus and has just hidden (a video, or a slideshow
+  // starting): the viewer moves focus to another control.
+  onFocusedButtonHidden(): void;
   elements: ViewerFaceElements;
   isSlideshowPlaying(): boolean;
   loadFaces(assetId: string): Promise<AssetFace[]>;
@@ -47,7 +50,8 @@ type ViewerFacesOptions = {
 
 export function createViewerFaces(options: ViewerFacesOptions): ViewerFaces {
   const { elements } = options;
-  // Faces stays off for the rest of the session once the key is refused.
+  // Faces stays off for the rest of the session once the key is refused. The
+  // button stays, showing why, so focus is never left on a hidden control.
   let refusedForSession = false;
   let cache: Array<{ assetId: string; faces: AssetFace[] }> = [];
   let drawnAssetId: string | null = null;
@@ -183,8 +187,13 @@ export function createViewerFaces(options: ViewerFacesOptions): ViewerFaces {
     const on = isOn();
     const label = on ? "Hide face tags" : "Show face tags";
 
-    elements.facesButton.hidden =
-      !asset || asset.type !== "image" || options.isSlideshowPlaying() || refusedForSession;
+    const hidden = !asset || asset.type !== "image" || options.isSlideshowPlaying();
+    const hadFocus = elements.facesButton.ownerDocument.activeElement === elements.facesButton;
+
+    elements.facesButton.hidden = hidden;
+    if (hidden && hadFocus) {
+      options.onFocusedButtonHidden();
+    }
     elements.facesButton.setAttribute("aria-pressed", on ? "true" : "false");
     elements.facesButton.setAttribute("aria-label", label);
     elements.facesButton.title = label;
@@ -237,6 +246,11 @@ export function createViewerFaces(options: ViewerFacesOptions): ViewerFaces {
     },
     sync,
     toggle() {
+      if (refusedForSession) {
+        setStatus(permissionMessage, options.currentAsset()?.id || null);
+        return;
+      }
+
       const settings = options.settingsStore.load();
 
       options.settingsStore.save({ ...settings, showFaceTags: !settings.showFaceTags });

@@ -1,7 +1,12 @@
+import type { Logger } from "../../logging/logger";
 import type { TizenTvInputDevice } from "./runtime";
 
+// Key codes verified against Samsung's TV remote key list. The media and
+// channel keys must be registered before the app receives them.
 export const remoteKeys = {
   back: 10009,
+  channelDown: 428,
+  channelUp: 427,
   down: 40,
   enter: 13,
   left: 37,
@@ -21,6 +26,13 @@ const fallbackKeyCodes: Record<string, number> = {
   Escape: remoteKeys.back
 };
 
+// The desktop preview has no channel keys, so Page Up and Page Down stand in
+// for them, as Escape and Backspace stand in for Back.
+const desktopChannelKeys: Record<string, number> = {
+  PageDown: remoteKeys.channelDown,
+  PageUp: remoteKeys.channelUp
+};
+
 export function getKeyCode(
   event: KeyboardEvent,
   windowRef: Pick<Window, "tizen"> | undefined = typeof window === "undefined" ? undefined : window
@@ -36,6 +48,10 @@ export function getKeyCode(
       return event.keyCode || 8;
     }
     return remoteKeys.back;
+  }
+
+  if (!windowRef?.tizen && desktopChannelKeys[event.key]) {
+    return desktopChannelKeys[event.key]!;
   }
 
   if (event.keyCode) {
@@ -66,6 +82,16 @@ export function readArrowDirection(keyCode: number): "down" | "left" | "right" |
   return null;
 }
 
+// The way a channel key moves through a list as displayed: CH ▲ goes up (-1),
+// CH ▼ goes down (1). Null for any other key.
+export function readChannelDirection(keyCode: number): -1 | 1 | null {
+  if (keyCode === remoteKeys.channelUp) {
+    return -1;
+  }
+
+  return keyCode === remoteKeys.channelDown ? 1 : null;
+}
+
 export function isMediaPlayPauseKey(keyCode: number): boolean {
   return (
     keyCode === remoteKeys.mediaPlayPause ||
@@ -74,36 +100,45 @@ export function isMediaPlayPauseKey(keyCode: number): boolean {
   );
 }
 
-export function registerMediaRemoteKeys(windowRef: Window = window): void {
+const optionalKeyNames = ["MediaPlayPause", "MediaPlay", "MediaPause", "ChannelUp", "ChannelDown"];
+
+// Registers the optional keys the app uses. Each is best-effort: the arrows,
+// Enter and Back work without registration, and every feature on an optional
+// key is also reachable with them.
+export function registerOptionalRemoteKeys(windowRef: Window, logger: Logger): void {
   const inputDevice = windowRef.tizen?.tvinputdevice;
 
   if (!inputDevice) {
     return;
   }
 
-  const keyNames = readSupportedMediaKeyNames(inputDevice);
-
-  for (const keyName of keyNames) {
+  for (const keyName of readSupportedKeyNames(inputDevice, logger)) {
     try {
       inputDevice.registerKey(keyName);
-    } catch {
-      // Optional media keys are best-effort; arrows, Enter, and Back still work without registration.
+    } catch (error) {
+      logger.warn("Optional remote key registration failed.", { error, keyName });
     }
   }
 }
 
-function readSupportedMediaKeyNames(inputDevice: TizenTvInputDevice): string[] {
-  const mediaKeyNames = ["MediaPlayPause", "MediaPlay", "MediaPause"];
-
+function readSupportedKeyNames(inputDevice: TizenTvInputDevice, logger: Logger): string[] {
   if (typeof inputDevice.getSupportedKeys !== "function") {
-    return mediaKeyNames;
+    return optionalKeyNames;
   }
 
   try {
     const supportedNames = inputDevice.getSupportedKeys().map((key) => key.name);
+    const supported = optionalKeyNames.filter((keyName) => supportedNames.indexOf(keyName) >= 0);
 
-    return mediaKeyNames.filter((keyName) => supportedNames.indexOf(keyName) >= 0);
-  } catch {
-    return mediaKeyNames;
+    if (supported.length < optionalKeyNames.length) {
+      logger.info("Some optional remote keys are not supported.", {
+        unsupported: optionalKeyNames.filter((keyName) => supported.indexOf(keyName) < 0)
+      });
+    }
+
+    return supported;
+  } catch (error) {
+    logger.warn("Reading the supported remote keys failed.", { error });
+    return optionalKeyNames;
   }
 }

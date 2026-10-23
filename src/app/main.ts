@@ -1,5 +1,5 @@
 import { consoleLogger } from "../logging/logger";
-import { registerMediaRemoteKeys } from "../platform/tizen/keys";
+import { registerOptionalRemoteKeys } from "../platform/tizen/keys";
 import { createAppLifecycle } from "../platform/tizen/lifecycle";
 import { createLocalAppSettingsStore } from "../storage/app-settings-store";
 import { createLocalConnectionSettingsStore } from "../storage/connection-settings-store";
@@ -20,7 +20,7 @@ afterNextPaint(() => {
   const fetchImpl = window.fetch.bind(window);
   const lifecycle = createAppLifecycle({ logger: consoleLogger });
 
-  registerMediaRemoteKeys(window);
+  registerOptionalRemoteKeys(window, consoleLogger);
 
   const application = composeApplication({
     albumService: createAlbumService({ fetchImpl, logger: consoleLogger, store }),

@@ -7,7 +7,7 @@ import {
   type GridDirection,
   type GridNavigationResult
 } from "../../navigation/grid-navigation";
-import { remoteKeys } from "../../platform/tizen/keys";
+import { readChannelDirection, remoteKeys } from "../../platform/tizen/keys";
 import {
   calculateRenderedAssetWindow,
   calculateThumbnailRetentionWindow,
@@ -71,6 +71,9 @@ export type GridLayout = {
 export type GridRail = {
   // Moves remote focus to the rail; false when there is no rail to enter.
   enter(): boolean;
+  // CH ▲/▼ from the grid: enter the rail and move a year. False when there is
+  // no rail to enter.
+  enterByChannel(direction: -1 | 1): boolean;
   focusMarker(): void;
   handleKeydown(event: KeyboardEvent, keyCode: number): void;
   render(): void;
@@ -678,6 +681,15 @@ export function createCollectionGrid(options: CollectionGridOptions): Collection
     }
 
     if (!activeElement || !elements.grid.contains(activeElement)) {
+      return;
+    }
+
+    const channelDirection = readChannelDirection(keyCode);
+
+    if (channelDirection !== null) {
+      if (rail?.enterByChannel(channelDirection)) {
+        event.preventDefault();
+      }
       return;
     }
 

@@ -6,7 +6,8 @@ import type {
   TimelineBucket
 } from "../../domain/album";
 import { toUserMessage } from "../../errors/app-error";
-import { remoteKeys } from "../../platform/tizen/keys";
+import { createHoldAccelerator } from "../../navigation/hold-accelerator";
+import { readChannelDirection, remoteKeys } from "../../platform/tizen/keys";
 import {
   formatTimelineBucketLabel,
   formatTimelineBucketYear
@@ -28,7 +29,8 @@ import { beginAsyncGeneration } from "../async-generation";
 import { focusWithoutPageScroll } from "../grid-presentation";
 import {
   calculateTimelineRailMarkerIndices,
-  isTimelineYearBoundary
+  isTimelineYearBoundary,
+  stepTimelineRailSelection
 } from "../timeline-rail-window";
 import type { CollectionGridController, GridLayout, GridRail } from "./collection-grid";
 import {
@@ -65,19 +67,36 @@ type PhotosTimelineOptions = {
   focusControls(): void;
   grid: CollectionGridController;
   model: CollectionModel;
+  // The clock the date-rail hold acceleration reads. Defaults to Date.now.
+  now?: () => number;
+  // Runs a callback before the next frame. Defaults to requestAnimationFrame.
+  scheduleFrame?: ScheduleFrame;
   // Release viewer previews when a jump replaces the loaded assets.
   resetViewerImages(): void;
   service: Pick<AlbumService, "loadTimelineAssetsPage">;
 };
 
+// Schedules a callback for the next animation frame and returns its cancel.
+export type ScheduleFrame = (callback: () => void) => () => void;
+
+const scheduleAnimationFrame: ScheduleFrame = (callback) => {
+  const id = window.requestAnimationFrame(callback);
+
+  return () => window.cancelAnimationFrame(id);
+};
+
 export type PhotosTimelineController = GridRail & {
   buckets(): TimelineBucket[];
+  destroy(): void;
+  handleKeyup(keyCode: number): void;
   hide(): void;
   layout: GridLayout;
   // Loads the first screen of assets, starting from the newest bucket.
   loadInitialAssets(): Promise<AlbumAssetPage>;
   reset(): void;
   setBuckets(buckets: TimelineBucket[]): void;
+  // Ends any held-key acceleration, for example when the app is hidden.
+  suspend(): void;
   totalAssets(): number | null;
 };
 
@@ -85,6 +104,12 @@ export function createPhotosTimeline(options: PhotosTimelineOptions): PhotosTime
   const { elements, grid, model } = options;
   let buckets: TimelineBucket[] = [];
   let selectedBucketIndex = 0;
+  // Held Up/Down on the rail move further the longer they are held. Keys only
+  // move the selection; the rail redraws at most once per animation frame,
+  // and nothing loads until OK.
+  const holdAccelerator = createHoldAccelerator(options.now || (() => Date.now()));
+  const scheduleFrame = options.scheduleFrame || scheduleAnimationFrame;
+  let cancelPendingFrame: (() => void) | null = null;
 
   const layout: GridLayout = {
     calculateWindow() {
@@ -150,7 +175,32 @@ export function createPhotosTimeline(options: PhotosTimelineOptions): PhotosTime
     return Math.max(0, Math.min(buckets.length - 1, index));
   }
 
+  function scheduleRailFrame(): void {
+    if (cancelPendingFrame) {
+      return;
+    }
+
+    cancelPendingFrame = scheduleFrame(() => {
+      cancelPendingFrame = null;
+
+      if (isTimelineRailFocused(model) && !elements.root.hidden) {
+        render();
+        focusMarker();
+      }
+    });
+  }
+
+  function suspend(): void {
+    holdAccelerator.reset();
+
+    if (cancelPendingFrame) {
+      cancelPendingFrame();
+      cancelPendingFrame = null;
+    }
+  }
+
   function hide(): void {
+    suspend();
     elements.timeline.hidden = true;
     elements.timeline.textContent = "";
     elements.root.removeAttribute("data-timeline");
@@ -235,6 +285,7 @@ export function createPhotosTimeline(options: PhotosTimelineOptions): PhotosTime
       return false;
     }
 
+    suspend();
     model.view = { kind: "grid", focus: "timeline" };
     selectedBucketIndex = readFocusedBucketIndex();
     render();
@@ -242,26 +293,82 @@ export function createPhotosTimeline(options: PhotosTimelineOptions): PhotosTime
     return true;
   }
 
+  // CH ▲/▼ from the Photos grid: enter the rail at the focused asset's month,
+  // then move a year from there.
+  function enterByChannel(direction: -1 | 1): boolean {
+    if (model.source?.kind !== "photos" || buckets.length === 0) {
+      return false;
+    }
+
+    suspend();
+    model.view = { kind: "grid", focus: "timeline" };
+    selectedBucketIndex = stepTimelineRailSelection(
+      buckets,
+      readFocusedBucketIndex(),
+      direction,
+      "boundary"
+    );
+    render();
+    focusMarker();
+    return true;
+  }
+
+  function leaveRail(): void {
+    suspend();
+    leaveTimelineRail(model);
+  }
+
   function handleKeydown(event: KeyboardEvent, keyCode: number): void {
     if (keyCode === remoteKeys.left || keyCode === remoteKeys.back) {
       event.preventDefault();
-      leaveTimelineRail(model);
+      leaveRail();
+      render();
       grid.focusCurrentAsset();
       return;
     }
 
     if (keyCode === remoteKeys.up || keyCode === remoteKeys.down) {
       event.preventDefault();
-      const offset = keyCode === remoteKeys.up ? -1 : 1;
-      selectedBucketIndex = clampBucketIndex(selectedBucketIndex + offset);
-      render();
-      focusMarker();
+      const direction = keyCode === remoteKeys.up ? -1 : 1;
+      const step = holdAccelerator.press(String(keyCode), event.repeat);
+
+      selectedBucketIndex = stepTimelineRailSelection(
+        buckets,
+        selectedBucketIndex,
+        direction,
+        step
+      );
+      scheduleRailFrame();
+      return;
+    }
+
+    // Any other key ends a hold.
+    holdAccelerator.reset();
+    const channelDirection = readChannelDirection(keyCode);
+
+    if (channelDirection !== null) {
+      // A year per press; a held channel key repeats without accelerating.
+      event.preventDefault();
+      selectedBucketIndex = stepTimelineRailSelection(
+        buckets,
+        selectedBucketIndex,
+        channelDirection,
+        "boundary"
+      );
+      scheduleRailFrame();
       return;
     }
 
     if (keyCode === remoteKeys.enter) {
       event.preventDefault();
+      suspend();
       jumpToBucket(selectedBucketIndex);
+    }
+  }
+
+  function handleKeyup(keyCode: number): void {
+    if (keyCode === remoteKeys.up || keyCode === remoteKeys.down) {
+      holdAccelerator.reset();
     }
   }
 
@@ -276,7 +383,7 @@ export function createPhotosTimeline(options: PhotosTimelineOptions): PhotosTime
     const loadedIndex = findFirstAssetIndexForBucket(model.assets, bucket);
 
     if (loadedIndex !== null) {
-      leaveTimelineRail(model);
+      leaveRail();
       model.focusedIndex = loadedIndex;
       model.preferredColumn = getAssetSectionColumn(model.assets, loadedIndex, columnCount);
       grid.refreshAroundFocus();
@@ -301,7 +408,7 @@ export function createPhotosTimeline(options: PhotosTimelineOptions): PhotosTime
     model.focusedIndex = 0;
     model.load = { status: "loading", request: { kind: "photos" } };
     model.preferredColumn = 0;
-    leaveTimelineRail(model);
+    leaveRail();
     selectedBucketIndex = bucketIndex;
     grid.resetThumbnails();
     options.resetViewerImages();
@@ -432,9 +539,12 @@ export function createPhotosTimeline(options: PhotosTimelineOptions): PhotosTime
 
   return {
     buckets: () => buckets,
+    destroy: suspend,
     enter,
+    enterByChannel,
     focusMarker,
     handleKeydown,
+    handleKeyup,
     hide,
     layout,
     loadInitialAssets() {
@@ -442,12 +552,14 @@ export function createPhotosTimeline(options: PhotosTimelineOptions): PhotosTime
     },
     render,
     reset() {
+      suspend();
       buckets = [];
       selectedBucketIndex = 0;
     },
     setBuckets(nextBuckets) {
       buckets = nextBuckets;
     },
+    suspend,
     totalAssets() {
       return readTimelineBucketTotal(buckets);
     }

@@ -39,7 +39,7 @@ import {
   type RemoteCollection,
   type StaticCollectionInput
 } from "./collection/collection-model";
-import { createPhotosTimeline } from "./collection/photos-timeline";
+import { createPhotosTimeline, type ScheduleFrame } from "./collection/photos-timeline";
 import type { ViewerElements } from "./collection/viewer-types";
 
 // The shared collection screen (ADR 0008, ADR 0012): composes the collection
@@ -66,6 +66,9 @@ type AlbumDetailScreenOptions = {
   onAssetViewed?(asset: AlbumAsset, source: ViewingSource): void;
   // Loads one page of a paged Home collection.
   loadFeedPage(feed: CollectionFeed, page: AlbumAssetPageToken): Promise<AlbumAssetPage>;
+  // The date rail's clock and frame scheduling; tests replace them.
+  now?: () => number;
+  scheduleFrame?: ScheduleFrame;
   service: AlbumService;
   settingsStore: AppSettingsStore;
 };
@@ -96,8 +99,9 @@ export type AlbumDetailScreenController = {
   showFeedCollection(input: FeedCollectionInput): void;
   showStaticAssetCollection(input: StaticCollectionInput): void;
   showPhotos(): void;
-  // Pauses slideshow, video and Live Photo motion when the app is hidden. They
-  // stay paused on return; the viewer keeps its focused control.
+  // Pauses slideshow, video and Live Photo motion when the app is hidden, and
+  // ends any held date-rail key. Playback stays paused on return; the viewer
+  // keeps its focused control.
   suspendPlayback(): void;
 };
 
@@ -134,7 +138,9 @@ export function mountAlbumDetailScreen(
     focusControls: () => focusScreenControls(),
     grid,
     model,
+    now: options.now,
     resetViewerImages: () => viewer.resetImages(),
+    scheduleFrame: options.scheduleFrame,
     service: options.service
   });
   // Photos arranges assets in date sections; every other source uses rows.
@@ -653,6 +659,7 @@ export function mountAlbumDetailScreen(
   };
   const handleDocumentKeyup = (event: KeyboardEvent) => {
     if (!elements.root.hidden) {
+      timeline.handleKeyup(getKeyCode(event));
       viewer.handleKeyup(event);
     }
   };
@@ -698,6 +705,7 @@ export function mountAlbumDetailScreen(
       elements.grid.removeEventListener("click", handleGridClick);
       elements.retryButton.removeEventListener("click", handleRetryClick);
       viewer.destroy();
+      timeline.destroy();
       releaseResources();
       viewer.stopSlideshow();
       viewer.resetPlayback();
@@ -720,6 +728,7 @@ export function mountAlbumDetailScreen(
       elements.root.hidden = true;
       model.contentFocusRequested = false;
       leaveTimelineRail(model);
+      timeline.suspend();
       viewer.stopSlideshow();
       viewer.resetPlayback();
       revokeBackdrop();
@@ -772,6 +781,7 @@ export function mountAlbumDetailScreen(
     },
     refreshPhotos,
     suspendPlayback() {
+      timeline.suspend();
       viewer.suspend();
     },
     showPhotos() {

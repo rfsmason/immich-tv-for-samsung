@@ -2,48 +2,29 @@ import type { ConnectionSettings } from "../domain/connection";
 import { toUserMessage } from "../errors/app-error";
 import { createFocusNavigator, isInputElement } from "../navigation/focus-navigation";
 import { getKeyCode, remoteKeys } from "../platform/tizen/keys";
-import { validateConnectionSettings } from "../utils/url";
 import type { ConnectionService } from "../app/connection-service";
 import type { AppSettingsStore } from "../storage/app-settings-store";
+import { createConnectionSection } from "./settings/connection-section";
+import { createDisplaySection } from "./settings/display-section";
+import { createHomeSection } from "./settings/home-section";
+import {
+  requireElement,
+  type SettingsSection,
+  type SettingsSectionId
+} from "./settings/settings-section";
 
-type ConnectionScreenElements = {
-  apiKeyInput: HTMLInputElement;
-  apiKeyVisibilityButton: HTMLButtonElement;
-  autoplayVideosInput: HTMLInputElement;
+// The Settings screen: a rail of sections, each opening its panel, with Save
+// and Back on the rail and a guard against leaving with unsaved changes. The
+// sections own their controls (src/screens/settings/).
+
+type SettingsScreenElements = {
   backButton: HTMLButtonElement;
   form: HTMLFormElement;
   root: HTMLElement;
-  serverUrlInput: HTMLInputElement;
-  settingsPanelConnection: HTMLElement;
-  settingsPanelDisplay: HTMLElement;
   settingsPanelUnsaved: HTMLElement;
   settingsSaveButton: HTMLButtonElement;
   settingsSaveLabel: HTMLElement;
-  settingsSectionConnection: HTMLButtonElement;
-  settingsSectionDisplay: HTMLButtonElement;
-  showViewerDateInput: HTMLInputElement;
-  showViewerExifInput: HTMLInputElement;
-  showViewerTimeInput: HTMLInputElement;
-  slideshowIntervalInput: HTMLSelectElement;
-  status: HTMLElement;
   summary: HTMLElement;
-};
-
-type SettingsSection = "connection" | "display";
-
-type SettingsKeydownResult = {
-  activeSection: SettingsSection;
-  savedSnapshot: string;
-};
-
-type SettingsSnapshot = {
-  apiKey: string;
-  autoplayVideos: boolean;
-  serverUrl: string;
-  showViewerDate: boolean;
-  showViewerExif: boolean;
-  showViewerTime: boolean;
-  slideshowIntervalSeconds: string;
 };
 
 type SettingsBackOptions = {
@@ -62,16 +43,26 @@ type ConnectionScreenOptions = {
 export type ConnectionScreenController = {
   destroy(): void;
   focusContent(): void;
+  // Focuses one section's button on the Settings rail.
+  focusSection(id: SettingsSectionId): void;
   hide(): void;
   requestExit(): boolean;
   show(options?: { allowBack?: boolean }): void;
 };
+
+const settingsSummary = "Manage connection, display and Home preferences.";
 
 export function mountConnectionScreen(
   options: ConnectionScreenOptions
 ): ConnectionScreenController {
   const documentRef = options.documentRef || document;
   const elements = readElements(documentRef);
+  const connection = createConnectionSection(documentRef, options.service);
+  const sections: SettingsSection[] = [
+    connection,
+    createDisplaySection(documentRef),
+    createHomeSection(documentRef)
+  ];
   const navigator = createFocusNavigator(
     () =>
       Array.prototype.slice
@@ -79,25 +70,25 @@ export function mountConnectionScreen(
         .filter(isVisibleElement),
     () => documentRef.activeElement
   );
-  let activeSection: SettingsSection = "connection";
+  let activeSection: SettingsSection = connection;
   let savedSnapshot = "";
   let dirtyStatusTimerId: number | null = null;
   let suppressNextActionClick = false;
 
-  hydrateForm(options.service, options.settingsStore, elements);
-  disableTextEntry(elements);
-  savedSnapshot = readSettingsSnapshot(elements);
-  hideSettingsPanels(elements);
+  hydrateForm();
+  connection.disableTextEntry();
+  savedSnapshot = readSettingsSnapshot();
+  hideSettingsPanels();
 
   elements.form.addEventListener("submit", (event) => {
     event.preventDefault();
-    testConnection(options.service, elements);
+    void connection.testConnection();
   });
   elements.form.addEventListener("input", () => {
-    updateDirtyStatus(elements, savedSnapshot);
+    updateDirtyStatus();
   });
   elements.form.addEventListener("change", () => {
-    updateDirtyStatus(elements, savedSnapshot);
+    updateDirtyStatus();
   });
   elements.form.addEventListener("click", (event) => {
     const actionElement = findActionElement(event.target);
@@ -113,16 +104,7 @@ export function mountConnectionScreen(
       return;
     }
 
-    const actionResult = handleAction(
-      actionElement.getAttribute("data-action"),
-      options.service,
-      elements,
-      options,
-      activeSection,
-      savedSnapshot
-    );
-    savedSnapshot = actionResult.savedSnapshot;
-    activeSection = actionResult.activeSection;
+    handleAction(actionElement.getAttribute("data-action"));
   });
 
   // Keys on the left rail belong to the shell: handling them here moved
@@ -133,21 +115,7 @@ export function mountConnectionScreen(
       return;
     }
 
-    const keydownResult = handleKeydown(
-      event,
-      options.service,
-      elements,
-      navigator,
-      documentRef,
-      options,
-      activeSection,
-      savedSnapshot,
-      () => {
-        suppressNextActionClick = true;
-      }
-    );
-    savedSnapshot = keydownResult.savedSnapshot;
-    activeSection = keydownResult.activeSection;
+    handleKeydown(event);
   };
 
   documentRef.addEventListener("keydown", handleDocumentKeydown);
@@ -158,27 +126,35 @@ export function mountConnectionScreen(
       stopDirtyStatusTimer();
     },
     focusContent() {
-      elements.settingsSectionConnection.focus();
+      connection.button.focus();
+    },
+    focusSection(id) {
+      const section = sections.filter((candidate) => candidate.id === id)[0];
+
+      if (section) {
+        activeSection = section;
+        section.button.focus();
+      }
     },
     hide() {
       stopDirtyStatusTimer();
-      disableTextEntry(elements);
+      connection.disableTextEntry();
       elements.root.hidden = true;
     },
     requestExit() {
-      return requestSettingsExit(elements, activeSection, savedSnapshot);
+      return requestSettingsExit();
     },
     show(showOptions = {}) {
       elements.root.hidden = false;
       elements.backButton.hidden = !showOptions.allowBack;
-      activeSection = "connection";
-      hydrateForm(options.service, options.settingsStore, elements);
-      savedSnapshot = readSettingsSnapshot(elements);
-      hideSettingsPanels(elements);
-      disableTextEntry(elements);
-      updateDirtyStatus(elements, savedSnapshot);
+      activeSection = connection;
+      hydrateForm();
+      savedSnapshot = readSettingsSnapshot();
+      hideSettingsPanels();
+      connection.disableTextEntry();
+      updateDirtyStatus();
       startDirtyStatusTimer();
-      elements.settingsSectionConnection.focus();
+      connection.button.focus();
     }
   };
 
@@ -186,7 +162,7 @@ export function mountConnectionScreen(
     stopDirtyStatusTimer();
     dirtyStatusTimerId = window.setInterval(() => {
       if (!elements.root.hidden) {
-        updateDirtyStatus(elements, savedSnapshot);
+        updateDirtyStatus();
       }
     }, 250);
   }
@@ -197,376 +173,374 @@ export function mountConnectionScreen(
       dirtyStatusTimerId = null;
     }
   }
-}
 
-function readElements(documentRef: Document): ConnectionScreenElements {
-  return {
-    apiKeyInput: requireElement<HTMLInputElement>(documentRef, "api-key"),
-    apiKeyVisibilityButton: requireElement<HTMLButtonElement>(documentRef, "api-key-visibility"),
-    autoplayVideosInput: requireElement<HTMLInputElement>(documentRef, "autoplay-videos"),
-    backButton: requireElement<HTMLButtonElement>(documentRef, "connection-back"),
-    form: requireElement<HTMLFormElement>(documentRef, "connection-form"),
-    root: requireElement(documentRef, "connection-screen"),
-    serverUrlInput: requireElement<HTMLInputElement>(documentRef, "server-url"),
-    settingsPanelConnection: requireElement(documentRef, "settings-panel-connection"),
-    settingsPanelDisplay: requireElement(documentRef, "settings-panel-display"),
-    settingsPanelUnsaved: requireElement(documentRef, "settings-panel-unsaved"),
-    settingsSaveButton: requireElement<HTMLButtonElement>(documentRef, "settings-save"),
-    settingsSaveLabel: requireElement(documentRef, "settings-save-label"),
-    settingsSectionConnection: requireElement<HTMLButtonElement>(
-      documentRef,
-      "settings-section-connection"
-    ),
-    settingsSectionDisplay: requireElement<HTMLButtonElement>(
-      documentRef,
-      "settings-section-display"
-    ),
-    showViewerDateInput: requireElement<HTMLInputElement>(documentRef, "show-viewer-date"),
-    showViewerExifInput: requireElement<HTMLInputElement>(documentRef, "show-viewer-exif"),
-    showViewerTimeInput: requireElement<HTMLInputElement>(documentRef, "show-viewer-time"),
-    slideshowIntervalInput: requireElement<HTMLSelectElement>(documentRef, "slideshow-interval"),
-    status: requireElement(documentRef, "connection-status"),
-    summary: requireElement(documentRef, "settings-summary")
-  };
-}
-
-function requireElement<T extends HTMLElement>(documentRef: Document, id: string): T {
-  const element = documentRef.getElementById(id);
-
-  if (!element) {
-    throw new Error(`Missing required element: ${id}`);
+  // Messages about Settings as a whole (saving, unsaved changes, exiting)
+  // show in the summary line above every section, so they are seen from any
+  // section.
+  function setSettingsStatus(message: string, state = "idle"): void {
+    elements.summary.textContent = message;
+    elements.summary.setAttribute("data-state", state);
   }
 
-  return element as T;
-}
+  function hydrateForm(): void {
+    const appSettings = options.settingsStore.load();
 
-function getSettingsFromForm(elements: ConnectionScreenElements): ConnectionSettings {
-  return {
-    apiKey: elements.apiKeyInput.value,
-    serverUrl: elements.serverUrlInput.value
-  };
-}
+    sections.forEach((section) => section.showAppSettings(appSettings));
+    setSettingsStatus(settingsSummary);
+    connection.loadConnection();
+  }
 
-// Connection results (testing, the API key, text entry) show in the
-// Connection section, the only place they apply.
-function setStatus(elements: ConnectionScreenElements, message: string, state = "idle"): void {
-  elements.status.textContent = message;
-  elements.status.setAttribute("data-state", state);
-}
+  function saveSettings(exitAfterSave: boolean): boolean {
+    try {
+      const settings = options.service.save(connection.readConnection());
+      const changes = sections.reduce(
+        (merged, section) => ({ ...merged, ...section.readAppSettings() }),
+        {}
+      );
+      // Settings kept elsewhere (for example sort orders) are saved as they are.
+      const appSettings = options.settingsStore.save({
+        ...options.settingsStore.load(),
+        ...changes
+      });
 
-const settingsSummary = "Manage connection and display preferences.";
+      connection.showSavedConnection(settings);
+      sections.forEach((section) => section.showAppSettings(appSettings));
+      setSettingsStatus("Settings saved.", "success");
+      if (exitAfterSave || elements.backButton.hidden) {
+        options.onSaved?.(settings);
+      }
 
-// Messages about Settings as a whole (saving, unsaved changes, exiting) show
-// in the summary line above every section, so they are seen from any section.
-function setSettingsStatus(
-  elements: ConnectionScreenElements,
-  message: string,
-  state = "idle"
-): void {
-  elements.summary.textContent = message;
-  elements.summary.setAttribute("data-state", state);
-}
+      return true;
+    } catch (error) {
+      setSettingsStatus(toUserMessage(error), "error");
 
-function readValidSettings(elements: ConnectionScreenElements): ConnectionSettings | null {
-  try {
-    const settings = validateConnectionSettings(getSettingsFromForm(elements));
+      return false;
+    }
+  }
 
-    elements.serverUrlInput.value = settings.serverUrl;
+  function handleAction(action: string | null): void {
+    if (action === "test-connection") {
+      void connection.testConnection();
+      return;
+    }
 
-    return settings;
-  } catch (error) {
-    setStatus(elements, toUserMessage(error), "error");
+    if (action === "save-settings") {
+      if (saveSettings(false)) {
+        savedSnapshot = readSettingsSnapshot();
+        updateDirtyStatus();
+      }
+
+      return;
+    }
+
+    if (action === "back-to-albums") {
+      handleSettingsExit();
+      return;
+    }
+
+    if (action === "save-and-exit") {
+      if (saveSettings(true)) {
+        savedSnapshot = readSettingsSnapshot();
+      }
+
+      return;
+    }
+
+    if (action === "discard-and-exit") {
+      connection.disableTextEntry();
+      options.onBack?.({ bypassGuard: true });
+      return;
+    }
+
+    if (action === "cancel-exit") {
+      hideSettingsPanels();
+      activeSection.button.focus();
+      setSettingsStatus("Exit cancelled.");
+      return;
+    }
+
+    if (action === "toggle-api-key") {
+      connection.toggleApiKeyVisibility();
+    }
+  }
+
+  function handleKeydown(event: KeyboardEvent): void {
+    const keyCode = getKeyCode(event);
+    const activeElement = documentRef.activeElement;
+
+    if (keyCode === remoteKeys.back) {
+      event.preventDefault();
+      if (!elements.settingsPanelUnsaved.hidden) {
+        hideSettingsPanels();
+        activeSection.button.focus();
+        setSettingsStatus("Exit cancelled.");
+        return;
+      }
+
+      if (options.onBack && !elements.backButton.hidden) {
+        handleSettingsExit();
+        return;
+      }
+
+      setSettingsStatus("Connection setup is the first screen.");
+      return;
+    }
+
+    if (isSettingsRailButton(activeElement)) {
+      handleSettingsRailKeydown(event, keyCode, activeElement);
+      return;
+    }
+
+    if (isInputElement(activeElement)) {
+      if (isTextSettingsInput(activeElement) && keyCode === remoteKeys.enter) {
+        event.preventDefault();
+        connection.enableTextEntry(activeElement);
+      } else if (isCheckboxInput(activeElement) && keyCode === remoteKeys.enter) {
+        event.preventDefault();
+        activeElement.checked = !activeElement.checked;
+      } else if (keyCode === remoteKeys.left) {
+        event.preventDefault();
+        connection.disableTextEntry();
+        hideSettingsPanels();
+        activeSection.button.focus();
+      } else if (keyCode === remoteKeys.up) {
+        event.preventDefault();
+        connection.disableTextEntry();
+        focusSettingsPanelByOffset(activeElement, -1);
+      } else if (keyCode === remoteKeys.down) {
+        event.preventDefault();
+        connection.disableTextEntry();
+        focusSettingsPanelByOffset(activeElement, 1);
+      }
+
+      updateDirtyStatus();
+      return;
+    }
+
+    if (activeElement instanceof HTMLSelectElement) {
+      if (keyCode === remoteKeys.left || keyCode === remoteKeys.right) {
+        event.preventDefault();
+        moveSelectOption(activeElement, keyCode === remoteKeys.left ? -1 : 1);
+      } else if (keyCode === remoteKeys.up) {
+        event.preventDefault();
+        focusSettingsPanelByOffset(activeElement, -1);
+      } else if (keyCode === remoteKeys.down) {
+        event.preventDefault();
+        focusSettingsPanelByOffset(activeElement, 1);
+      }
+
+      updateDirtyStatus();
+      return;
+    }
+
+    switch (keyCode) {
+      case remoteKeys.left:
+        event.preventDefault();
+        hideSettingsPanels();
+        activeSection.button.focus();
+        break;
+      case remoteKeys.up:
+        event.preventDefault();
+        if (!focusSettingsPanelByOffset(activeElement, -1)) {
+          navigator.focusByOffset(-1);
+        }
+        break;
+      case remoteKeys.right:
+      case remoteKeys.down:
+        event.preventDefault();
+        if (!focusSettingsPanelByOffset(activeElement, 1)) {
+          navigator.focusByOffset(1);
+        }
+        break;
+      case remoteKeys.enter:
+        event.preventDefault();
+        suppressNextActionClick = true;
+        handleAction(activeElement ? activeElement.getAttribute("data-action") : null);
+        break;
+      default:
+        break;
+    }
+  }
+
+  function handleSettingsRailKeydown(
+    event: KeyboardEvent,
+    keyCode: number,
+    activeElement: HTMLButtonElement
+  ): void {
+    if (keyCode === remoteKeys.up || keyCode === remoteKeys.down) {
+      event.preventDefault();
+      const nextButton = focusSettingsRailByOffset(
+        activeElement,
+        keyCode === remoteKeys.up ? -1 : 1
+      );
+      const nextSection = nextButton ? readSettingsSection(nextButton) : null;
+
+      if (nextSection) {
+        activeSection = nextSection;
+      }
+
+      hideSettingsPanels();
+      return;
+    }
+
+    if (keyCode === remoteKeys.left && options.onReturnToShell) {
+      event.preventDefault();
+      hideSettingsPanels();
+      options.onReturnToShell();
+      return;
+    }
+
+    if (keyCode === remoteKeys.right || keyCode === remoteKeys.enter) {
+      event.preventDefault();
+      const section = readSettingsSection(activeElement);
+
+      if (section) {
+        activeSection = section;
+        showSettingsSection(section);
+        section.firstControl().focus();
+        return;
+      }
+
+      if (keyCode === remoteKeys.enter) {
+        suppressNextActionClick = true;
+        handleAction(activeElement.getAttribute("data-action"));
+      }
+    }
+  }
+
+  function readSettingsSection(element: HTMLElement): SettingsSection | null {
+    const id = element.getAttribute("data-settings-section") as SettingsSectionId | null;
+
+    return sections.filter((section) => section.id === id)[0] || null;
+  }
+
+  function focusSettingsRailByOffset(
+    activeElement: HTMLButtonElement,
+    offset: number
+  ): HTMLButtonElement | null {
+    const buttons = Array.prototype.slice
+      .call(elements.root.querySelectorAll(".settings-nav .focusable:not([hidden])"))
+      .filter(isVisibleElement) as HTMLButtonElement[];
+    const currentIndex = buttons.indexOf(activeElement);
+    const nextIndex = Math.max(0, Math.min(buttons.length - 1, currentIndex + offset));
+    const nextButton = buttons[nextIndex];
+
+    if (nextButton) {
+      nextButton.focus();
+      return nextButton;
+    }
 
     return null;
   }
-}
 
-async function testConnection(
-  service: ConnectionService,
-  elements: ConnectionScreenElements
-): Promise<void> {
-  const settings = readValidSettings(elements);
-
-  if (!settings) {
-    return;
-  }
-
-  setStatus(elements, "Checking Immich server...", "pending");
-
-  try {
-    const result = await service.test(settings);
-
-    const found = `${result.serverLabel} found. Connected as ${result.userLabel}.`;
-
-    if (result.versionWarning) {
-      setStatus(elements, `${found} ${result.versionWarning}`, "warning");
-    } else {
-      setStatus(elements, found, "success");
-    }
-  } catch (error) {
-    setStatus(elements, toUserMessage(error), "error");
-  }
-}
-
-function saveSettings(
-  service: ConnectionService,
-  elements: ConnectionScreenElements,
-  options: ConnectionScreenOptions,
-  exitAfterSave: boolean
-): boolean {
-  try {
-    const settings = service.save(getSettingsFromForm(elements));
-    const appSettings = options.settingsStore.save({
-      autoplayVideos: elements.autoplayVideosInput.checked,
-      showViewerDate: elements.showViewerDateInput.checked,
-      showViewerExif: elements.showViewerExifInput.checked,
-      showViewerTime: elements.showViewerTimeInput.checked,
-      slideshowIntervalSeconds: Number(elements.slideshowIntervalInput.value)
+  function showSettingsSection(shown: SettingsSection): void {
+    sections.forEach((section) => {
+      section.panel.hidden = section !== shown;
+      section.button.setAttribute("aria-selected", section === shown ? "true" : "false");
     });
+    elements.settingsPanelUnsaved.hidden = true;
+  }
 
-    elements.serverUrlInput.value = settings.serverUrl;
-    elements.autoplayVideosInput.checked = appSettings.autoplayVideos;
-    elements.showViewerDateInput.checked = appSettings.showViewerDate;
-    elements.showViewerExifInput.checked = appSettings.showViewerExif;
-    elements.showViewerTimeInput.checked = appSettings.showViewerTime;
-    elements.slideshowIntervalInput.value = String(appSettings.slideshowIntervalSeconds);
-    setSettingsStatus(elements, "Settings saved.", "success");
-    if (exitAfterSave || elements.backButton.hidden) {
-      options.onSaved?.(settings);
+  function hideSettingsPanels(): void {
+    sections.forEach((section) => {
+      section.panel.hidden = true;
+      section.button.setAttribute("aria-selected", "false");
+    });
+    elements.settingsPanelUnsaved.hidden = true;
+  }
+
+  function focusSettingsPanelByOffset(activeElement: Element | null, offset: number): boolean {
+    const panel = readOpenSettingsPanel();
+
+    if (!panel || !(activeElement instanceof HTMLElement) || !panel.contains(activeElement)) {
+      return false;
+    }
+
+    const controls = Array.prototype.slice
+      .call(panel.querySelectorAll(".focusable:not([hidden])"))
+      .filter(isVisibleElement) as HTMLElement[];
+
+    if (controls.length === 0) {
+      return false;
+    }
+
+    const currentIndex = controls.indexOf(activeElement);
+    const baseIndex = currentIndex < 0 ? 0 : currentIndex;
+    const nextIndex = (baseIndex + offset + controls.length) % controls.length;
+    const nextControl = controls[nextIndex];
+
+    if (nextControl) {
+      nextControl.focus();
     }
 
     return true;
-  } catch (error) {
-    setSettingsStatus(elements, toUserMessage(error), "error");
+  }
+
+  function readOpenSettingsPanel(): HTMLElement | null {
+    if (!elements.settingsPanelUnsaved.hidden) {
+      return elements.settingsPanelUnsaved;
+    }
+
+    return activeSection.panel.hidden ? null : activeSection.panel;
+  }
+
+  function handleSettingsExit(): void {
+    if (requestSettingsExit()) {
+      options.onBack?.();
+    }
+  }
+
+  function requestSettingsExit(): boolean {
+    if (!hasUnsavedSettings()) {
+      return true;
+    }
+
+    hideSettingsPanels();
+    elements.settingsPanelUnsaved.hidden = false;
+    elements.settingsPanelUnsaved.setAttribute("data-return-section", activeSection.id);
+    setSettingsStatus("Unsaved changes.");
+    elements.settingsPanelUnsaved.querySelector<HTMLButtonElement>(".focusable")?.focus();
 
     return false;
   }
-}
 
-function toggleApiKeyVisibility(elements: ConnectionScreenElements): void {
-  const isVisible = elements.apiKeyInput.type === "text";
+  function readSettingsSnapshot(): string {
+    const snapshot: Record<string, unknown> = {};
 
-  elements.apiKeyInput.type = isVisible ? "password" : "text";
-  elements.apiKeyVisibilityButton.textContent = isVisible ? "Show" : "Hide";
-  elements.apiKeyVisibilityButton.setAttribute("aria-pressed", isVisible ? "false" : "true");
-  setStatus(elements, isVisible ? "API key hidden." : "API key visible on screen.");
-}
+    sections.forEach((section) => {
+      snapshot[section.id] = section.snapshot();
+    });
 
-function hydrateForm(
-  service: ConnectionService,
-  settingsStore: AppSettingsStore,
-  elements: ConnectionScreenElements
-): void {
-  const settings = service.load();
-  const appSettings = settingsStore.load();
-
-  elements.serverUrlInput.value = "";
-  elements.apiKeyInput.value = "";
-  elements.autoplayVideosInput.checked = appSettings.autoplayVideos;
-  elements.showViewerDateInput.checked = appSettings.showViewerDate;
-  elements.showViewerExifInput.checked = appSettings.showViewerExif;
-  elements.showViewerTimeInput.checked = appSettings.showViewerTime;
-  elements.slideshowIntervalInput.value = String(appSettings.slideshowIntervalSeconds);
-  setSettingsStatus(elements, settingsSummary);
-  setStatus(elements, "Enter an Immich server URL and API key.");
-
-  if (!settings) {
-    return;
+    return JSON.stringify(snapshot);
   }
 
-  elements.serverUrlInput.value = settings.serverUrl;
-  elements.apiKeyInput.value = settings.apiKey;
-  setStatus(elements, "Connection settings loaded.", "success");
+  function hasUnsavedSettings(): boolean {
+    return readSettingsSnapshot() !== savedSnapshot;
+  }
+
+  function updateDirtyStatus(): void {
+    const hasChanges = hasUnsavedSettings();
+
+    // Element.toggleAttribute needs Chrome 69; Tizen 5.0 runs Chromium 63.
+    if (hasChanges) {
+      elements.settingsSaveButton.setAttribute("data-dirty", "");
+    } else {
+      elements.settingsSaveButton.removeAttribute("data-dirty");
+    }
+    elements.settingsSaveLabel.textContent = hasChanges ? "Save *" : "Save";
+  }
 }
 
-function handleAction(
-  action: string | null,
-  service: ConnectionService,
-  elements: ConnectionScreenElements,
-  options: ConnectionScreenOptions,
-  activeSection: SettingsSection,
-  savedSnapshot: string
-): SettingsKeydownResult {
-  const result = {
-    activeSection,
-    savedSnapshot
+function readElements(documentRef: Document): SettingsScreenElements {
+  return {
+    backButton: requireElement<HTMLButtonElement>(documentRef, "connection-back"),
+    form: requireElement<HTMLFormElement>(documentRef, "connection-form"),
+    root: requireElement(documentRef, "connection-screen"),
+    settingsPanelUnsaved: requireElement(documentRef, "settings-panel-unsaved"),
+    settingsSaveButton: requireElement<HTMLButtonElement>(documentRef, "settings-save"),
+    settingsSaveLabel: requireElement(documentRef, "settings-save-label"),
+    summary: requireElement(documentRef, "settings-summary")
   };
-
-  if (action === "test-connection") {
-    testConnection(service, elements);
-    return result;
-  }
-
-  if (action === "save-settings") {
-    if (saveSettings(service, elements, options, false)) {
-      result.savedSnapshot = readSettingsSnapshot(elements);
-      updateDirtyStatus(elements, result.savedSnapshot);
-    }
-
-    return result;
-  }
-
-  if (action === "back-to-albums") {
-    handleSettingsExit(elements, options, activeSection, savedSnapshot);
-    return result;
-  }
-
-  if (action === "save-and-exit") {
-    if (saveSettings(service, elements, options, true)) {
-      result.savedSnapshot = readSettingsSnapshot(elements);
-    }
-
-    return result;
-  }
-
-  if (action === "discard-and-exit") {
-    disableTextEntry(elements);
-    options.onBack?.({ bypassGuard: true });
-    return result;
-  }
-
-  if (action === "cancel-exit") {
-    hideSettingsPanels(elements);
-    focusActiveSettingsSection(elements, activeSection);
-    setSettingsStatus(elements, "Exit cancelled.");
-    return result;
-  }
-
-  if (action === "toggle-api-key") {
-    toggleApiKeyVisibility(elements);
-  }
-
-  return result;
-}
-
-function handleKeydown(
-  event: KeyboardEvent,
-  service: ConnectionService,
-  elements: ConnectionScreenElements,
-  navigator: ReturnType<typeof createFocusNavigator>,
-  documentRef: Document,
-  options: ConnectionScreenOptions,
-  activeSection: SettingsSection,
-  savedSnapshot: string,
-  onActionKeydown: () => void
-): SettingsKeydownResult {
-  const keyCode = getKeyCode(event);
-  const activeElement = documentRef.activeElement;
-  const result = {
-    activeSection,
-    savedSnapshot
-  };
-
-  if (keyCode === remoteKeys.back) {
-    event.preventDefault();
-    if (!elements.settingsPanelUnsaved.hidden) {
-      hideSettingsPanels(elements);
-      focusActiveSettingsSection(elements, activeSection);
-      setSettingsStatus(elements, "Exit cancelled.");
-      return result;
-    }
-
-    if (options.onBack && !elements.backButton.hidden) {
-      handleSettingsExit(elements, options, activeSection, savedSnapshot);
-      return result;
-    }
-
-    setSettingsStatus(elements, "Connection setup is the first screen.");
-    return result;
-  }
-
-  if (isSettingsRailButton(activeElement)) {
-    return handleSettingsRailKeydown(
-      event,
-      keyCode,
-      service,
-      elements,
-      activeElement,
-      options,
-      activeSection,
-      savedSnapshot,
-      onActionKeydown
-    );
-  }
-
-  if (isInputElement(activeElement)) {
-    if (isTextSettingsInput(activeElement) && keyCode === remoteKeys.enter) {
-      event.preventDefault();
-      enableTextEntry(activeElement, elements);
-    } else if (isCheckboxInput(activeElement) && keyCode === remoteKeys.enter) {
-      event.preventDefault();
-      activeElement.checked = !activeElement.checked;
-    } else if (keyCode === remoteKeys.left) {
-      event.preventDefault();
-      disableTextEntry(elements);
-      hideSettingsPanels(elements);
-      focusActiveSettingsSection(elements, activeSection);
-    } else if (keyCode === remoteKeys.up) {
-      event.preventDefault();
-      disableTextEntry(elements);
-      focusSettingsPanelByOffset(elements, activeElement, activeSection, -1);
-    } else if (keyCode === remoteKeys.down) {
-      event.preventDefault();
-      disableTextEntry(elements);
-      focusSettingsPanelByOffset(elements, activeElement, activeSection, 1);
-    }
-
-    updateDirtyStatus(elements, savedSnapshot);
-    return result;
-  }
-
-  if (activeElement instanceof HTMLSelectElement) {
-    if (keyCode === remoteKeys.left || keyCode === remoteKeys.right) {
-      event.preventDefault();
-      moveSelectOption(activeElement, keyCode === remoteKeys.left ? -1 : 1);
-    } else if (keyCode === remoteKeys.up) {
-      event.preventDefault();
-      focusSettingsPanelByOffset(elements, activeElement, activeSection, -1);
-    } else if (keyCode === remoteKeys.down) {
-      event.preventDefault();
-      focusSettingsPanelByOffset(elements, activeElement, activeSection, 1);
-    }
-
-    updateDirtyStatus(elements, savedSnapshot);
-    return result;
-  }
-
-  switch (keyCode) {
-    case remoteKeys.left:
-      event.preventDefault();
-      hideSettingsPanels(elements);
-      focusActiveSettingsSection(elements, activeSection);
-      break;
-    case remoteKeys.up:
-      event.preventDefault();
-      if (!focusSettingsPanelByOffset(elements, activeElement, activeSection, -1)) {
-        navigator.focusByOffset(-1);
-      }
-      break;
-    case remoteKeys.right:
-    case remoteKeys.down:
-      event.preventDefault();
-      if (!focusSettingsPanelByOffset(elements, activeElement, activeSection, 1)) {
-        navigator.focusByOffset(1);
-      }
-      break;
-    case remoteKeys.enter:
-      event.preventDefault();
-      onActionKeydown();
-      return handleAction(
-        activeElement ? activeElement.getAttribute("data-action") : null,
-        service,
-        elements,
-        options,
-        activeSection,
-        savedSnapshot
-      );
-      break;
-    default:
-      break;
-  }
-
-  return result;
 }
 
 function isCheckboxInput(element: Element | null): element is HTMLInputElement {
@@ -578,27 +552,6 @@ function isTextSettingsInput(element: Element | null): element is HTMLInputEleme
     element instanceof HTMLInputElement &&
     (element.type === "text" || element.type === "url" || element.type === "password")
   );
-}
-
-function enableTextEntry(input: HTMLInputElement, elements: ConnectionScreenElements): void {
-  input.readOnly = false;
-  input.setAttribute("inputmode", input === elements.serverUrlInput ? "url" : "text");
-  input.setAttribute("data-editing", "true");
-  elements.root.ownerDocument.documentElement.classList.add("settings-text-entry-active");
-  elements.root.ownerDocument.body.classList.add("settings-text-entry-active");
-  setStatus(elements, "Text entry enabled.");
-}
-
-function disableTextEntry(elements: ConnectionScreenElements): void {
-  const inputs = [elements.serverUrlInput, elements.apiKeyInput];
-
-  inputs.forEach((input) => {
-    input.readOnly = true;
-    input.setAttribute("inputmode", "none");
-    input.removeAttribute("data-editing");
-  });
-  elements.root.ownerDocument.documentElement.classList.remove("settings-text-entry-active");
-  elements.root.ownerDocument.body.classList.remove("settings-text-entry-active");
 }
 
 function isVisibleElement(element: HTMLElement): boolean {
@@ -619,264 +572,6 @@ function findActionElement(target: EventTarget | null): HTMLElement | null {
   const actionElement = target.closest("[data-action]");
 
   return actionElement instanceof HTMLElement ? actionElement : null;
-}
-
-function handleSettingsRailKeydown(
-  event: KeyboardEvent,
-  keyCode: number,
-  service: ConnectionService,
-  elements: ConnectionScreenElements,
-  activeElement: HTMLButtonElement,
-  options: ConnectionScreenOptions,
-  activeSection: SettingsSection,
-  savedSnapshot: string,
-  onActionKeydown: () => void
-): SettingsKeydownResult {
-  const result = {
-    activeSection,
-    savedSnapshot
-  };
-
-  if (keyCode === remoteKeys.up || keyCode === remoteKeys.down) {
-    event.preventDefault();
-    const nextButton = focusSettingsRailByOffset(
-      elements,
-      activeElement,
-      keyCode === remoteKeys.up ? -1 : 1
-    );
-    const nextSection = nextButton ? readSettingsSection(nextButton) : null;
-
-    if (nextSection) {
-      result.activeSection = nextSection;
-    }
-
-    hideSettingsPanels(elements);
-
-    return result;
-  }
-
-  if (keyCode === remoteKeys.left && options.onReturnToShell) {
-    event.preventDefault();
-    hideSettingsPanels(elements);
-    options.onReturnToShell();
-    return result;
-  }
-
-  if (keyCode === remoteKeys.right || keyCode === remoteKeys.enter) {
-    event.preventDefault();
-    const section = readSettingsSection(activeElement) || activeSection;
-
-    if (readSettingsSection(activeElement)) {
-      result.activeSection = section;
-      showSettingsSection(elements, section);
-      focusFirstPanelControl(elements, section);
-
-      return result;
-    }
-
-    if (keyCode === remoteKeys.enter) {
-      onActionKeydown();
-      return handleAction(
-        activeElement.getAttribute("data-action"),
-        service,
-        elements,
-        options,
-        activeSection,
-        savedSnapshot
-      );
-    }
-  }
-
-  return result;
-}
-
-function readSettingsSection(element: HTMLElement): SettingsSection | null {
-  const section = element.getAttribute("data-settings-section");
-
-  return section === "connection" || section === "display" ? section : null;
-}
-
-function focusSettingsRailByOffset(
-  elements: ConnectionScreenElements,
-  activeElement: HTMLButtonElement,
-  offset: number
-): HTMLButtonElement | null {
-  const buttons = Array.prototype.slice
-    .call(elements.root.querySelectorAll(".settings-nav .focusable:not([hidden])"))
-    .filter(isVisibleElement) as HTMLButtonElement[];
-  const currentIndex = buttons.indexOf(activeElement);
-  const nextIndex = Math.max(0, Math.min(buttons.length - 1, currentIndex + offset));
-  const nextButton = buttons[nextIndex];
-
-  if (nextButton) {
-    nextButton.focus();
-    return nextButton;
-  }
-
-  return null;
-}
-
-function showSettingsSection(elements: ConnectionScreenElements, section: SettingsSection): void {
-  const isConnection = section === "connection";
-
-  elements.settingsPanelConnection.hidden = !isConnection;
-  elements.settingsPanelDisplay.hidden = isConnection;
-  elements.settingsPanelUnsaved.hidden = true;
-  elements.settingsSectionConnection.setAttribute("aria-selected", isConnection ? "true" : "false");
-  elements.settingsSectionDisplay.setAttribute("aria-selected", isConnection ? "false" : "true");
-}
-
-function hideSettingsPanels(elements: ConnectionScreenElements): void {
-  elements.settingsPanelConnection.hidden = true;
-  elements.settingsPanelDisplay.hidden = true;
-  elements.settingsPanelUnsaved.hidden = true;
-  elements.settingsSectionConnection.setAttribute("aria-selected", "false");
-  elements.settingsSectionDisplay.setAttribute("aria-selected", "false");
-}
-
-function focusActiveSettingsSection(
-  elements: ConnectionScreenElements,
-  section: SettingsSection
-): void {
-  if (section === "connection") {
-    elements.settingsSectionConnection.focus();
-    return;
-  }
-
-  elements.settingsSectionDisplay.focus();
-}
-
-function focusFirstPanelControl(
-  elements: ConnectionScreenElements,
-  section: SettingsSection
-): void {
-  if (section === "connection") {
-    elements.serverUrlInput.focus();
-    return;
-  }
-
-  elements.autoplayVideosInput.focus();
-}
-
-function focusSettingsPanelByOffset(
-  elements: ConnectionScreenElements,
-  activeElement: Element | null,
-  activeSection: SettingsSection,
-  offset: number
-): boolean {
-  const panel = readOpenSettingsPanel(elements, activeSection);
-
-  if (!panel || !(activeElement instanceof HTMLElement) || !panel.contains(activeElement)) {
-    return false;
-  }
-
-  const controls = Array.prototype.slice
-    .call(panel.querySelectorAll(".focusable:not([hidden])"))
-    .filter(isVisibleElement) as HTMLElement[];
-
-  if (controls.length === 0) {
-    return false;
-  }
-
-  const currentIndex = controls.indexOf(activeElement);
-  const baseIndex = currentIndex < 0 ? 0 : currentIndex;
-  const nextIndex = (baseIndex + offset + controls.length) % controls.length;
-  const nextControl = controls[nextIndex];
-
-  if (nextControl) {
-    nextControl.focus();
-  }
-
-  return true;
-}
-
-function readOpenSettingsPanel(
-  elements: ConnectionScreenElements,
-  activeSection: SettingsSection
-): HTMLElement | null {
-  if (!elements.settingsPanelUnsaved.hidden) {
-    return elements.settingsPanelUnsaved;
-  }
-
-  if (activeSection === "connection" && !elements.settingsPanelConnection.hidden) {
-    return elements.settingsPanelConnection;
-  }
-
-  if (activeSection === "display" && !elements.settingsPanelDisplay.hidden) {
-    return elements.settingsPanelDisplay;
-  }
-
-  return null;
-}
-
-function handleSettingsExit(
-  elements: ConnectionScreenElements,
-  options: ConnectionScreenOptions,
-  activeSection: SettingsSection,
-  savedSnapshot: string
-): void {
-  if (requestSettingsExit(elements, activeSection, savedSnapshot)) {
-    options.onBack?.();
-  }
-}
-
-function requestSettingsExit(
-  elements: ConnectionScreenElements,
-  activeSection: SettingsSection,
-  savedSnapshot: string
-): boolean {
-  if (!hasUnsavedSettings(elements, savedSnapshot)) {
-    return true;
-  }
-
-  elements.settingsPanelConnection.hidden = true;
-  elements.settingsPanelDisplay.hidden = true;
-  elements.settingsPanelUnsaved.hidden = false;
-  elements.settingsSectionConnection.setAttribute("aria-selected", "false");
-  elements.settingsSectionDisplay.setAttribute("aria-selected", "false");
-  elements.settingsPanelUnsaved.setAttribute("data-return-section", activeSection);
-  setSettingsStatus(elements, "Unsaved changes.");
-  focusUnsavedAction(elements);
-
-  return false;
-}
-
-function focusUnsavedAction(elements: ConnectionScreenElements): void {
-  const button = elements.settingsPanelUnsaved.querySelector<HTMLButtonElement>(".focusable");
-
-  if (button) {
-    button.focus();
-  }
-}
-
-function readSettingsSnapshot(elements: ConnectionScreenElements): string {
-  const snapshot: SettingsSnapshot = {
-    apiKey: elements.apiKeyInput.value,
-    autoplayVideos: elements.autoplayVideosInput.checked,
-    serverUrl: elements.serverUrlInput.value,
-    showViewerDate: elements.showViewerDateInput.checked,
-    showViewerExif: elements.showViewerExifInput.checked,
-    showViewerTime: elements.showViewerTimeInput.checked,
-    slideshowIntervalSeconds: elements.slideshowIntervalInput.value
-  };
-
-  return JSON.stringify(snapshot);
-}
-
-function hasUnsavedSettings(elements: ConnectionScreenElements, savedSnapshot: string): boolean {
-  return readSettingsSnapshot(elements) !== savedSnapshot;
-}
-
-function updateDirtyStatus(elements: ConnectionScreenElements, savedSnapshot: string): void {
-  const hasChanges = hasUnsavedSettings(elements, savedSnapshot);
-
-  // Element.toggleAttribute needs Chrome 69; Tizen 5.0 runs Chromium 63.
-  if (hasChanges) {
-    elements.settingsSaveButton.setAttribute("data-dirty", "");
-  } else {
-    elements.settingsSaveButton.removeAttribute("data-dirty");
-  }
-  elements.settingsSaveLabel.textContent = hasChanges ? "Save *" : "Save";
 }
 
 function moveSelectOption(element: HTMLSelectElement, offset: number): void {

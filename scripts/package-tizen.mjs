@@ -6,6 +6,7 @@ import { loadTizenEnv, requireTizenEnv } from "./tizen-env.mjs";
 
 const runtimeFiles = [
   "config.xml",
+  "assets/app-background.jpg",
   "assets/immich-tv-logo.png",
   "index.html",
   "icon.png",

@@ -7,6 +7,9 @@ export type ViewerElements = {
   assetPlaceholderBack: HTMLButtonElement;
   assetPlaceholderSummary: HTMLElement;
   assetViewerExif: HTMLElement;
+  assetViewerFaceOverlay: HTMLElement;
+  assetViewerFaces: HTMLButtonElement;
+  assetViewerFacesStatus: HTMLElement;
   assetViewerImage: HTMLImageElement;
   assetViewerPlaceholder: HTMLElement;
   assetViewerPlaceholderMessage: HTMLElement;

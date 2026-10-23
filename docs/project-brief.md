@@ -75,6 +75,10 @@ Development tooling: desktop screenshot and video capture against a demo library
 
 Milestone 14, Favorites and Library Views, is complete on `main` (see [ADR 0016](architecture/0016-library-views.md)); physical Q950R acceptance is pending and will be run with Milestones 12 and 13. Favourites, Videos (a new Home rail) and Recently added open as library views in the shared collection, viewer and slideshow.
 
+Fixes from TV testing (picker face flicker, a sharper launcher icon, an earlier splash with Home revealed once its rails have loaded, and Home loading in screen order) are on `main`; their physical-TV checks are pending with Milestones 12-14.
+
+Milestone 15, Personalisation and Navigation, is implemented on branch `claude/milestone-15-personalisation-navigation` (see [ADR 0017](architecture/0017-personalisation-and-navigation.md)); physical Q950R acceptance is pending. It adds date-rail hold acceleration and CH year jumps, Home rail visibility in Settings, a Newest first / Oldest first toggle on collections, and viewer face tags. The roadmap continues with Milestone 16 (Search v2), then Shared Content, Ambient / Screensaver Mode, Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 17-20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
+
 ## Post-MVP Product Roadmap
 
 ### Milestone 8 - Application Shell, Splash and Top-Level Navigation - complete
@@ -295,7 +299,7 @@ Include a test that asserts no unsupported APIs reach the bundle, if the compati
 #### Out of scope
 
 - People, Search, Favorites and any other new destination.
-- Pairing or changes to authentication (Milestone 17).
+- Pairing or changes to authentication (Milestone 17, now Milestone 19).
 - Visual redesign beyond the spacing corrections in item A3.
 - Adopting a UI framework or router library.
 
@@ -401,7 +405,49 @@ Carry-over (16 October 2026): Recently Added paging. **Resolved in Milestone 14:
 
 Success criterion: important common library subsets can be browsed without duplicating collection, viewer, or slideshow logic.
 
-### Milestone 15 - Shared Content
+### Milestone 15 - Personalisation and Navigation
+
+**Status:** implemented (ADR 0017); TV acceptance pending.
+
+Four features chosen from TV use, each reusing the existing shared collection, viewer and Settings patterns. There are no on-screen hints for the date-rail acceleration or the channel keys (user decision).
+
+#### Date-rail navigation (Photos)
+
+- **Hold to accelerate.** While Up or Down is held on the Photos date rail, each repeat moves one month bucket for the first second, then to the next year marker (the year boundaries the rail already labels), and after three seconds two years at a time. The thresholds are named constants. A hold is detected from `KeyboardEvent.repeat` or, where the runtime doesn't set it, the same key arriving within 250 ms. It resets on key release, another key, a change of direction, a longer gap, leaving the rail, hiding the screen or a lifecycle pause. The first press of a hold is always one month, so single presses stay precise.
+- **At most one re-render per frame.** Key handling only moves the selection; the rail re-renders and refocuses at most once per animation frame. Holding loads nothing: photos still load only when OK jumps to the selected month.
+- **CH ▲ / CH ▼ jump a year.** The channel rocker (registered through the platform layer) moves the date-rail selection to the previous or next year marker. From the Photos grid it enters the rail at the focused photo's month first. It does nothing on other screens. PageUp and PageDown do the same on the desktop preview (ADR 0015 precedent). Up, Down, Left, Right, OK and Back remain the only required keys.
+- **Order-aware.** Up/Down and CH always mean towards the top or bottom of the rail as displayed, in either sort order.
+
+#### Home rails in Settings
+
+- A **Home** section in Settings turns each Home rail on or off, listed in Home order with their Home titles. All are on by default; saving follows the existing Settings save behaviour. The settings store gains a schema version and migration.
+- Rails that are off are not rendered, fetched, given thumbnail requests or reachable by navigation, and the startup splash waits only for enabled rails. Changes apply the next time Home is shown. If every rail is off, Home shows "Choose what Home shows in Settings." with an **Open Settings** button.
+- Turning Recently Viewed off only hides the rail; viewing history is still recorded. Reordering rails and clearing history are possible later work.
+
+#### Collection sort order
+
+- A header button reading **Newest first** or **Oldest first** reverses Photos, albums, people, Favourites, Videos and Search results, reloading from the start with focus kept on the button. Memories, Recently Viewed and Recently Added keep their own order and show no control.
+- The choice is saved per collection kind (Photos, Favourites, Videos, people, Search), defaulting to newest first. Albums start in the album's own Immich order and can be reversed for the session only. Opening a library view or person from a specific Home rail item opens it newest first for that visit, so the chosen item can be focused.
+- Photos oldest first reverses the date rail, date headings, year markers and jumps; the viewer and slideshow follow the collection order.
+
+#### Face tags in the viewer
+
+- A **Faces** button in the viewer's controls (images and Live Photo stills only; saved, default off) outlines the faces Immich has tagged on the current photo, with readable names for named people. Unnamed faces get an outline only; hidden people are never shown.
+- Faces are fetched only while the toggle is on, for the displayed photo only, with a tiny bounded cache. They're hidden during a slideshow. Without the `face.read` API-key permission, a single calm message explains what's needed and Faces turns off for the session.
+
+Success criterion: everyday browsing is faster and more personal on the TV, without new frameworks, extra backend services or unbounded resource use.
+
+### Milestone 16 - Search v2
+
+Extend Search v1 (ADR 0014) with three remote-friendly criteria. Each new criterion is one criteria field plus its helpers, one mapper line and one panel row; no query builder.
+
+- **Media type:** one row choosing All, Photos, Live Photos or Videos. "Photos" means all still images, including Live Photos (`type` IMAGE). "Live Photos" means `type` IMAGE with `isMotion: { eq: true }` (Immich matches assets whose `livePhotoVideoId` is set). "Videos" means `type` VIDEO.
+- **Location:** one place, chosen by drilling down from a country to an optional region and then an optional city, using values from `GET /search/suggestions?type=country|state|city` (asset read). Nothing is typed. The filter uses `country`, `state` and `city`.
+- **Albums:** a multi-select picker reusing the people-picker pattern. It matches photos in *any* chosen album (`albumIds.any`), and the panel says so in plain words.
+
+The API-key permission stays asset read only. Verify the API again at implementation time.
+
+### Milestone 17 - Shared Content
 
 Add appropriate support for Immich content shared with the current user.
 
@@ -411,7 +457,7 @@ Shared content should integrate naturally with the existing Albums/Home/asset br
 
 Success criterion: content legitimately available to the logged-in Immich user can be discovered and viewed consistently regardless of ownership.
 
-### Milestone 16 - Ambient / Screensaver Mode
+### Milestone 18 - Ambient / Screensaver Mode
 
 Build an ambient photo-frame/screensaver-style experience on top of the existing slideshow/viewer infrastructure.
 
@@ -423,7 +469,7 @@ Investigate Samsung/Tizen lifecycle and screensaver restrictions before deciding
 
 Success criterion: the television can reliably display Immich content for an extended period without memory growth, crashes, or repeated manual intervention.
 
-### Milestone 17 - Consumer-Friendly Pairing and Authentication
+### Milestone 19 - Consumer-Friendly Pairing and Authentication
 
 Replace or supplement manual API-key entry with an authentication experience suitable for ordinary TV users.
 
@@ -443,7 +489,7 @@ At this milestone revisit credential persistence, least-privilege permissions, l
 
 #### Authentication approach order
 
-When Milestone 17 is implemented, investigate authentication options in this order:
+When Milestone 19 is implemented, investigate authentication options in this order:
 
 1. Prefer a native Immich-supported device-authorisation or pairing flow if Immich provides one by then.
 2. If not available, investigate a reliable local/LAN pairing mechanism between phone/browser and TV that avoids any external service.
@@ -554,7 +600,7 @@ Do not make this source-licensing decision irreversible in the brief, but record
 
 Success criterion: a normal Immich user can securely pair the Samsung TV client without manually entering a long API key using the remote, while preserving direct TV-to-Immich operation after pairing and allowing privacy-conscious users to self-host the pairing service if a broker architecture is required.
 
-### Milestone 18 - Product Hardening and Samsung Release Readiness
+### Milestone 20 - Product Hardening and Samsung Release Readiness
 
 Once the feature set and navigation model are stable, harden the application for long-term use and possible wider distribution.
 

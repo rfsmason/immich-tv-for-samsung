@@ -12,6 +12,7 @@ import {
   createRailState,
   getAssetRailState,
   hasLoadedAnyHomeRail,
+  isRailEnabled,
   homeThumbnailRequestLimit,
   isHomeLoading,
   readRailFocusId,
@@ -52,6 +53,7 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
   const elements = readElements(documentRef);
   const state: HomeScreenState = {
     activeRail: "recently-added",
+    enabledRails: options.loadEnabledRails(),
     refreshPending: false,
     albumThumbnails: createAlbumThumbnailState(),
     albums: createRailState(),
@@ -86,6 +88,10 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
       event.stopImmediatePropagation();
     }
   };
+  const handleOpenSettingsClick = (event: MouseEvent) => {
+    event.preventDefault();
+    options.onOpenSettings();
+  };
   const handleRailClick = (event: MouseEvent) => {
     if (elements.root.hidden) {
       return;
@@ -95,6 +101,7 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
   };
 
   documentRef.addEventListener("keydown", handleDocumentKeydown);
+  elements.openSettingsButton.addEventListener("click", handleOpenSettingsClick);
   elements.recentlyAddedRail.addEventListener("click", handleRailClick);
   elements.albumsRail.addEventListener("click", handleRailClick);
   elements.favoritesRail.addEventListener("click", handleRailClick);
@@ -118,6 +125,7 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
   return {
     destroy() {
       documentRef.removeEventListener("keydown", handleDocumentKeydown);
+      elements.openSettingsButton.removeEventListener("click", handleOpenSettingsClick);
       elements.recentlyAddedRail.removeEventListener("click", handleRailClick);
       elements.albumsRail.removeEventListener("click", handleRailClick);
       elements.favoritesRail.removeEventListener("click", handleRailClick);
@@ -183,6 +191,11 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
     show() {
       elements.root.hidden = false;
 
+      // Rails turned on or off in Settings apply now, with a fresh load.
+      if (options.loadEnabledRails().join() !== state.enabledRails.join()) {
+        state.refreshPending = true;
+      }
+
       if (state.refreshPending || (!hasLoadedAnyHomeRail(state) && !isHomeLoading(state))) {
         state.refreshPending = false;
         state.homeLoad = loadHome(elements, options, state, false);
@@ -190,15 +203,17 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
       }
 
       renderHome(elements, options, state, state.loadGeneration);
-      state.recentlyViewed.loading = true;
-      void loadRecentlyViewedRail(
-        elements,
-        options,
-        state,
-        state.loadGeneration,
-        readRailFocusId(state.recentlyViewed),
-        false
-      );
+      if (isRailEnabled(state, "recently-viewed")) {
+        state.recentlyViewed.loading = true;
+        void loadRecentlyViewedRail(
+          elements,
+          options,
+          state,
+          state.loadGeneration,
+          readRailFocusId(state.recentlyViewed),
+          false
+        );
+      }
       if (state.contentFocusRequested) {
         focusActiveRailItem(elements, options, state);
       }
@@ -208,6 +223,8 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
 
 function readElements(documentRef: Document): HomeScreenElements {
   return {
+    empty: requireElement(documentRef, "home-empty"),
+    openSettingsButton: requireElement<HTMLButtonElement>(documentRef, "home-open-settings"),
     albumsRail: requireElement(documentRef, "home-albums-rail"),
     albumsStatus: requireElement(documentRef, "home-albums-status"),
     favoritesRail: requireElement(documentRef, "home-favorites-rail"),
@@ -248,6 +265,17 @@ function handleKeydown(
   if (keyCode === remoteKeys.back) {
     event.preventDefault();
     options.onReturnToShell();
+    return;
+  }
+
+  if (documentRef.activeElement === elements.openSettingsButton) {
+    if (keyCode === remoteKeys.enter) {
+      event.preventDefault();
+      options.onOpenSettings();
+    } else if (keyCode === remoteKeys.left) {
+      event.preventDefault();
+      options.onReturnToShell();
+    }
     return;
   }
 

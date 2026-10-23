@@ -83,3 +83,7 @@ The tile sits at index `items.length`, and focus on it is restored across reload
 ## Update: Videos rail and typed library route (Milestone 14)
 
 Home has seven rails: a Videos rail sits directly after Favourites and follows the same rules (18 items, See more when Immich reports a next cursor). Favourites, Videos and Recently Added now open as library views on a typed `library` route rather than `home-collection`. See more on those rails opens the view on its first item and Back returns to the See more tile; Recently Viewed keeps its behaviour. See [ADR 0016](0016-library-views.md).
+
+## Update: rail visibility (Milestone 15)
+
+Settings > Home turns each rail on or off; all are on by default. Home reads the enabled rails at each load: rails that are off are emptied and hidden, so they are not fetched, rendered, given thumbnails or reached, and the launch splash waits only for rails that are on. A change applies the next time Home is shown, with focus moving to the nearest rail still on. With every rail off, Home offers **Open Settings**. Recently Viewed history is recorded whether or not its rail is shown. A rail item opens Favourites or Videos newest first, matching the rail. See [ADR 0017](0017-personalisation-and-navigation.md).

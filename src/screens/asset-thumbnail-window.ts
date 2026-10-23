@@ -142,7 +142,7 @@ function loadThumbnail<T extends ThumbnailItem>(
 
   return options.loadThumbnailUrl(request.asset).then(
     (url) => {
-      handleThumbnailLoaded(options, request.asset, request.index, url);
+      handleThumbnailLoaded(options, request, url);
     },
     () => {
       if (options.state.thumbnailRequests[request.asset.id] === request.generation) {
@@ -193,30 +193,36 @@ function prioritizeQueuedThumbnailRequests<T extends ThumbnailItem>(
   });
 }
 
+// A request is judged by the generation it was made for, not by the
+// options that happened to start it: when a caller reuses its state after a
+// reload, a finishing request from the previous generation starts the next
+// queued one, which belongs to the new generation. Judging it by the old
+// generation discarded its thumbnail and left it marked as requested, so it
+// was never loaded (Home tiles beyond the first few after a reload).
 function handleThumbnailLoaded<T extends ThumbnailItem>(
   options: ReconcileAssetThumbnailOptions<T>,
-  asset: T,
-  index: number,
+  request: AssetThumbnailRequest<T>,
   url: string | null
 ): void {
+  const { asset, generation, index } = request;
   const requestGeneration = options.state.thumbnailRequests[asset.id];
 
   if (!url) {
-    if (requestGeneration === options.generation) {
+    if (requestGeneration === generation) {
       delete options.state.thumbnailRequests[asset.id];
     }
     return;
   }
 
   if (
-    !options.isCurrentGeneration(options.generation) ||
+    !options.isCurrentGeneration(generation) ||
     options.isHidden() ||
-    requestGeneration !== options.generation ||
+    requestGeneration !== generation ||
     !options.state.retainedAssetIds[asset.id]
   ) {
     options.revokeThumbnailUrl(url);
 
-    if (requestGeneration === options.generation) {
+    if (requestGeneration === generation) {
       delete options.state.thumbnailRequests[asset.id];
     }
 

@@ -5,6 +5,7 @@ import type {
   AlbumAsset,
   AlbumAssetPage,
   AlbumAssetPageToken,
+  SortOrder,
   TimelineBucket
 } from "../domain/album";
 import { defaultAppSettings } from "../domain/app-settings";
@@ -69,9 +70,10 @@ function createServices(
     Promise.resolve({ assets: items, nextPageToken: null, total: items.length });
   const albumService = {
     loadAlbumAssetsPage: vi.fn(() => page(assets.slice(0, 2))),
+    loadAssetFaces: vi.fn(async () => []),
     loadAlbumDetail: vi.fn(async (id: string) => ({
       ...albums.find((album) => album.id === id)!,
-      order: "desc" as const
+      order: "newest-first" as const
     })),
     loadAlbums: vi.fn(async () => albums),
     loadAssetPlaybackUrl: vi.fn(() => null),
@@ -80,7 +82,7 @@ function createServices(
     loadAssetViewerStillUrl: vi.fn(async () => null),
     loadFavoriteAssets: vi.fn(() => page(assets.slice(0, 2))),
     // The full collection repeats the rail's items, then continues.
-    loadFavoriteAssetsPage: vi.fn(async (token: AlbumAssetPageToken | null) =>
+    loadFavoriteAssetsPage: vi.fn(async (_order: SortOrder, token: AlbumAssetPageToken | null) =>
       token?.kind === "page" && token.page === 1
         ? {
             assets: moreAssets(0, 30),
@@ -448,6 +450,9 @@ describe("application routing", () => {
     expect(document.getElementById("album-detail-back")).toBeNull();
     pressKey(remoteKeys.right);
     pressKey(remoteKeys.up);
+    // Up from the first row reaches the sort order button.
+    expect(active()).toBe(byId("collection-sort-order"));
+    pressKey(remoteKeys.down);
     expect(active()?.getAttribute("data-asset-index")).toBe("0");
     pressKey(remoteKeys.back);
     expect(active()).toBe(rail("photos"));
@@ -524,7 +529,7 @@ describe("application routing", () => {
     pressKey(remoteKeys.enter);
 
     await collectionGridReady();
-    expect(albumService.loadPersonAssetsPage).toHaveBeenCalledWith("person-1", {
+    expect(albumService.loadPersonAssetsPage).toHaveBeenCalledWith("person-1", "newest-first", {
       kind: "page",
       page: 1
     });
@@ -569,7 +574,7 @@ describe("application routing", () => {
 
     await collectionGridReady();
     expect(byId("people-screen").hidden).toBe(true);
-    expect(albumService.loadPersonAssetsPage).toHaveBeenCalledWith("person-1", {
+    expect(albumService.loadPersonAssetsPage).toHaveBeenCalledWith("person-1", "newest-first", {
       kind: "page",
       page: 1
     });
@@ -633,13 +638,19 @@ describe("application routing", () => {
     await vi.waitFor(() =>
       expect(byId("album-detail-summary").getAttribute("data-loaded-count")).toBe("30")
     );
-    expect(albumService.loadFavoriteAssetsPage).toHaveBeenCalledWith({ kind: "page", page: 1 });
+    expect(albumService.loadFavoriteAssetsPage).toHaveBeenCalledWith("newest-first", {
+      kind: "page",
+      page: 1
+    });
 
     for (let step = 0; step < 3; step += 1) pressKey(remoteKeys.down);
     await vi.waitFor(() =>
       expect(byId("album-detail-summary").getAttribute("data-loaded-count")).toBe("40")
     );
-    expect(albumService.loadFavoriteAssetsPage).toHaveBeenLastCalledWith({ kind: "page", page: 2 });
+    expect(albumService.loadFavoriteAssetsPage).toHaveBeenLastCalledWith("newest-first", {
+      kind: "page",
+      page: 2
+    });
 
     pressKey(remoteKeys.enter);
     for (let step = 0; step < 30; step += 1) pressKey(remoteKeys.right);
@@ -808,6 +819,7 @@ describe("application routing", () => {
     await collectionGridReady();
     expect(albumService.loadSearchAssetsPage).toHaveBeenCalledWith(
       { people: [{ id: "person-1", name: "Alex" }], takenFrom: null, takenTo: null },
+      "newest-first",
       { kind: "page", page: 1 }
     );
     expect(byId("album-detail-title").textContent).toBe("Alex");

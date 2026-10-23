@@ -87,13 +87,13 @@ describe("search request", () => {
     );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.searchAssetsPage(criteria({ people: [mum] }), null)).resolves.toMatchObject(
-      {
-        assets: [{ id: "a1", name: "a1.jpg" }],
-        nextPageToken: { cursor: "120", kind: "cursor" },
-        total: null
-      }
-    );
+    await expect(
+      client.searchAssetsPage(criteria({ people: [mum] }), "newest-first", null)
+    ).resolves.toMatchObject({
+      assets: [{ id: "a1", name: "a1.jpg" }],
+      nextPageToken: { cursor: "120", kind: "cursor" },
+      total: null
+    });
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(fetchImpl.mock.calls[0]?.[0]).toBe("http://immich.local:2283/api/search/metadata");
     expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body))).toEqual({
@@ -111,7 +111,10 @@ describe("search request", () => {
     const client = createImmichClient({ fetchImpl, settings });
 
     await expect(
-      client.searchAssetsPage(criteria({ people: [mum] }), { cursor: "120", kind: "cursor" })
+      client.searchAssetsPage(criteria({ people: [mum] }), "newest-first", {
+        cursor: "120",
+        kind: "cursor"
+      })
     ).resolves.toEqual({ assets: [], nextPageToken: null, total: null });
     const body = JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body));
     expect(body.cursor).toBe("120");
@@ -124,7 +127,11 @@ describe("search request", () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ assets: { items: [] } }));
     const client = createImmichClient({ fetchImpl, settings });
 
-    await client.searchAssetsPage(criteria({ takenFrom: { day: 1, month: 1, year: 2020 } }), null);
+    await client.searchAssetsPage(
+      criteria({ takenFrom: { day: 1, month: 1, year: 2020 } }),
+      "newest-first",
+      null
+    );
 
     expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual([
       "http://immich.local:2283/api/search/metadata"
@@ -135,7 +142,9 @@ describe("search request", () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ assets: { items: [{ type: 1 }] } }));
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.searchAssetsPage(criteria({ people: [mum] }), null)).rejects.toMatchObject({
+    await expect(
+      client.searchAssetsPage(criteria({ people: [mum] }), "newest-first", null)
+    ).rejects.toMatchObject({
       kind: "invalid-response"
     });
   });
@@ -146,7 +155,7 @@ describe("search request", () => {
       .mockResolvedValue(jsonResponse({ message: "Missing permission" }, { status: 403 }));
     const client = createImmichClient({ fetchImpl, settings });
     const error = await client
-      .searchAssetsPage(criteria({ people: [mum] }), null)
+      .searchAssetsPage(criteria({ people: [mum] }), "newest-first", null)
       .catch((reason: unknown) => reason);
 
     expect(error).toMatchObject({ feature: "Search", kind: "permission" });
@@ -159,7 +168,7 @@ describe("search request", () => {
       const fetchImpl = vi.fn(() => new Promise<Response>(() => undefined));
       const client = createImmichClient({ fetchImpl, settings });
       const result = client
-        .searchAssetsPage(criteria({ people: [mum] }), null)
+        .searchAssetsPage(criteria({ people: [mum] }), "newest-first", null)
         .catch((reason: unknown) => reason);
 
       await vi.advanceTimersByTimeAsync(defaultRequestTimeouts.jsonMs);

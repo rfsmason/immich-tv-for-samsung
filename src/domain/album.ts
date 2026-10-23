@@ -5,7 +5,8 @@ export type Album = {
   thumbnailAssetId: string | null;
 };
 
-export type AssetOrder = "asc" | "desc";
+// The order a collection lists its assets in, by capture date.
+export type SortOrder = "newest-first" | "oldest-first";
 
 export type AlbumAssetType = "audio" | "image" | "other" | "video";
 
@@ -54,5 +55,6 @@ export type TimelineBucket = {
 };
 
 export type AlbumDetail = Album & {
-  order: AssetOrder;
+  // The album's own order, set in Immich.
+  order: SortOrder;
 };

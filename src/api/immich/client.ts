@@ -4,10 +4,11 @@ import type {
   AlbumAssetPage,
   AlbumAssetPageToken,
   AlbumDetail,
-  AssetOrder,
+  SortOrder,
   TimelineBucket
 } from "../../domain/album";
 import type { ConnectionSettings, CurrentUser, ServerVersion } from "../../domain/connection";
+import type { AssetFace } from "../../domain/face";
 import { localMemoryDate, type Memory, type PeoplePage } from "../../domain/home";
 import type { SearchCriteria } from "../../domain/search";
 import { AppError } from "../../errors/app-error";
@@ -24,6 +25,7 @@ import { buildSearchCriteriaFilter } from "./search-filter";
 import type {
   AlbumDetailResponseDto,
   AlbumResponseDto,
+  AssetFaceResponseDto,
   AssetResponseDto,
   MemoryResponseDto,
   PeopleResponseDto,
@@ -38,11 +40,14 @@ import {
   mapMemory,
   mapPerson,
   mapTimelineBucket,
-  mapTimelineBucketAssets
+  mapAssetFaces,
+  mapTimelineBucketAssets,
+  toImmichAssetOrder
 } from "./mappers";
 import {
   isAlbumDetailResponse,
   isAlbumResponseList,
+  isAssetFaceResponseList,
   isAssetResponse,
   isCurrentUser,
   isMemoryResponseList,
@@ -58,35 +63,51 @@ type FetchLike = typeof fetch;
 export type ImmichClient = {
   getAlbumAssetsPage(
     albumId: string,
-    order: AssetOrder,
+    order: SortOrder,
     page: AlbumAssetPageToken | null
   ): Promise<AlbumAssetPage>;
+  // The Favourites rail's first page, newest first.
   getFavoriteAssets(limit: number): Promise<AlbumAssetPage>;
-  // Full, paged Favourites for the Home summary collection.
-  getFavoriteAssetsPage(page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
+  // Every favourite in the given order, paged by search cursor.
+  getFavoriteAssetsPage(
+    order: SortOrder,
+    page: AlbumAssetPageToken | null
+  ): Promise<AlbumAssetPage>;
   // The Videos rail's first page; its next cursor tells Home whether more exist.
   getVideoAssets(limit: number): Promise<AlbumAssetPage>;
-  // Every timeline video, newest first, paged by search cursor.
-  getVideoAssetsPage(page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
+  // Every timeline video in the given order, paged by search cursor.
+  getVideoAssetsPage(order: SortOrder, page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
   getMemories(limit: number, page?: number, date?: string): Promise<Memory[]>;
   getMemory(id: string): Promise<Memory>;
   getMemoriesTotal(date: string): Promise<number>;
   // One page of the People list, as Immich orders it. Hidden people are
   // never requested.
   getPeoplePage(page: number, size: number): Promise<PeoplePage>;
-  getPersonAssetsPage(personId: string, page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
+  getPersonAssetsPage(
+    personId: string,
+    order: SortOrder,
+    page: AlbumAssetPageToken | null
+  ): Promise<AlbumAssetPage>;
   getPersonThumbnail(personId: string): Promise<Blob>;
-  // Assets matching search criteria, newest first, paged by search cursor.
+  // The faces Immich has detected in an asset, without hidden people.
+  getAssetFaces(assetId: string): Promise<AssetFace[]>;
+  // Assets matching search criteria in the given order, paged by search cursor.
   searchAssetsPage(
     criteria: SearchCriteria,
+    order: SortOrder,
     page: AlbumAssetPageToken | null
   ): Promise<AlbumAssetPage>;
   getHistoryAsset(assetId: string): Promise<AlbumAsset | null>;
   getRecentlyAddedAssets(limit: number): Promise<AlbumAssetPage>;
   // Recently added assets one upload-date bucket at a time, newest first.
   getRecentlyAddedAssetsPage(page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
-  getTimelineAssetsPage(page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
-  getTimelineBuckets(): Promise<TimelineBucket[]>;
+  // The timeline's buckets and their assets run in the given order; both
+  // must use the same order, as bucket indexes refer to the bucket list.
+  getTimelineAssetsPage(
+    order: SortOrder,
+    page: AlbumAssetPageToken | null
+  ): Promise<AlbumAssetPage>;
+  getTimelineBuckets(order: SortOrder): Promise<TimelineBucket[]>;
   getAlbumDetail(albumId: string): Promise<AlbumDetail>;
   getAlbums(): Promise<Album[]>;
   getAssetThumbnail(assetId: string, size?: AssetThumbnailSize): Promise<Blob>;
@@ -157,28 +178,38 @@ export function createImmichClient(options: CreateImmichClientOptions): ImmichCl
       // The rail's first page; its next cursor tells Home whether more exist.
       return getPagedFilteredAssetPage({
         http,
-        body: buildFilteredSearchBody(favoriteAssetFilter(), railSearchSize(limit), null),
+        body: buildFilteredSearchBody(
+          favoriteAssetFilter(),
+          railSearchSize(limit),
+          "newest-first",
+          null
+        ),
         feature: "Favourites"
       });
     },
     getVideoAssets(limit) {
       return getPagedFilteredAssetPage({
         http,
-        body: buildFilteredSearchBody(videoAssetFilter(), railSearchSize(limit), null),
+        body: buildFilteredSearchBody(
+          videoAssetFilter(),
+          railSearchSize(limit),
+          "newest-first",
+          null
+        ),
         feature: "Videos"
       });
     },
-    getVideoAssetsPage(page) {
+    getVideoAssetsPage(order, page) {
       return getPagedFilteredAssetPage({
         http,
-        body: buildFilteredSearchBody(videoAssetFilter(), filteredSearchPageSize, page),
+        body: buildFilteredSearchBody(videoAssetFilter(), filteredSearchPageSize, order, page),
         feature: "Videos"
       });
     },
-    getFavoriteAssetsPage(page) {
+    getFavoriteAssetsPage(order, page) {
       return getPagedFilteredAssetPage({
         http,
-        body: buildFilteredSearchBody(favoriteAssetFilter(), filteredSearchPageSize, page),
+        body: buildFilteredSearchBody(favoriteAssetFilter(), filteredSearchPageSize, order, page),
         feature: "Favourites"
       });
     },
@@ -266,12 +297,27 @@ export function createImmichClient(options: CreateImmichClientOptions): ImmichCl
           total: response.total
         }));
     },
-    getPersonAssetsPage(personId, page) {
+    getPersonAssetsPage(personId, order, page) {
       return getPagedFilteredAssetPage({
         http,
-        body: buildFilteredSearchBody(personAssetFilter(personId), filteredSearchPageSize, page),
+        body: buildFilteredSearchBody(
+          personAssetFilter(personId),
+          filteredSearchPageSize,
+          order,
+          page
+        ),
         feature: "People"
       });
+    },
+    getAssetFaces(assetId) {
+      return http
+        .json<AssetFaceResponseDto[]>({
+          auth: true,
+          feature: "Face tags",
+          path: `/faces?id=${encodeURIComponent(assetId)}`,
+          validate: isAssetFaceResponseList
+        })
+        .then(mapAssetFaces);
     },
     getPersonThumbnail(personId) {
       return http.blob({
@@ -282,12 +328,13 @@ export function createImmichClient(options: CreateImmichClientOptions): ImmichCl
         path: `/people/${encodeURIComponent(personId)}/thumbnail`
       });
     },
-    searchAssetsPage(criteria, page) {
+    searchAssetsPage(criteria, order, page) {
       return getPagedFilteredAssetPage({
         http,
         body: buildFilteredSearchBody(
           buildSearchCriteriaFilter(criteria),
           filteredSearchPageSize,
+          order,
           page
         ),
         feature: "Search"
@@ -302,14 +349,15 @@ export function createImmichClient(options: CreateImmichClientOptions): ImmichCl
     getRecentlyAddedAssetsPage(page) {
       return getRecentlyAddedBucketPage({ http, page });
     },
-    getTimelineAssetsPage(page) {
+    getTimelineAssetsPage(order, page) {
       return getTimelineAssetPage({
         http,
+        order,
         pageRequest: page
       });
     },
-    getTimelineBuckets() {
-      return getTimelineBuckets({ http });
+    getTimelineBuckets(order) {
+      return getTimelineBuckets({ http, order });
     },
     async getAlbumDetail(albumId) {
       const album = await http.json<AlbumDetailResponseDto>({
@@ -368,12 +416,13 @@ type AssetThumbnailSize = "preview" | "thumbnail";
 type AlbumAssetSearchOptions = {
   http: ImmichHttp;
   albumId: string;
-  order: AssetOrder;
+  order: SortOrder;
   pageRequest: AlbumAssetPageToken | null;
 };
 
 type TimelineAssetSearchOptions = {
   http: ImmichHttp;
+  order: SortOrder;
   pageRequest: AlbumAssetPageToken | null;
 };
 
@@ -433,17 +482,19 @@ async function getTimelineAssetPage(options: TimelineAssetSearchOptions): Promis
     return getTimelineBucketPage({
       bucketIndex: options.pageRequest.bucketIndex,
       buckets,
-      http: options.http
+      http: options.http,
+      order: options.order
     });
   }
 
   // Photos pages by timeline bucket; any other request starts a structured
-  // search of the timeline, newest first. Bucket counts give the total.
+  // search of the timeline in the same order. Bucket counts give the total.
   return getPagedFilteredAssetPage({
     http: options.http,
     body: buildFilteredSearchBody(
       timelineAssetFilter(),
       timelineAssetSearchPageSize,
+      options.order,
       options.pageRequest
     ),
     feature: "Photos"
@@ -456,7 +507,7 @@ async function getTimelineBuckets(
   const response = await options.http.json<TimelineBucketResponseDto[]>({
     auth: true,
     feature: "Photos",
-    path: "/timeline/buckets?order=desc&orderBy=takenAt&visibility=timeline&withStacked=true",
+    path: `/timeline/buckets?${timelineQuery(options.order)}`,
     validate: isTimelineBucketResponseList
   });
 
@@ -467,6 +518,7 @@ async function getTimelineBucketPage(options: {
   bucketIndex: number;
   buckets: TimelineBucket[];
   http: ImmichHttp;
+  order: SortOrder;
 }): Promise<AlbumAssetPage> {
   const bucket = options.buckets[options.bucketIndex];
 
@@ -481,7 +533,7 @@ async function getTimelineBucketPage(options: {
   const response = await options.http.json<TimelineBucketAssetsResponseDto>({
     auth: true,
     feature: "Photos",
-    path: `/timeline/bucket?timeBucket=${encodeURIComponent(bucket.timeBucket)}&order=desc&orderBy=takenAt&visibility=timeline&withStacked=true`,
+    path: `/timeline/bucket?timeBucket=${encodeURIComponent(bucket.timeBucket)}&${timelineQuery(options.order)}`,
     validate: isTimelineBucketAssetsResponse
   });
 
@@ -498,9 +550,16 @@ async function getTimelineBucketPage(options: {
   };
 }
 
+// Immich sorts the bucket list and the assets within each bucket by this
+// order, so reversing it reverses the whole timeline. withPartners delegates
+// partner inclusion to Immich's per-partner "Show in timeline" preferences.
+function timelineQuery(order: SortOrder): string {
+  return `order=${toImmichAssetOrder(order)}&orderBy=takenAt&visibility=timeline&withPartners=true&withStacked=true`;
+}
+
 function buildAlbumAssetSearchBody(
   albumId: string,
-  order: AssetOrder,
+  order: SortOrder,
   pageRequest: AlbumAssetPageToken | null
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {
@@ -514,7 +573,7 @@ function buildAlbumAssetSearchBody(
       }
     },
     orderBy: {
-      direction: order,
+      direction: toImmichAssetOrder(order),
       field: "fileCreatedAt"
     },
     size: albumAssetSearchPageSize,
@@ -529,7 +588,7 @@ function buildAlbumAssetSearchBody(
 }
 
 const recentlyAddedQuery =
-  "order=desc&orderBy=createdAt&visibility=timeline&isTrashed=false&withStacked=true";
+  "order=desc&orderBy=createdAt&visibility=timeline&isTrashed=false&withPartners=true&withStacked=true";
 
 // Recently Added pages one upload month at a time, newest first. The first
 // page fetches the month list once; each later token names its month by
@@ -678,19 +737,21 @@ function personAssetFilter(personId: string): Record<string, unknown> {
   };
 }
 
-// Newest first, in Immich's structured search shape (`filter`/`orderBy`/
-// `cursor`, Immich 3.2+). That shape rejects the deprecated flat `page`
-// field, so it pages only by the response's `nextCursor`; a page token here
-// can only mean the first page, which sends no cursor.
+// By capture date in the given order, in Immich's structured search shape
+// (`filter`/`orderBy`/`cursor`, Immich 3.2+). That shape rejects the
+// deprecated flat `page` field, so it pages only by the response's
+// `nextCursor`; a page token here can only mean the first page, which sends
+// no cursor.
 function buildFilteredSearchBody(
   filter: Record<string, unknown>,
   size: number,
+  order: SortOrder,
   pageRequest: AlbumAssetPageToken | null
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {
     filter,
     orderBy: {
-      direction: "desc",
+      direction: toImmichAssetOrder(order),
       field: "fileCreatedAt"
     },
     size,

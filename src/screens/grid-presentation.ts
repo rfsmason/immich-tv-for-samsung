@@ -30,6 +30,40 @@ export function focusWithoutPageScroll(element: HTMLElement): void {
   }
 }
 
+export type RowScrollInput = {
+  // Rows from the top of the grid's content, not the window.
+  row: number;
+  rowHeight: number;
+  // Row height plus the gap between rows.
+  rowPitch: number;
+  // Room kept around the focused row for its enlarged face and focus ring.
+  margin: number;
+  scrollTop: number;
+  viewHeight: number;
+  // The grid's top padding, above its first row.
+  paddingTop: number;
+};
+
+// The scroll position that shows `row`, moving by whole rows only, or null
+// when it is already in view. Rows then always come to rest in the same
+// places: scrolling just enough to show a row moved the grid by uneven
+// amounts (18 px one step, a full row the next), which read as the grid
+// jumping.
+export function readRowScrollTop(input: RowScrollInput): number | null {
+  const rowTop = input.paddingTop + input.row * input.rowPitch;
+  const rowBottom = rowTop + input.rowHeight;
+  let target: number | null = null;
+
+  if (rowTop - input.margin < input.scrollTop) {
+    target = input.row * input.rowPitch;
+  } else if (rowBottom + input.margin > input.scrollTop + input.viewHeight) {
+    target =
+      Math.ceil((rowBottom + input.margin - input.viewHeight) / input.rowPitch) * input.rowPitch;
+  }
+
+  return target === null || Math.max(0, target) === input.scrollTop ? null : Math.max(0, target);
+}
+
 // Scrolls `container` just enough to show `element` with `padding` pixels of
 // room for the focus ring.
 export function scrollIntoContainer(

@@ -22,6 +22,7 @@ import {
 import {
   createGridSpacer,
   focusWithoutPageScroll,
+  readRowScrollTop,
   scrollIntoContainer
 } from "../grid-presentation";
 import { createPageWindow, type PageWindowDirection } from "../page-window";
@@ -36,6 +37,9 @@ import { createPersonCard, personCardLabel, setPersonCardFace } from "./person-c
 const columnCount = 6;
 export const peoplePageSize = 30;
 export const retainedPeoplePageCount = 4;
+// Room above and below a focused card for its face's 6% growth and 12 px
+// focus ring.
+const focusedFaceMargin = 24;
 
 export type PeopleGridElements = {
   grid: HTMLElement;
@@ -122,7 +126,36 @@ export function mountPeopleGrid(options: PeopleGridOptions): PeopleGridControlle
     }
 
     focusWithoutPageScroll(card);
-    scrollIntoContainer(elements.grid, card, 12);
+    scrollToCardRow(card);
+  }
+
+  // Scrolls by whole rows, keeping room for the focused face, which grows
+  // and gains a ring beyond its card. Without layout (tests) it falls back to
+  // scrolling just enough.
+  function scrollToCardRow(card: HTMLElement): void {
+    const style = documentRef.defaultView?.getComputedStyle(elements.grid);
+    const gap = style ? parseFloat(style.getPropertyValue("--person-grid-gap")) : NaN;
+    const paddingTop = style ? parseFloat(style.paddingTop) : NaN;
+    const rowHeight = card.offsetHeight;
+
+    if (!(rowHeight > 0) || !(gap >= 0) || !(paddingTop >= 0)) {
+      scrollIntoContainer(elements.grid, card, 12);
+      return;
+    }
+
+    const scrollTop = readRowScrollTop({
+      margin: focusedFaceMargin,
+      paddingTop,
+      row: Math.floor(state.focusedIndex / columnCount),
+      rowHeight,
+      rowPitch: rowHeight + gap,
+      scrollTop: elements.grid.scrollTop,
+      viewHeight: elements.grid.clientHeight
+    });
+
+    if (scrollTop !== null) {
+      elements.grid.scrollTop = scrollTop;
+    }
   }
 
   const topSpacer = createGridSpacer(documentRef, "person-grid-spacer", "--person-spacer-rows", 0);

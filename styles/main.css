@@ -2251,11 +2251,15 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   height: 0;
 }
 
+/* N skipped rows are N rows and N gaps, but the spacer is itself followed
+   by a grid gap, so it stands for N rows and N - 1 gaps. Counting one gap
+   too many shifted every row by a gap when the spacer appeared. */
 .person-grid-spacer {
   grid-column: 1 / -1;
   height: calc(
     var(--person-spacer-rows) *
-      (var(--person-tile-size) + var(--person-name-height) + var(--person-grid-gap))
+      (var(--person-tile-size) + var(--person-name-height) + var(--person-grid-gap)) -
+      var(--person-grid-gap)
   );
   min-height: 0;
 }

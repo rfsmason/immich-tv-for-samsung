@@ -76,9 +76,10 @@ try {
 // An explicit file allowlist rejects capture output, Playwright, credentials,
 // source files and any future tooling accidentally copied into dist. The
 // desktop preview script is the sole permitted development file; packaging
-// separately stages its existing six-file production allowlist.
+// separately stages its seven-file production allowlist.
 const allowedFiles = new Set([
   ...requiredFiles,
+  "assets/app-background.jpg",
   "assets/immich-tv-logo.png",
   "scripts/dev-preview.js"
 ]);

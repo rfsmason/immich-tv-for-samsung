@@ -24,7 +24,6 @@ import {
   isCurrentGeneration
 } from "./async-generation";
 import { createAssetViewer } from "./collection/asset-viewer";
-import { createCollectionBackdrop } from "./collection/collection-backdrop";
 import {
   createCollectionGrid,
   createPlainGridLayout,
@@ -63,7 +62,6 @@ import type { ViewerElements } from "./collection/viewer-types";
 // collections into it.
 
 type AlbumDetailElements = ViewerElements & {
-  backdrop: HTMLImageElement;
   grid: HTMLElement;
   retryButton: HTMLButtonElement;
   root: HTMLElement;
@@ -131,7 +129,6 @@ export function mountAlbumDetailScreen(
   const elements = readElements(documentRef);
   const model = createCollectionModel();
   const plainLayout = createPlainGridLayout(model);
-  const backdrop = createCollectionBackdrop({ image: elements.backdrop, service: options.service });
   // The album being shown, and album order reversals for this session, by id.
   let currentAlbum: Album | null = null;
   let sessionAlbumOrders: Record<string, SortOrder> = {};
@@ -331,7 +328,6 @@ export function mountAlbumDetailScreen(
     model.assetOffset = 0;
     model.total = null;
     model.assets = [];
-    backdrop.revoke();
     model.focusedIndex = 0;
     model.preferredColumn = 0;
     viewer.clearSelection();
@@ -406,7 +402,6 @@ export function mountAlbumDetailScreen(
       model.paging.previous = null;
       updateTotalFromPage(model, firstAssetPage.total);
       grid.render(true);
-      loadRandomBackdrop(generation);
     } catch (error) {
       if (!canApplyAlbumDetail(model.loadGeneration, generation, elements.root.hidden)) {
         return;
@@ -475,7 +470,6 @@ export function mountAlbumDetailScreen(
       model.paging.next = firstAssetPage.nextPageToken;
       updateTotalFromPage(model, firstAssetPage.total);
       grid.render(model.contentFocusRequested);
-      loadRandomBackdrop(generation);
     } catch (error) {
       if (!canApplyAlbumDetail(model.loadGeneration, generation, elements.root.hidden)) {
         return;
@@ -633,7 +627,6 @@ export function mountAlbumDetailScreen(
 
     if (input.initialView === "grid") {
       grid.render(shouldFocus);
-      loadRandomBackdrop(model.loadGeneration);
     } else {
       openViewer(focusedIndex);
     }
@@ -720,13 +713,6 @@ export function mountAlbumDetailScreen(
     void loadPhotosTimeline();
   }
 
-  function loadRandomBackdrop(generation: number): void {
-    backdrop.load(
-      model.assets,
-      () => isCurrentGeneration(model, generation) && !elements.root.hidden
-    );
-  }
-
   function releaseResources(): void {
     invalidateAsyncGeneration(model);
     model.load = { status: "idle" };
@@ -798,7 +784,6 @@ export function mountAlbumDetailScreen(
       releaseResources();
       viewer.stopSlideshow();
       viewer.resetPlayback();
-      backdrop.revoke();
       grid.resetThumbnails();
       viewer.resetImages();
     },
@@ -823,7 +808,6 @@ export function mountAlbumDetailScreen(
       timeline.suspend();
       viewer.stopSlideshow();
       viewer.resetPlayback();
-      backdrop.revoke();
       grid.resetThumbnails();
       viewer.resetImages();
     },
@@ -948,7 +932,6 @@ function readElements(documentRef: Document): AlbumDetailElements {
     assetViewerSpinner: requireElement(documentRef, "asset-viewer-spinner"),
     assetViewerTitle: requireElement(documentRef, "asset-viewer-title"),
     assetViewerVideo: requireElement<HTMLVideoElement>(documentRef, "asset-viewer-video"),
-    backdrop: requireElement<HTMLImageElement>(documentRef, "album-detail-backdrop"),
     grid: requireElement(documentRef, "album-assets-grid"),
     retryButton: requireElement<HTMLButtonElement>(documentRef, "collection-retry"),
     sortButton: requireElement<HTMLButtonElement>(documentRef, "collection-sort-order"),

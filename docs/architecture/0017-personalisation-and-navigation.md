@@ -81,6 +81,12 @@ Immich facts were checked against `immich-app/immich` `main` at `1cf5bb4`:
 - Immich accepts `withPartners` only with `visibility=timeline`, with no truthy `isTrashed` and without `isFavorite`. Both queries meet that; Recently Added's `isTrashed=false` is allowed.
 - Both timeline endpoints send the same query, so bucket indexes still agree. The Search date stepper reads its range from the same buckets, so it can reach back to a partner's oldest month; Search results come from structured search and do not include partners.
 
+### Standard background
+
+- Every screen sits on one standard background picture (`assets/app-background.jpg`, a runtime file), under a dark wash so white text stays readable. It replaces the random per-screen backdrops (a random album cover on Albums, a random photo on collections): thumbnail-sized library pictures stretched to full screen often looked poor.
+- The background is plain CSS on `body`, with the previous dark gradient colour as a fallback. It costs one 1920 × 1080 decode for the whole app and no requests to Immich.
+- Letting the household choose their own background from the library may become a setting later.
+
 ### Rail logo
 
 - The logo above the left rail fills a 72 × 64 box, the size of a collapsed rail button.
@@ -97,7 +103,7 @@ Immich facts were checked against `immich-app/immich` `main` at `1cf5bb4`:
 
 - `AppSettings` grows `homeRails`, `sortOrders` and `showFaceTags`, with a schema version.
 - Client and service page methods for reversible sources take a `SortOrder`. `CollectionFeed` and `CollectionSource` carry it, and a `library` remote collection loads Favourites or Videos from their start.
-- `album-detail-screen.ts` stays under about 1,000 lines by moving the backdrop into `collection-backdrop.ts`.
+- `album-detail-screen.ts` stays under about 1,000 lines.
 - To check on the TV:
   - key repeat and keyup for held Up/Down and CH;
   - CH registration;

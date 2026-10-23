@@ -12,7 +12,6 @@ import {
   gridThumbnailRows
 } from "./album-assets-window";
 import { getAlbumStatus } from "./albums-state";
-import { chooseRandomItem, createScreenBackdrop, type ScreenBackdrop } from "./screen-backdrop";
 import { createGridSpacer, focusWithoutPageScroll, scrollIntoContainer } from "./grid-presentation";
 import {
   beginAsyncGeneration,
@@ -47,7 +46,7 @@ type AlbumsScreenState = {
   loadGeneration: number;
   loading: boolean;
   preferredColumn: number;
-  backdrop: ScreenBackdrop;
+  backdropUrl: string | null;
   retainedThumbnailAlbumIds: Record<string, true>;
   thumbnailRequests: Record<string, number>;
   thumbnailUrls: Record<string, string>;
@@ -73,10 +72,7 @@ export function mountAlbumsScreen(options: AlbumsScreenOptions): AlbumsScreenCon
     loadGeneration: 0,
     loading: false,
     preferredColumn: 0,
-    backdrop: createScreenBackdrop({
-      image: elements.backdrop,
-      revokeUrl: (url) => options.service.revokeThumbnailUrl(url)
-    }),
+    backdropUrl: null,
     retainedThumbnailAlbumIds: {},
     thumbnailRequests: {},
     thumbnailUrls: {}
@@ -115,7 +111,7 @@ export function mountAlbumsScreen(options: AlbumsScreenOptions): AlbumsScreenCon
       elements.grid.removeEventListener("keydown", handleGridKeydown);
       invalidateAsyncGeneration(state);
       state.loading = false;
-      state.backdrop.clear();
+      revokeBackdrop(options, state, elements);
       revokeThumbnails(options, state);
     },
     focusContent() {
@@ -141,7 +137,7 @@ export function mountAlbumsScreen(options: AlbumsScreenOptions): AlbumsScreenCon
       state.loading = false;
       elements.root.hidden = true;
       state.contentFocusRequested = false;
-      state.backdrop.clear();
+      revokeBackdrop(options, state, elements);
       revokeThumbnails(options, state);
     },
     // Reloads the albums without moving focus (the rail's Refresh).
@@ -164,7 +160,7 @@ export function mountAlbumsScreen(options: AlbumsScreenOptions): AlbumsScreenCon
 
       if (state.albums.length > 0) {
         renderAlbums(elements, options, state, state.loadGeneration, state.contentFocusRequested);
-        showAlbumBackdrop(options, state);
+        loadRandomBackdrop(elements, options, state, state.loadGeneration);
         return;
       }
 
@@ -215,7 +211,7 @@ async function loadAlbums(
   state.preferredColumn = 0;
   setStatus(elements, "Loading albums...", "pending");
   elements.grid.textContent = "";
-  state.backdrop.clear();
+  revokeBackdrop(options, state, elements);
   revokeThumbnails(options, state);
 
   try {
@@ -233,7 +229,7 @@ async function loadAlbums(
       state.contentFocusRequested &&
       elements.root.contains(elements.root.ownerDocument.activeElement);
     renderAlbums(elements, options, state, generation, shouldFocus || focusRequested);
-    showAlbumBackdrop(options, state);
+    loadRandomBackdrop(elements, options, state, generation);
   } catch (error) {
     if (!isCurrentGeneration(state, generation) || elements.root.hidden) {
       return;
@@ -277,13 +273,48 @@ function renderAlbums(
   loadThumbnailsNearFocus(elements, options, state, generation);
 }
 
-// A random album cover behind the grid.
-function showAlbumBackdrop(options: AlbumsScreenOptions, state: AlbumsScreenState): void {
-  const album = chooseRandomItem(state.albums.filter((candidate) => candidate.thumbnailAssetId));
+function loadRandomBackdrop(
+  elements: AlbumsScreenElements,
+  options: AlbumsScreenOptions,
+  state: AlbumsScreenState,
+  generation: number
+): void {
+  const album = chooseRandomAlbumWithThumbnail(state.albums);
 
-  if (album) {
-    state.backdrop.show(() => options.service.loadThumbnailUrl(album));
+  if (!album) {
+    return;
   }
+
+  options.service
+    .loadThumbnailUrl(album)
+    .then((url) => {
+      if (!url) {
+        return;
+      }
+
+      if (!isCurrentGeneration(state, generation) || elements.root.hidden) {
+        options.service.revokeThumbnailUrl(url);
+        return;
+      }
+
+      revokeBackdrop(options, state, elements);
+      state.backdropUrl = url;
+      elements.backdrop.src = url;
+      elements.backdrop.className = "screen-backdrop is-loaded";
+    })
+    .catch(() => {
+      // A decorative backdrop should never block album browsing.
+    });
+}
+
+function chooseRandomAlbumWithThumbnail(albums: Album[]): Album | null {
+  const candidates = albums.filter((album) => album.thumbnailAssetId);
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  return candidates[Math.floor(Math.random() * candidates.length)] || null;
 }
 
 function renderAlbumWindow(elements: AlbumsScreenElements, state: AlbumsScreenState): void {
@@ -748,6 +779,20 @@ function revokeThumbnails(options: AlbumsScreenOptions, state: AlbumsScreenState
   state.retainedThumbnailAlbumIds = {};
   state.thumbnailRequests = {};
   state.thumbnailUrls = {};
+}
+
+function revokeBackdrop(
+  options: AlbumsScreenOptions,
+  state: AlbumsScreenState,
+  elements: AlbumsScreenElements
+): void {
+  elements.backdrop.removeAttribute("src");
+  elements.backdrop.className = "screen-backdrop";
+
+  if (state.backdropUrl) {
+    options.service.revokeThumbnailUrl(state.backdropUrl);
+    state.backdropUrl = null;
+  }
 }
 
 function revokeThumbnailsOutsideRetention(

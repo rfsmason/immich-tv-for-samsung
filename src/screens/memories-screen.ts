@@ -16,7 +16,6 @@ import {
   revokeAllAssetThumbnails
 } from "./asset-thumbnail-window";
 import { createPageWindow, type PageWindowDirection } from "./page-window";
-import { chooseRandomItem, createScreenBackdrop } from "./screen-backdrop";
 import {
   beginAsyncGeneration,
   invalidateAsyncGeneration,
@@ -40,7 +39,6 @@ const emptyPageScanLimit = 4;
 type LoadDirection = PageWindowDirection;
 
 type MemoriesScreenElements = {
-  backdrop: HTMLImageElement;
   grid: HTMLElement;
   retry: HTMLElement;
   root: HTMLElement;
@@ -93,25 +91,8 @@ export function mountMemoriesScreen(options: MemoriesScreenOptions): MemoriesScr
     total: null
   };
 
-  // A random Memory's cover behind the grid, chosen once per visit.
-  const backdrop = createScreenBackdrop({
-    image: elements.backdrop,
-    revokeUrl: (url) => options.service.revokeThumbnailUrl(url)
-  });
-  let backdropShown = false;
-
   function memories(): Memory[] {
     return pages.items();
-  }
-
-  function showBackdropOnce(items: Memory[]): void {
-    const withCovers = items.filter((memory) => memory.assets.length > 0);
-    const cover = backdropShown ? null : chooseRandomItem(withCovers)?.assets[0];
-
-    if (cover) {
-      backdropShown = true;
-      backdrop.show(() => options.service.loadAssetThumbnailUrl(cover));
-    }
   }
 
   function ownsFocus(): boolean {
@@ -167,8 +148,6 @@ export function mountMemoriesScreen(options: MemoriesScreenOptions): MemoriesScr
 
   function render(): void {
     const items = memories();
-
-    showBackdropOnce(items);
 
     // Match Albums' square cards and grid sizing at every viewport.
 
@@ -481,8 +460,6 @@ export function mountMemoriesScreen(options: MemoriesScreenOptions): MemoriesScr
     state.loading = false;
     elements.root.hidden = true;
     clearImages();
-    backdrop.clear();
-    backdropShown = false;
     elements.grid.textContent = "";
   }
 
@@ -535,7 +512,6 @@ export function mountMemoriesScreen(options: MemoriesScreenOptions): MemoriesScr
 
 function readElements(documentRef: Document): MemoriesScreenElements {
   return {
-    backdrop: requireElement(documentRef, "memories-backdrop") as HTMLImageElement,
     grid: requireElement(documentRef, "memories-grid"),
     retry: requireElement(documentRef, "memories-retry"),
     root: requireElement(documentRef, "memories-screen"),

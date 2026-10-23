@@ -24,7 +24,6 @@ export function mountPeopleScreen(options: PeopleScreenOptions): PeopleScreenCon
   return mountPeopleGrid({
     documentRef,
     elements: {
-      backdrop: requireElement(documentRef, "people-backdrop") as HTMLImageElement,
       grid: requireElement(documentRef, "people-grid"),
       retry: requireElement(documentRef, "people-retry"),
       root: requireElement(documentRef, "people-screen"),

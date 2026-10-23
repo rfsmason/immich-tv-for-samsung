@@ -4,7 +4,6 @@ import type { Album, AlbumAsset } from "../../domain/album";
 import { homeRailOrder, type HomeRailId, type Memory, type Person } from "../../domain/home";
 import type { AssetThumbnailState } from "../asset-thumbnail-window";
 import type { PriorityScheduler } from "../priority-scheduler";
-import type { BackdropSource } from "../screen-backdrop";
 
 // Home screen data: the seven rails, their bounded item lists and thumbnail
 // state, and small lookups shared by the Home modules (ADR 0009).
@@ -34,7 +33,6 @@ export type HomeAssetRailId = Extract<
 >;
 
 export type HomeScreenElements = {
-  backdrop: HTMLImageElement;
   // Shown instead of the rails when every rail is turned off in Settings.
   empty: HTMLElement;
   openSettingsButton: HTMLButtonElement;
@@ -56,8 +54,6 @@ export type HomeScreenElements = {
 };
 
 export type HomeScreenOptions = {
-  // Pictures for the backdrop: random favourites.
-  backdrop?: BackdropSource;
   documentRef?: Document;
   // The rails Settings turns on, in screen order. Read at each load.
   loadEnabledRails(): HomeRailId[];

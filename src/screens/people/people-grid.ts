@@ -26,7 +26,6 @@ import {
 } from "../grid-presentation";
 import { createPageWindow, type PageWindowDirection } from "../page-window";
 import { createPersonCard, personCardLabel, setPersonCardFace } from "./person-card";
-import { chooseRandomItem, createScreenBackdrop } from "../screen-backdrop";
 
 // A paged, windowed grid of people in Immich's order (ADR 0013, ADR 0014):
 // the People browser and the Search people picker. Pages load near remote
@@ -39,7 +38,6 @@ export const peoplePageSize = 30;
 export const retainedPeoplePageCount = 4;
 
 export type PeopleGridElements = {
-  backdrop: HTMLImageElement;
   grid: HTMLElement;
   retry: HTMLElement;
   root: HTMLElement;
@@ -94,11 +92,6 @@ export function mountPeopleGrid(options: PeopleGridOptions): PeopleGridControlle
     retainedPageCount: retainedPeoplePageCount
   });
   const faces = createAssetThumbnailState<Person>();
-  const backdrop = createScreenBackdrop({
-    image: elements.backdrop,
-    revokeUrl: (url) => options.service.revokeThumbnailUrl(url)
-  });
-  let backdropShown = false;
   const state: PeopleGridState = {
     destroyed: false,
     failedDirection: null,
@@ -152,8 +145,6 @@ export function mountPeopleGrid(options: PeopleGridOptions): PeopleGridControlle
   // replayed the focus animation, which flickered on the TV.
   function render(): void {
     const people = pages.items();
-
-    showBackdropOnce(people);
 
     const rendered = calculateRenderedAssetWindow({
       columnCount,
@@ -491,22 +482,10 @@ export function mountPeopleGrid(options: PeopleGridOptions): PeopleGridControlle
   documentRef.addEventListener("keydown", handleDocumentKeydown);
   elements.root.addEventListener("click", handleClick);
 
-  // A random person's face behind the grid, chosen once per visit.
-  function showBackdropOnce(people: Person[]): void {
-    const person = backdropShown ? null : chooseRandomItem(people);
-
-    if (person) {
-      backdropShown = true;
-      backdrop.show(() => options.service.loadPersonThumbnailUrl(person));
-    }
-  }
-
   function hide(): void {
     invalidateAsyncGeneration(state);
     state.loading = false;
     elements.root.hidden = true;
-    backdrop.clear();
-    backdropShown = false;
     clearFaces();
     elements.grid.textContent = "";
   }

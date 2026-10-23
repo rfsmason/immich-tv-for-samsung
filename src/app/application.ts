@@ -18,7 +18,6 @@ import { mountPeoplePicker } from "../screens/search/people-picker-screen";
 import { mountSearchScreen } from "../screens/search/search-screen";
 import type { AppSettingsStore } from "../storage/app-settings-store";
 import { readEnabledHomeRails } from "../domain/app-settings";
-import { createFavoriteBackdrops } from "./favorite-backdrops";
 import type { AlbumService } from "./album-service";
 import {
   mountApplicationShell,
@@ -80,14 +79,7 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
       lifecycle.exit();
     }
   });
-  // General screens show a random favourite behind them.
-  const favoriteBackdrops = createFavoriteBackdrops(albumService);
-  const generalBackdrop = {
-    loadUrl: () => favoriteBackdrops.loadUrl(),
-    revokeUrl: (url: string) => albumService.revokeThumbnailUrl(url)
-  };
   const homeScreen = mountHomeScreen({
-    backdrop: generalBackdrop,
     documentRef,
     history: viewingHistory,
     loadEnabledRails: () => readEnabledHomeRails(settingsStore.load()),
@@ -149,7 +141,6 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     service: albumService
   });
   const searchScreen = mountSearchScreen({
-    backdrop: generalBackdrop,
     documentRef,
     onAddPeople(people) {
       showSearchPeople(people);
@@ -174,7 +165,6 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     service: albumService
   });
   const connectionScreen = mountConnectionScreen({
-    backdrop: generalBackdrop,
     documentRef,
     onBack(options) {
       shell.routeBackFromSettings(options);
@@ -183,7 +173,6 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
       shell.focusActiveDestinationNav();
     },
     onSaved() {
-      favoriteBackdrops.reset();
       collectionScreen.forgetSessionSortOrders();
       memoriesScreen.reset();
       peopleScreen.reset();
@@ -415,7 +404,6 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
   // the rail. Home loads as it opens; the other screens are hidden by then
   // and load when next shown.
   function refreshEverything(): void {
-    favoriteBackdrops.reset();
     homeScreen.reset();
     shell.activateDestination("home");
     memoriesScreen.reset();

@@ -2,7 +2,6 @@ import { getKeyCode, remoteKeys } from "../platform/tizen/keys";
 import { createAssetThumbnailState } from "./asset-thumbnail-window";
 import { invalidateAsyncGeneration } from "./async-generation";
 import { createPriorityScheduler } from "./priority-scheduler";
-import { createSourcedBackdrop } from "./screen-backdrop";
 import { loadHome, loadRecentlyViewedRail } from "./home/home-loaders";
 import {
   type HomeScreenElements,
@@ -52,7 +51,6 @@ export type HomeScreenController = {
 export function mountHomeScreen(options: HomeScreenOptions): HomeScreenController {
   const documentRef = options.documentRef || document;
   const elements = readElements(documentRef);
-  const backdrop = createSourcedBackdrop(elements.backdrop, options.backdrop);
   const state: HomeScreenState = {
     activeRail: "recently-added",
     enabledRails: options.loadEnabledRails(),
@@ -137,7 +135,6 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
       elements.memoriesRail.removeEventListener("click", handleRailClick);
       invalidateAsyncGeneration(state);
       cleanupHomeThumbnails(options, state);
-      backdrop.hide();
     },
     focusContent(lastViewedAssetId) {
       if (
@@ -170,7 +167,6 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
       state.recentlyViewed.loading = false;
       state.memories.loading = false;
       cleanupHomeThumbnails(options, state);
-      backdrop.hide();
     },
     // Reloads every rail without moving focus (the rail's Refresh, or a
     // connection change).
@@ -194,7 +190,6 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
     whenLoaded,
     show() {
       elements.root.hidden = false;
-      backdrop.show();
 
       // Rails turned on or off in Settings apply now, with a fresh load.
       if (options.loadEnabledRails().join() !== state.enabledRails.join()) {
@@ -228,7 +223,6 @@ export function mountHomeScreen(options: HomeScreenOptions): HomeScreenControlle
 
 function readElements(documentRef: Document): HomeScreenElements {
   return {
-    backdrop: requireElement<HTMLImageElement>(documentRef, "home-backdrop"),
     empty: requireElement(documentRef, "home-empty"),
     openSettingsButton: requireElement<HTMLButtonElement>(documentRef, "home-open-settings"),
     albumsRail: requireElement(documentRef, "home-albums-rail"),

@@ -6,6 +6,7 @@ import type { ConnectionService } from "../app/connection-service";
 import type { AppSettingsStore } from "../storage/app-settings-store";
 import { createConnectionSection } from "./settings/connection-section";
 import { createDisplaySection } from "./settings/display-section";
+import { createSourcedBackdrop, type BackdropSource } from "./screen-backdrop";
 import { createHomeSection } from "./settings/home-section";
 import {
   requireElement,
@@ -32,6 +33,8 @@ type SettingsBackOptions = {
 };
 
 type ConnectionScreenOptions = {
+  // Pictures for the backdrop: random favourites, once connected.
+  backdrop?: BackdropSource;
   documentRef?: Document;
   onBack?(options?: SettingsBackOptions): void;
   onReturnToShell?(): void;
@@ -58,6 +61,10 @@ export function mountConnectionScreen(
   const documentRef = options.documentRef || document;
   const elements = readElements(documentRef);
   const connection = createConnectionSection(documentRef, options.service);
+  const backdrop = createSourcedBackdrop(
+    requireElement<HTMLImageElement>(documentRef, "settings-backdrop"),
+    options.backdrop
+  );
   const sections: SettingsSection[] = [
     connection,
     createDisplaySection(documentRef),
@@ -124,6 +131,7 @@ export function mountConnectionScreen(
     destroy() {
       documentRef.removeEventListener("keydown", handleDocumentKeydown);
       stopDirtyStatusTimer();
+      backdrop.hide();
     },
     focusContent() {
       connection.button.focus();
@@ -140,12 +148,14 @@ export function mountConnectionScreen(
       stopDirtyStatusTimer();
       connection.disableTextEntry();
       elements.root.hidden = true;
+      backdrop.hide();
     },
     requestExit() {
       return requestSettingsExit();
     },
     show(showOptions = {}) {
       elements.root.hidden = false;
+      backdrop.show();
       elements.backButton.hidden = !showOptions.allowBack;
       activeSection = connection;
       hydrateForm();

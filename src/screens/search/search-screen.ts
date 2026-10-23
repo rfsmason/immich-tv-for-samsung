@@ -20,6 +20,7 @@ import { shortMonthNames } from "../../presentation/date-labels";
 import { formatPersonName } from "../../presentation/person-labels";
 import { formatSearchDate, searchPeopleRule } from "../../presentation/search-labels";
 import { focusWithoutPageScroll } from "../grid-presentation";
+import { createSourcedBackdrop, type BackdropSource } from "../screen-backdrop";
 import {
   moveDateStepperColumn,
   openDateStepper,
@@ -58,6 +59,8 @@ type SearchScreenState = {
 
 type SearchScreenOptions = {
   documentRef?: Document;
+  // Pictures for the backdrop: random favourites.
+  backdrop?: BackdropSource;
   onAddPeople(people: SearchPerson[]): void;
   onReturnToShell(): void;
   onShowPhotos(criteria: SearchCriteria): void;
@@ -87,6 +90,10 @@ export function mountSearchScreen(options: SearchScreenOptions): SearchScreenCon
   const root = requireElement(documentRef, "search-screen");
   const panel = requireElement(documentRef, "search-panel");
   const status = requireElement(documentRef, "search-message");
+  const backdrop = createSourcedBackdrop(
+    requireElement(documentRef, "search-backdrop") as HTMLImageElement,
+    options.backdrop
+  );
   const today = () => calendarDateFromLocal(options.today ? options.today() : new Date());
   const state: SearchScreenState = {
     bounds: null,
@@ -735,6 +742,7 @@ export function mountSearchScreen(options: SearchScreenOptions): SearchScreenCon
 
   function hide(): void {
     root.hidden = true;
+    backdrop.hide();
     state.editing = null;
     state.confirmingClear = false;
     releaseFaces();
@@ -770,6 +778,7 @@ export function mountSearchScreen(options: SearchScreenOptions): SearchScreenCon
     },
     show() {
       root.hidden = false;
+      backdrop.show();
       state.editing = null;
       state.confirmingClear = false;
       loadBounds();

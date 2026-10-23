@@ -336,9 +336,11 @@ describe("Memories scrolling summary", () => {
     f.service.loadAssetThumbnailUrl.mockImplementation(async (asset) => `blob:${asset.id}`);
     f.controller.show();
     await f.loaded();
-    await vi.waitFor(() => expect(f.service.loadAssetThumbnailUrl).toHaveBeenCalledTimes(8));
+    // Eight covers, plus one for the backdrop.
+    await vi.waitFor(() => expect(f.service.loadAssetThumbnailUrl).toHaveBeenCalledTimes(9));
+    await vi.waitFor(() => expect(f.get("backdrop").className).toBe("screen-backdrop is-loaded"));
     f.controller[action]();
-    expect(f.service.revokeThumbnailUrl).toHaveBeenCalledTimes(8);
+    expect(f.service.revokeThumbnailUrl).toHaveBeenCalledTimes(9);
     f.controller.destroy();
   });
 
@@ -380,8 +382,10 @@ describe("Memories scrolling summary", () => {
     await vi.waitFor(() => expect(f.cards()[2]?.querySelector("img")?.src).toBe("blob:shared"));
     expect(f.cards()[0]?.querySelector("img")).toBeNull();
     expect(f.cards()[2]?.children[f.cards()[2]!.children.length - 1]?.className).toBe("album-meta");
-    expect(f.service.loadAssetThumbnailUrl).toHaveBeenCalledTimes(1);
+    // The shared cover loads once for both cards; the backdrop loads its own.
+    expect(f.service.loadAssetThumbnailUrl).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(f.get("backdrop").className).toBe("screen-backdrop is-loaded"));
     f.controller.destroy();
-    expect(f.service.revokeThumbnailUrl).toHaveBeenCalledTimes(1);
+    expect(f.service.revokeThumbnailUrl).toHaveBeenCalledTimes(2);
   });
 });

@@ -75,6 +75,21 @@ Immich facts were checked against `immich-app/immich` `main` at `1cf5bb4`:
 - A photo without faces says "No faces tagged" in the viewer's status line. A 403 shows "Face tags need the face.read permission on your Immich API key." once and turns Faces off for the session.
 - The README lists every permission the app needs, taken from the endpoints it calls and their `@Authenticated` decorators.
 
+### Screen backdrops
+
+- Every screen shows one random picture faintly behind it, as Albums already did (\`src/screens/screen-backdrop.ts\`, one shared module):
+  - Albums: a random album cover;
+  - Photos and every collection: a random photo from the collection;
+  - People and the Search people picker: a random person's face;
+  - Memories: a random Memory's cover;
+  - Home, Search and Settings: a random favourite.
+- Favourites come from one bounded page (18), fetched once and forgotten when the connection changes or the library is refreshed (\`src/app/favorite-backdrops.ts\`). With no favourites, those screens show no backdrop.
+- A screen picks a new picture each time it is shown and releases it when it hides; a picture that arrives after the screen has moved on is released at once. Each backdrop is one thumbnail-sized image, so memory stays bounded.
+
+### Rail logo
+
+- The logo above the left rail fills a 72 × 64 box, the size of a collapsed rail button.
+
 ## Reasoning
 
 - Acceleration by hold time, rather than by repeat count, behaves the same whatever repeat rate the TV uses. Rendering per frame keeps fast repeats from rebuilding the rail on every key on Chromium 63, and loading only on OK keeps a long hold from flooding the server.

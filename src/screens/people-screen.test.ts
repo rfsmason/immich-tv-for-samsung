@@ -286,4 +286,22 @@ describe("People browser", () => {
     await f.settled();
     expect(f.loadPeoplePage).toHaveBeenCalledTimes(2);
   });
+
+  it("shows a random loaded person's face behind the grid, once per visit", async () => {
+    const f = setup(10);
+    const backdrop = () => byId<HTMLImageElement>("people-backdrop");
+
+    controller!.show();
+    await f.settled();
+    await vi.waitFor(() => expect(backdrop().className).toBe("screen-backdrop is-loaded"));
+    const shown = backdrop().getAttribute("src")!;
+    expect(shown).toMatch(/^blob:person-\d$/);
+
+    await f.press(remoteKeys.right);
+    expect(backdrop().getAttribute("src")).toBe(shown);
+
+    controller!.hide();
+    expect(backdrop().hasAttribute("src")).toBe(false);
+    expect(f.revokeThumbnailUrl).toHaveBeenCalledWith(shown);
+  });
 });

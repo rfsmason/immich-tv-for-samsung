@@ -66,6 +66,7 @@
 
       <div class="shell-content">
         <section id="home-screen" class="screen home-screen" aria-label="Home" tabindex="-1" hidden>
+        <img id="home-backdrop" class="screen-backdrop" alt="" aria-hidden="true">
         <div class="home-rails" aria-label="Library overview">
           <section class="home-rail-section" aria-labelledby="home-recently-added-title">
             <h2 id="home-recently-added-title" class="home-rail-title">Recently Added</h2>
@@ -115,6 +116,7 @@
         </section>
 
         <section id="memories-screen" class="screen memories-screen" aria-labelledby="memories-title" hidden>
+        <img id="memories-backdrop" class="screen-backdrop" alt="" aria-hidden="true">
           <h1 id="memories-title" class="screen-heading-subtle">Memories</h1>
           <p id="memories-status" class="screen-status" aria-live="polite" tabindex="-1"></p>
           <button id="memories-retry" class="focusable" type="button" hidden>Retry</button>
@@ -122,6 +124,7 @@
         </section>
 
         <section id="people-screen" class="screen people-screen" aria-labelledby="people-title" hidden>
+        <img id="people-backdrop" class="screen-backdrop" alt="" aria-hidden="true">
           <h1 id="people-title" class="screen-heading-subtle">People</h1>
           <p id="people-status" class="screen-status" aria-live="polite" tabindex="-1"></p>
           <button id="people-retry" class="focusable" type="button" hidden>Retry</button>
@@ -294,6 +297,7 @@
         </section>
 
         <section id="search-people-screen" class="screen people-screen search-people-screen" aria-labelledby="search-people-title" hidden>
+        <img id="search-people-backdrop" class="screen-backdrop" alt="" aria-hidden="true">
           <h1 id="search-people-title" class="screen-heading-subtle">Choose people</h1>
           <div class="search-people-actions">
             <button id="search-people-done" class="focusable search-action" type="button">Done</button>
@@ -309,11 +313,13 @@
         </section>
 
         <section id="search-screen" class="screen search-screen" aria-label="Search" hidden>
+        <img id="search-backdrop" class="screen-backdrop" alt="" aria-hidden="true">
           <div id="search-panel" class="search-panel"></div>
           <p id="search-message" class="screen-status search-message" aria-live="polite" data-state="idle"></p>
         </section>
 
         <section id="connection-screen" class="screen setup-panel" aria-label="Settings" aria-describedby="settings-summary connection-status" hidden>
+        <img id="settings-backdrop" class="screen-backdrop" alt="" aria-hidden="true">
         <p id="settings-summary" class="screen-status top-level-summary" data-state="idle" aria-live="polite">Manage connection, display and Home preferences.</p>
 
         <form class="connection-form" id="connection-form">

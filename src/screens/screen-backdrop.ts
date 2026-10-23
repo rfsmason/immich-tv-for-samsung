@@ -6,6 +6,12 @@ import type { AlbumAsset } from "../domain/album";
 // favourite on general screens such as Home, Search and Settings. A backdrop
 // never blocks the screen: failures leave it empty.
 
+// Where a general screen's pictures come from, and how to release them.
+export type BackdropSource = {
+  loadUrl(): Promise<string | null>;
+  revokeUrl(url: string): void;
+};
+
 export type ScreenBackdrop = {
   // Releases the picture, for example when the screen hides. A picture still
   // loading is released when it arrives.
@@ -60,6 +66,26 @@ export function createScreenBackdrop(options: {
         .catch(() => {
           // Decorative only: the screen works without it.
         });
+    }
+  };
+}
+
+// A general screen's backdrop: a new picture from `source` each time the
+// screen shows, released when it hides. Without a source it stays empty.
+export function createSourcedBackdrop(
+  image: HTMLImageElement,
+  source: BackdropSource | undefined
+): { hide(): void; show(): void } {
+  const backdrop = source ? createScreenBackdrop({ image, revokeUrl: source.revokeUrl }) : null;
+
+  return {
+    hide() {
+      backdrop?.clear();
+    },
+    show() {
+      if (backdrop && source) {
+        backdrop.show(() => source.loadUrl());
+      }
     }
   };
 }

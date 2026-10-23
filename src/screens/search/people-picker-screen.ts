@@ -97,6 +97,7 @@ export function mountPeoplePicker(options: PeoplePickerOptions): PeoplePickerCon
     },
     documentRef,
     elements: {
+      backdrop: requireElement(documentRef, "search-people-backdrop") as HTMLImageElement,
       grid: requireElement(documentRef, "search-people-grid"),
       retry: requireElement(documentRef, "search-people-retry"),
       root: requireElement(documentRef, "search-people-screen"),

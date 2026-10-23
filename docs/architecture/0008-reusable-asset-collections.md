@@ -28,3 +28,7 @@ The API boundary remains responsible for Immich request construction, bucket/pag
 Future collection sources should plug in by adding a source loader that returns the same asset page shape. They should not create new thumbnail, viewer, slideshow, or playback engines.
 
 Heavy media resources remain bounded by the thumbnail and viewer retention windows. Loaded asset metadata may be retained during the current application session to restore useful Photos position after navigating away, but thumbnails, preview URLs, playback URLs, and stale async generations are released or invalidated when the screen is hidden.
+
+## Update: collection order (Milestone 15)
+
+A collection's order is part of its source: Photos and albums carry a `SortOrder`, and reversible feeds (Favourites, Videos, People and Search) carry one too. Only the Immich client maps it to `asc`/`desc`. A header sort button, above the grid's first row, reverses the order and reloads from the start under a new async generation. The Photos timeline extension pages its buckets in whichever order they arrive, so its rail, headings, offsets and jumps follow without special cases; held Up/Down and CH accelerate the rail. See [ADR 0017](0017-personalisation-and-navigation.md).

@@ -31,3 +31,7 @@ The viewer may require another Right press after lazy-loading more assets at the
 Slideshow preloading in Milestone 7 can build on the same preview-window state instead of adding a separate media cache.
 
 Video playback quality and compatibility remain areas for later hardening, including whether Samsung AVPlay is preferable to HTML5 video for some TV models.
+
+## Update: Faces control (Milestone 15)
+
+The viewer's bottom-right controls gain **Faces** (between Slideshow and Back) for photos and Live Photo stills. It draws Immich's face tags over the photo once it has decoded, requesting faces for the current photo only and caching the last three, so the bounded previous/current/next window is unchanged. See [ADR 0017](0017-personalisation-and-navigation.md).

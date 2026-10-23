@@ -77,7 +77,7 @@ Milestone 14, Favorites and Library Views, is complete on `main` (see [ADR 0016]
 
 Fixes from TV testing (picker face flicker, a sharper launcher icon, an earlier splash with Home revealed once its rails have loaded, and Home loading in screen order) are on `main`; their physical-TV checks are pending with Milestones 12-14.
 
-Milestone 15, Personalisation and Navigation, is the current implementation milestone. The roadmap continues with Milestone 16 (Search v2), then Shared Content, Ambient / Screensaver Mode, Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 17-20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
+Milestone 15, Personalisation and Navigation, is implemented on branch `claude/milestone-15-personalisation-navigation` (see [ADR 0017](architecture/0017-personalisation-and-navigation.md)); physical Q950R acceptance is pending. It adds date-rail hold acceleration and CH year jumps, Home rail visibility in Settings, a Newest first / Oldest first toggle on collections, and viewer face tags. The roadmap continues with Milestone 16 (Search v2), then Shared Content, Ambient / Screensaver Mode, Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 17-20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
 
 ## Post-MVP Product Roadmap
 
@@ -406,6 +406,8 @@ Carry-over (16 October 2026): Recently Added paging. **Resolved in Milestone 14:
 Success criterion: important common library subsets can be browsed without duplicating collection, viewer, or slideshow logic.
 
 ### Milestone 15 - Personalisation and Navigation
+
+**Status:** implemented (ADR 0017); TV acceptance pending.
 
 Four features chosen from TV use, each reusing the existing shared collection, viewer and Settings patterns. There are no on-screen hints for the date-rail acceleration or the channel keys (user decision).
 

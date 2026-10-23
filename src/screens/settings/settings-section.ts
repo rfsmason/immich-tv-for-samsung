@@ -1,6 +1,6 @@
 import type { AppSettings } from "../../domain/app-settings";
 
-export type SettingsSectionId = "connection" | "display";
+export type SettingsSectionId = "connection" | "display" | "home";
 
 // One section of Settings: its button on the Settings rail and the panel the
 // button opens. The Settings screen owns the rail, saving and the

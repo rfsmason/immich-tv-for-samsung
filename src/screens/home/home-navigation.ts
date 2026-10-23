@@ -120,6 +120,13 @@ export function focusActiveRailItem(
   options: HomeScreenOptions,
   state: HomeScreenState
 ): void {
+  // Every rail is off: focus the way to Settings.
+  if (state.enabledRails.length === 0) {
+    renderHome(elements, options, state, state.loadGeneration);
+    focusWithoutPageScroll(elements.openSettingsButton);
+    return;
+  }
+
   if (readRailItemCount(state, state.activeRail) === 0) {
     state.activeRail =
       homeRailOrder.find((candidate) => readRailItemCount(state, candidate) > 0) ||

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createLocalAppSettingsStore } from "./app-settings-store";
+import { defaultAppSettings } from "../domain/app-settings";
+import { appSettingsSchemaVersion, createLocalAppSettingsStore } from "./app-settings-store";
 import type { KeyValueStorage } from "./connection-settings-store";
 
 function createMemoryStorage(initial: Record<string, string> = {}): KeyValueStorage & {
@@ -16,12 +17,23 @@ function createMemoryStorage(initial: Record<string, string> = {}): KeyValueStor
   };
 }
 
+const allRailsOn = {
+  albums: true,
+  favorites: true,
+  memories: true,
+  people: true,
+  "recently-added": true,
+  "recently-viewed": true,
+  videos: true
+};
+
 describe("app settings store", () => {
   it("loads default settings when storage is empty", () => {
     const store = createLocalAppSettingsStore(createMemoryStorage());
 
     expect(store.load()).toEqual({
       autoplayVideos: false,
+      homeRails: allRailsOn,
       showViewerDate: true,
       showViewerExif: true,
       showViewerTime: true,
@@ -36,44 +48,29 @@ describe("app settings store", () => {
       })
     );
 
-    expect(store.load()).toEqual({
-      autoplayVideos: false,
-      showViewerDate: true,
-      showViewerExif: true,
-      showViewerTime: true,
-      slideshowIntervalSeconds: 8
-    });
+    expect(store.load()).toEqual(defaultAppSettings);
   });
 
-  it("saves and loads viewer settings", () => {
+  it("saves and loads settings with the schema version", () => {
     const storage = createMemoryStorage();
     const store = createLocalAppSettingsStore(storage);
+    const settings = {
+      autoplayVideos: true,
+      homeRails: { ...allRailsOn, people: false },
+      showViewerDate: false,
+      showViewerExif: true,
+      showViewerTime: false,
+      slideshowIntervalSeconds: 12
+    };
 
-    expect(
-      store.save({
-        autoplayVideos: true,
-        showViewerDate: false,
-        showViewerExif: true,
-        showViewerTime: false,
-        slideshowIntervalSeconds: 12
-      })
-    ).toEqual({
-      autoplayVideos: true,
-      showViewerDate: false,
-      showViewerExif: true,
-      showViewerTime: false,
-      slideshowIntervalSeconds: 12
-    });
-    expect(store.load()).toEqual({
-      autoplayVideos: true,
-      showViewerDate: false,
-      showViewerExif: true,
-      showViewerTime: false,
-      slideshowIntervalSeconds: 12
-    });
+    expect(store.save(settings)).toEqual(settings);
+    expect(store.load()).toEqual(settings);
+    expect(JSON.parse(storage.values["immich-tv.app-settings"]!).schemaVersion).toBe(
+      appSettingsSchemaVersion
+    );
   });
 
-  it("defaults new viewer metadata settings on for older stored settings", () => {
+  it("migrates unversioned settings, defaulting newer settings", () => {
     const store = createLocalAppSettingsStore(
       createMemoryStorage({
         "immich-tv.app-settings": JSON.stringify({
@@ -84,11 +81,25 @@ describe("app settings store", () => {
 
     expect(store.load()).toEqual({
       autoplayVideos: true,
+      homeRails: allRailsOn,
       showViewerDate: true,
       showViewerExif: true,
       showViewerTime: true,
       slideshowIntervalSeconds: 8
     });
+  });
+
+  it("drops unknown Home rails and turns on rails missing from storage", () => {
+    const store = createLocalAppSettingsStore(
+      createMemoryStorage({
+        "immich-tv.app-settings": JSON.stringify({
+          homeRails: { albums: false, retired: false, videos: "no" },
+          schemaVersion: 1
+        })
+      })
+    );
+
+    expect(store.load().homeRails).toEqual({ ...allRailsOn, albums: false });
   });
 
   it("normalizes unsupported slideshow intervals to the safe default", () => {
@@ -100,12 +111,6 @@ describe("app settings store", () => {
       })
     );
 
-    expect(store.load()).toEqual({
-      autoplayVideos: false,
-      showViewerDate: true,
-      showViewerExif: true,
-      showViewerTime: true,
-      slideshowIntervalSeconds: 8
-    });
+    expect(store.load()).toEqual(defaultAppSettings);
   });
 });

@@ -1,3 +1,4 @@
+import { defaultAppSettings } from "../domain/app-settings";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AlbumService } from "../app/album-service";
 import type { Memory } from "../domain/home";
@@ -43,6 +44,7 @@ function fixture() {
     } as unknown as AlbumService,
     settingsStore: {
       load: () => ({
+        ...defaultAppSettings,
         autoplayVideos: false,
         showViewerDate: false,
         showViewerExif: false,
@@ -598,6 +600,7 @@ describe("Album paging recovery", () => {
       } as unknown as AlbumService,
       settingsStore: {
         load: () => ({
+          ...defaultAppSettings,
           autoplayVideos: false,
           showViewerDate: false,
           showViewerExif: false,

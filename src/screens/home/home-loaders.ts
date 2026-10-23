@@ -7,7 +7,11 @@ import {
   type HomeScreenOptions,
   type HomeScreenState,
   albumLimit,
+  clearRail,
   favoriteAssetLimit,
+  findNearestEnabledRail,
+  getRailState,
+  isRailEnabled,
   homeRailDataConcurrency,
   homeRailOrder,
   videoAssetLimit,
@@ -41,21 +45,22 @@ export function loadHome(
   const previousPersonId = readRailFocusId(state.people);
   const previousMemoryId = readRailFocusId(state.memories);
 
-  state.recentlyAdded.loading = true;
-  state.albums.loading = true;
-  state.favorites.loading = true;
-  state.videos.loading = true;
-  state.people.loading = true;
-  state.recentlyViewed.loading = true;
+  state.enabledRails = options.loadEnabledRails();
+  state.activeRail =
+    findNearestEnabledRail(state.enabledRails, state.activeRail) || "recently-added";
+  homeRailOrder.forEach((railId) => {
+    if (!isRailEnabled(state, railId)) {
+      // A rail that is off keeps nothing, so it has no thumbnails or focus.
+      clearRail(state, railId);
+      return;
+    }
+
+    const rail = getRailState(state, railId);
+
+    rail.loading = true;
+    rail.error = null;
+  });
   state.recentlyViewed.items = [];
-  state.memories.loading = true;
-  state.recentlyAdded.error = null;
-  state.albums.error = null;
-  state.favorites.error = null;
-  state.videos.error = null;
-  state.people.error = null;
-  state.recentlyViewed.error = null;
-  state.memories.error = null;
   cleanupHomeThumbnails(options, state);
   renderHome(elements, options, state, generation);
 
@@ -91,7 +96,7 @@ export function loadHome(
   };
 
   return runInOrder(
-    homeRailOrder.map((railId) => railLoaders[railId]),
+    state.enabledRails.map((railId) => railLoaders[railId]),
     homeRailDataConcurrency,
     () => isCurrentGeneration(state, generation)
   );

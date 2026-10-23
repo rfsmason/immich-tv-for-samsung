@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AlbumService } from "../app/album-service";
 import type { AlbumAsset } from "../domain/album";
-import type { AppSettings } from "../domain/app-settings";
+import { defaultAppSettings, type AppSettings } from "../domain/app-settings";
 import { TestDocument } from "../test/document";
 import { mountAlbumDetailScreen } from "./album-detail-screen";
 
@@ -19,6 +19,7 @@ function asset(id: string, type: AlbumAsset["type"] = "image"): AlbumAsset {
 
 function settings(overrides: Partial<AppSettings> = {}): AppSettings {
   return {
+    ...defaultAppSettings,
     autoplayVideos: false,
     showViewerDate: false,
     showViewerExif: false,

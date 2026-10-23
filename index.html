@@ -108,6 +108,10 @@
             <div id="home-memories-rail" class="home-rail home-memories-rail" role="list" aria-label="Memories"></div>
           </section>
         </div>
+        <div id="home-empty" class="home-empty" hidden>
+          <p class="home-empty-message">Choose what Home shows in Settings.</p>
+          <button id="home-open-settings" class="focusable primary-action" type="button">Open Settings</button>
+        </div>
         </section>
 
         <section id="memories-screen" class="screen memories-screen" aria-labelledby="memories-title" hidden>
@@ -274,7 +278,7 @@
         </section>
 
         <section id="connection-screen" class="screen setup-panel" aria-label="Settings" aria-describedby="settings-summary connection-status" hidden>
-        <p id="settings-summary" class="screen-status top-level-summary" data-state="idle" aria-live="polite">Manage connection and display preferences.</p>
+        <p id="settings-summary" class="screen-status top-level-summary" data-state="idle" aria-live="polite">Manage connection, display and Home preferences.</p>
 
         <form class="connection-form" id="connection-form">
           <div class="settings-layout">
@@ -304,6 +308,19 @@
                   <path d="M12 4a8 8 0 0 1 8 8 8 8 0 0 1-8 8 8 8 0 0 1-8-8 8 8 0 0 1 8-8zm0 2v12a6 6 0 0 0 0-12z"></path>
                 </svg>
                 <span>Display</span>
+              </button>
+              <button
+                id="settings-section-home"
+                class="focusable settings-section-button"
+                type="button"
+                data-settings-section="home"
+                aria-controls="settings-panel-home"
+                aria-selected="false"
+              >
+                <svg class="settings-section-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"></path>
+                </svg>
+                <span>Home</span>
               </button>
               <div class="settings-nav-actions" role="group" aria-label="Settings actions">
                 <button
@@ -430,6 +447,13 @@
                   </select>
                 </label>
               </section>
+
+              <section
+                id="settings-panel-home"
+                class="settings-section-panel"
+                aria-labelledby="settings-section-home"
+                hidden
+              ></section>
 
               <section
                 id="settings-panel-unsaved"

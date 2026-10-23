@@ -6,6 +6,7 @@ import type { ConnectionService } from "../app/connection-service";
 import type { AppSettingsStore } from "../storage/app-settings-store";
 import { createConnectionSection } from "./settings/connection-section";
 import { createDisplaySection } from "./settings/display-section";
+import { createHomeSection } from "./settings/home-section";
 import {
   requireElement,
   type SettingsSection,
@@ -42,12 +43,14 @@ type ConnectionScreenOptions = {
 export type ConnectionScreenController = {
   destroy(): void;
   focusContent(): void;
+  // Focuses one section's button on the Settings rail.
+  focusSection(id: SettingsSectionId): void;
   hide(): void;
   requestExit(): boolean;
   show(options?: { allowBack?: boolean }): void;
 };
 
-const settingsSummary = "Manage connection and display preferences.";
+const settingsSummary = "Manage connection, display and Home preferences.";
 
 export function mountConnectionScreen(
   options: ConnectionScreenOptions
@@ -55,7 +58,11 @@ export function mountConnectionScreen(
   const documentRef = options.documentRef || document;
   const elements = readElements(documentRef);
   const connection = createConnectionSection(documentRef, options.service);
-  const sections: SettingsSection[] = [connection, createDisplaySection(documentRef)];
+  const sections: SettingsSection[] = [
+    connection,
+    createDisplaySection(documentRef),
+    createHomeSection(documentRef)
+  ];
   const navigator = createFocusNavigator(
     () =>
       Array.prototype.slice
@@ -120,6 +127,14 @@ export function mountConnectionScreen(
     },
     focusContent() {
       connection.button.focus();
+    },
+    focusSection(id) {
+      const section = sections.filter((candidate) => candidate.id === id)[0];
+
+      if (section) {
+        activeSection = section;
+        section.button.focus();
+      }
     },
     hide() {
       stopDirtyStatusTimer();

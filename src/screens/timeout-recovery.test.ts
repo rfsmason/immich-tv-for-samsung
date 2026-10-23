@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultRequestTimeouts } from "../api/immich/http";
 import { createAlbumService } from "../app/album-service";
 import { defaultAppSettings } from "../domain/app-settings";
+import { homeRailOrder } from "../domain/home";
 import { silentLogger } from "../logging/logger";
 import { remoteKeys } from "../platform/tizen/keys";
 import { byId, loadAppMarkup, pressKey } from "../test/app-markup";
@@ -218,6 +219,7 @@ describe("stalled Immich server", () => {
     const onReturnToShell = vi.fn();
     const screen = mountHomeScreen({
       history: { loadAssets: vi.fn(() => new Promise<never>(() => undefined)) },
+      loadEnabledRails: () => homeRailOrder.slice(),
       onBrowseAlbums: vi.fn(),
       onBrowseMemories: vi.fn(),
       onBrowsePeople: vi.fn(),
@@ -225,6 +227,7 @@ describe("stalled Immich server", () => {
       onOpenAssetCollection: vi.fn(),
       onOpenMemory: vi.fn(),
       onOpenPerson: vi.fn(),
+      onOpenSettings: vi.fn(),
       onReturnToShell,
       service: createStalledService()
     });

@@ -17,6 +17,7 @@ import { mountPeopleScreen } from "../screens/people-screen";
 import { mountPeoplePicker } from "../screens/search/people-picker-screen";
 import { mountSearchScreen } from "../screens/search/search-screen";
 import type { AppSettingsStore } from "../storage/app-settings-store";
+import { readEnabledHomeRails } from "../domain/app-settings";
 import type { AlbumService } from "./album-service";
 import {
   mountApplicationShell,
@@ -81,6 +82,7 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
   const homeScreen = mountHomeScreen({
     documentRef,
     history: viewingHistory,
+    loadEnabledRails: () => readEnabledHomeRails(settingsStore.load()),
     onBrowseAlbums() {
       showAlbums({ refresh: false });
       albumsScreen.focusContent();
@@ -102,6 +104,10 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     },
     onOpenPerson(person) {
       showPerson(person, "home");
+    },
+    onOpenSettings() {
+      shell.activateDestination("settings");
+      connectionScreen.focusSection("home");
     },
     onReturnToShell() {
       shell.focusActiveDestinationNav();

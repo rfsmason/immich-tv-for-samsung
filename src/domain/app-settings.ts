@@ -1,5 +1,8 @@
+import { homeRailOrder, type HomeRailVisibility } from "./home";
+
 export type AppSettings = {
   autoplayVideos: boolean;
+  homeRails: HomeRailVisibility;
   showViewerDate: boolean;
   showViewerExif: boolean;
   showViewerTime: boolean;
@@ -10,6 +13,7 @@ export const defaultSlideshowIntervalSeconds = 8;
 
 export const defaultAppSettings: AppSettings = {
   autoplayVideos: false,
+  homeRails: normalizeHomeRailVisibility(null),
   showViewerDate: true,
   showViewerExif: true,
   showViewerTime: true,
@@ -19,6 +23,7 @@ export const defaultAppSettings: AppSettings = {
 export function normalizeAppSettings(settings: Partial<AppSettings> | null): AppSettings {
   return {
     autoplayVideos: settings?.autoplayVideos === true,
+    homeRails: normalizeHomeRailVisibility(settings?.homeRails),
     showViewerDate: settings?.showViewerDate !== false,
     showViewerExif: settings?.showViewerExif !== false,
     showViewerTime: settings?.showViewerTime !== false,
@@ -38,4 +43,21 @@ export function normalizeSlideshowIntervalSeconds(value: unknown): number {
   }
 
   return roundedValue;
+}
+
+// Keeps only known rails; a rail missing from stored settings, for example
+// one added in a later release, is on.
+export function normalizeHomeRailVisibility(value: unknown): HomeRailVisibility {
+  const stored = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const visibility = {} as HomeRailVisibility;
+
+  homeRailOrder.forEach((railId) => {
+    visibility[railId] = stored[railId] !== false;
+  });
+
+  return visibility;
+}
+
+export function readEnabledHomeRails(settings: AppSettings): typeof homeRailOrder {
+  return homeRailOrder.filter((railId) => settings.homeRails[railId]);
 }

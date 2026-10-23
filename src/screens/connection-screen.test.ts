@@ -234,6 +234,58 @@ describe("Settings remote navigation and actions", () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 
+  it("turns Home rails on and off in Home order, keeping settings saved elsewhere", () => {
+    const { settingsStore } = mount({
+      appSettings: {
+        ...defaultAppSettings,
+        homeRails: { ...defaultAppSettings.homeRails, albums: false }
+      }
+    });
+    controller!.show({ allowBack: true });
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.down);
+    expect(document.activeElement).toBe(byId("settings-section-home"));
+    pressKey(remoteKeys.right);
+    expect(byId("settings-panel-home").hidden).toBe(false);
+    expect(document.activeElement).toBe(byId("home-rail-recently-added"));
+
+    const labels = Array.prototype.map.call(
+      byId("settings-panel-home").querySelectorAll(".field-label"),
+      (label: Element) => label.textContent
+    );
+    expect(labels).toEqual([
+      "Show Recently Added",
+      "Show Favourites",
+      "Show Videos",
+      "Show People",
+      "Show Recently Viewed",
+      "Show Albums",
+      "Show Memories"
+    ]);
+    expect(byId<HTMLInputElement>("home-rail-albums").checked).toBe(false);
+
+    pressKey(remoteKeys.down);
+    expect(document.activeElement).toBe(byId("home-rail-favorites"));
+    pressKey(remoteKeys.enter);
+    expect(byId("settings-save-label").textContent).toBe("Save *");
+
+    byId("settings-save").focus();
+    pressKey(remoteKeys.enter);
+    expect(settingsStore.save).toHaveBeenCalledWith({
+      ...defaultAppSettings,
+      homeRails: { ...defaultAppSettings.homeRails, albums: false, favorites: false }
+    });
+  });
+
+  it("focuses a requested section's button", () => {
+    mount();
+    controller!.show({ allowBack: true });
+    controller!.focusSection("home");
+    expect(document.activeElement).toBe(byId("settings-section-home"));
+    pressKey(remoteKeys.enter);
+    expect(byId("settings-panel-home").hidden).toBe(false);
+  });
+
   it("guards an unsaved exit with Save and exit, Discard and Cancel", () => {
     const { onBack, onSaved } = mount();
     controller!.show({ allowBack: true });

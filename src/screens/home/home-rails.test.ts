@@ -39,6 +39,7 @@ function fixture(activeRail: HomeRailId, focused: Partial<Record<HomeRailId, num
   const railState = (railId: HomeRailId) => ({ focusedIndex: focused[railId] ?? 0, items: [] });
   const state = {
     activeRail,
+    enabledRails: homeRailOrder.slice(),
     albums: railState("albums"),
     favorites: railState("favorites"),
     memories: railState("memories"),

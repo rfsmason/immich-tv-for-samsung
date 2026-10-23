@@ -1,3 +1,4 @@
+import { defaultAppSettings } from "../domain/app-settings";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AlbumService } from "../app/album-service";
 import type { AlbumAsset, AlbumAssetPageToken, TimelineBucket } from "../domain/album";
@@ -112,6 +113,7 @@ function fixture(
     } as unknown as AlbumService,
     settingsStore: {
       load: () => ({
+        ...defaultAppSettings,
         autoplayVideos: false,
         showViewerDate: false,
         showViewerExif: false,

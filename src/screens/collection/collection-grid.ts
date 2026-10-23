@@ -79,6 +79,15 @@ export type GridRail = {
   render(): void;
 };
 
+export type GridHeader = {
+  // Focuses the header; false when it has nothing to focus.
+  focus(): boolean;
+  // Handles a key while the header has focus; false otherwise.
+  handleKeydown(event: KeyboardEvent, keyCode: number): boolean;
+  // While the header has focus, loading keeps focus there.
+  hasFocus(): boolean;
+};
+
 // How newer assets are prepended: select the asset immediately before the
 // viewer's current one, move up a row in the grid, or keep the current focus.
 export type PreviousPageFocus = "previous-asset" | "previous-row" | "preserve";
@@ -87,6 +96,8 @@ type CollectionGridOptions = {
   elements: GridElements;
   // Focuses the screen's own controls when no asset can take focus.
   focusControls(): void;
+  // Header controls above the grid, reached with Up from its first row.
+  header?: GridHeader;
   // The Back key.
   onBack(): void;
   onOpenAsset(index: number): void;
@@ -314,7 +325,7 @@ export function createCollectionGrid(options: CollectionGridOptions): Collection
 
     updateStatus();
     renderWindow();
-    if (shouldFocusGrid) {
+    if (shouldFocusGrid && !options.header?.hasFocus()) {
       focusCurrentAsset();
     }
     loadThumbnails(generation);
@@ -600,6 +611,8 @@ export function createCollectionGrid(options: CollectionGridOptions): Collection
     if (keyCode === remoteKeys.up && layout.isFirstRow(model.focusedIndex, model.preferredColumn)) {
       if (model.paging.previous) {
         maybeLoadPrevious(model.loadGeneration, "previous-row");
+      } else {
+        options.header?.focus();
       }
 
       return;
@@ -644,6 +657,10 @@ export function createCollectionGrid(options: CollectionGridOptions): Collection
       return;
     }
 
+    if (options.header?.handleKeydown(event, keyCode)) {
+      return;
+    }
+
     if (keyCode === remoteKeys.back) {
       event.preventDefault();
       options.onBack();
@@ -672,6 +689,8 @@ export function createCollectionGrid(options: CollectionGridOptions): Collection
       if (keyCode === remoteKeys.left && options.onReturnToShell) {
         event.preventDefault();
         options.onReturnToShell();
+      } else if (keyCode === remoteKeys.right && options.header?.focus()) {
+        event.preventDefault();
       }
       return;
     }

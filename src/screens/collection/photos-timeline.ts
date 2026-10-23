@@ -3,6 +3,7 @@ import type {
   AlbumAsset,
   AlbumAssetPage,
   AlbumAssetPageToken,
+  SortOrder,
   TimelineBucket
 } from "../../domain/album";
 import { toUserMessage } from "../../errors/app-error";
@@ -91,7 +92,8 @@ export type PhotosTimelineController = GridRail & {
   handleKeyup(keyCode: number): void;
   hide(): void;
   layout: GridLayout;
-  // Loads the first screen of assets, starting from the newest bucket.
+  // Loads the first screen of assets, starting from the first bucket in the
+  // timeline's order.
   loadInitialAssets(): Promise<AlbumAssetPage>;
   reset(): void;
   setBuckets(buckets: TimelineBucket[]): void;
@@ -155,6 +157,10 @@ export function createPhotosTimeline(options: PhotosTimelineOptions): PhotosTime
       return getAssetDateContext(model.assets, index).label;
     }
   };
+
+  function readPhotosOrder(): SortOrder {
+    return model.source?.kind === "photos" ? model.source.order : "newest-first";
+  }
 
   function readFocusedBucketIndex(): number {
     const asset = model.assets[model.focusedIndex];
@@ -470,7 +476,7 @@ export function createPhotosTimeline(options: PhotosTimelineOptions): PhotosTime
 
       model.paging.requested[formatAssetPageKey(pageToken)] = true;
 
-      const page = await options.service.loadTimelineAssetsPage(pageToken);
+      const page = await options.service.loadTimelineAssetsPage(readPhotosOrder(), pageToken);
 
       if (page.total !== null) {
         total = page.total;
@@ -516,7 +522,7 @@ export function createPhotosTimeline(options: PhotosTimelineOptions): PhotosTime
     while (nextPageToken && assets.length < initialFillAssetTarget) {
       model.paging.requested[formatAssetPageKey(nextPageToken)] = true;
 
-      const page = await options.service.loadTimelineAssetsPage(nextPageToken);
+      const page = await options.service.loadTimelineAssetsPage(readPhotosOrder(), nextPageToken);
 
       assets.push(...page.assets);
       nextPageToken = page.nextPageToken;

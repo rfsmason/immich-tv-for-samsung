@@ -447,7 +447,7 @@ export function mountSearchScreen(options: SearchScreenOptions): SearchScreenCon
     const epoch = state.connectionEpoch;
 
     options.service
-      .loadTimelineBuckets()
+      .loadTimelineBuckets("newest-first")
       .then((buckets) => {
         if (epoch === state.connectionEpoch) {
           state.bounds = readBounds(buckets);

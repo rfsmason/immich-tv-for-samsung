@@ -180,7 +180,7 @@ describe("Immich client", () => {
       assetCount: 2,
       id: "album-id",
       name: "Summer",
-      order: "asc",
+      order: "oldest-first",
       thumbnailAssetId: "cover-id"
     });
 
@@ -220,7 +220,7 @@ describe("Immich client", () => {
     );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.getAlbumAssetsPage("album-id", "asc", null)).resolves.toEqual({
+    await expect(client.getAlbumAssetsPage("album-id", "oldest-first", null)).resolves.toEqual({
       assets: [
         {
           capturedAt: null,
@@ -286,7 +286,7 @@ describe("Immich client", () => {
     );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.getTimelineBuckets()).resolves.toEqual([
+    await expect(client.getTimelineBuckets("newest-first")).resolves.toEqual([
       {
         assetCount: 12,
         timeBucket: "2026-10-01"
@@ -451,7 +451,7 @@ describe("Immich client", () => {
     const client = createImmichClient({ fetchImpl, settings });
 
     await expect(
-      client.getFavoriteAssetsPage({ cursor: "next-cursor", kind: "cursor" })
+      client.getFavoriteAssetsPage("newest-first", { cursor: "next-cursor", kind: "cursor" })
     ).resolves.toEqual({ assets: [], nextPageToken: null, total: null });
 
     const body = JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body));
@@ -476,8 +476,8 @@ describe("Immich client", () => {
         );
       const client = createImmichClient({ fetchImpl, settings });
 
-      await client.getFavoriteAssetsPage(token);
-      await client.getPersonAssetsPage("person", token);
+      await client.getFavoriteAssetsPage("newest-first", token);
+      await client.getPersonAssetsPage("person", "newest-first", token);
 
       for (const call of fetchImpl.mock.calls) {
         const body = JSON.parse(String(call[1]?.body));
@@ -487,6 +487,69 @@ describe("Immich client", () => {
     }
   );
 
+  it("asks Immich for oldest first as ascending order on every reversible source", async () => {
+    const fetchImpl = vi.fn().mockImplementation(async (url: string) =>
+      url.indexOf("/timeline/buckets") >= 0
+        ? jsonResponse([{ count: 1, timeBucket: "2020-01-01" }])
+        : url.indexOf("/timeline/bucket") >= 0
+          ? jsonResponse({
+              city: [],
+              country: [],
+              duration: [],
+              fileCreatedAt: [],
+              id: [],
+              isImage: [],
+              livePhotoVideoId: []
+            })
+          : jsonResponse({ assets: { items: [], nextCursor: null, total: 0 } })
+    );
+    const client = createImmichClient({ fetchImpl, settings });
+    const page = { kind: "page", page: 1 } as const;
+
+    await client.getTimelineBuckets("oldest-first");
+    await client.getTimelineAssetsPage("oldest-first", { bucketIndex: 0, kind: "bucket" });
+    // Both timeline endpoints sort by the same order, so bucket indexes agree.
+    const timelineUrls = fetchImpl.mock.calls.map(([url]) => String(url));
+    expect(timelineUrls).toHaveLength(3);
+    timelineUrls.forEach((url) => expect(url).toContain("order=asc&orderBy=takenAt"));
+
+    fetchImpl.mockClear();
+    await client.getAlbumAssetsPage("album", "oldest-first", null);
+    await client.getFavoriteAssetsPage("oldest-first", page);
+    await client.getVideoAssetsPage("oldest-first", page);
+    await client.getPersonAssetsPage("person", "oldest-first", page);
+    await client.searchAssetsPage(
+      { people: [], takenFrom: null, takenTo: null },
+      "oldest-first",
+      page
+    );
+    await client.getTimelineAssetsPage("oldest-first", null);
+
+    expect(fetchImpl).toHaveBeenCalledTimes(6);
+    for (const call of fetchImpl.mock.calls) {
+      expect(JSON.parse(String(call[1]?.body)).orderBy).toEqual({
+        direction: "asc",
+        field: "fileCreatedAt"
+      });
+    }
+  });
+
+  it("keeps Home's rails newest first", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockImplementation(async () =>
+        jsonResponse({ assets: { items: [], nextCursor: null, total: 0 } })
+      );
+    const client = createImmichClient({ fetchImpl, settings });
+
+    await client.getFavoriteAssets(18);
+    await client.getVideoAssets(18);
+
+    for (const call of fetchImpl.mock.calls) {
+      expect(JSON.parse(String(call[1]?.body)).orderBy.direction).toBe("desc");
+    }
+  });
+
   it("starts a Photos search in the structured shape and pages it by cursor", async () => {
     const fetchImpl = vi.fn().mockImplementation(async () =>
       jsonResponse({
@@ -495,12 +558,12 @@ describe("Immich client", () => {
     );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.getTimelineAssetsPage(null)).resolves.toEqual({
+    await expect(client.getTimelineAssetsPage("newest-first", null)).resolves.toEqual({
       assets: [],
       nextPageToken: { cursor: "after-first", kind: "cursor" },
       total: null
     });
-    await client.getTimelineAssetsPage({ cursor: "after-first", kind: "cursor" });
+    await client.getTimelineAssetsPage("newest-first", { cursor: "after-first", kind: "cursor" });
 
     const bodies = fetchImpl.mock.calls.map((call) => JSON.parse(String(call[1]?.body)));
     expect(bodies[0]).toEqual({
@@ -523,8 +586,8 @@ describe("Immich client", () => {
       .mockImplementation(async () => jsonResponse({ assets: { items: [], nextCursor: null } }));
     const client = createImmichClient({ fetchImpl, settings });
 
-    await client.getAlbumAssetsPage("album-id", "desc", null);
-    await client.getAlbumAssetsPage("album-id", "desc", { cursor: "next", kind: "cursor" });
+    await client.getAlbumAssetsPage("album-id", "newest-first", null);
+    await client.getAlbumAssetsPage("album-id", "newest-first", { cursor: "next", kind: "cursor" });
 
     for (const call of fetchImpl.mock.calls) {
       expect(JSON.parse(String(call[1]?.body)).filter).toEqual({
@@ -542,13 +605,15 @@ describe("Immich client", () => {
       );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.getFavoriteAssetsPage(null)).resolves.toMatchObject({
+    await expect(client.getFavoriteAssetsPage("newest-first", null)).resolves.toMatchObject({
       nextPageToken: null
     });
-    await expect(client.getPersonAssetsPage("person", null)).resolves.toMatchObject({
-      nextPageToken: null
-    });
-    await expect(client.getAlbumAssetsPage("album", "desc", null)).resolves.toMatchObject({
+    await expect(client.getPersonAssetsPage("person", "newest-first", null)).resolves.toMatchObject(
+      {
+        nextPageToken: null
+      }
+    );
+    await expect(client.getAlbumAssetsPage("album", "newest-first", null)).resolves.toMatchObject({
       nextPageToken: null
     });
   });
@@ -696,7 +761,7 @@ describe("Immich client", () => {
         nextPageToken: { cursor: "18", kind: "cursor" },
         total: null
       });
-      await client.getVideoAssetsPage({ cursor: "120", kind: "cursor" });
+      await client.getVideoAssetsPage("newest-first", { cursor: "120", kind: "cursor" });
 
       const [rail, view] = fetchImpl.mock.calls.map((call) => JSON.parse(String(call[1]?.body)));
       expect(fetchImpl.mock.calls[0]?.[0]).toBe("http://immich.local:2283/api/search/metadata");
@@ -723,12 +788,15 @@ describe("Immich client", () => {
     it("ends on an empty page and rejects a malformed one", async () => {
       const empty = vi.fn().mockResolvedValue(jsonResponse({ assets: { items: [] } }));
       await expect(
-        createImmichClient({ fetchImpl: empty, settings }).getVideoAssetsPage(null)
+        createImmichClient({ fetchImpl: empty, settings }).getVideoAssetsPage("newest-first", null)
       ).resolves.toEqual({ assets: [], nextPageToken: null, total: null });
 
       const malformed = vi.fn().mockResolvedValue(jsonResponse({ assets: { items: [{ id: 7 }] } }));
       await expect(
-        createImmichClient({ fetchImpl: malformed, settings }).getVideoAssetsPage(null)
+        createImmichClient({ fetchImpl: malformed, settings }).getVideoAssetsPage(
+          "newest-first",
+          null
+        )
       ).rejects.toMatchObject({ kind: "invalid-response" });
     });
   });
@@ -746,7 +814,10 @@ describe("Immich client", () => {
     const client = createImmichClient({ fetchImpl, settings });
 
     await expect(
-      client.getPersonAssetsPage("00000000-0000-4000-8000-000000000001", { kind: "page", page: 1 })
+      client.getPersonAssetsPage("00000000-0000-4000-8000-000000000001", "newest-first", {
+        kind: "page",
+        page: 1
+      })
     ).resolves.toEqual({
       assets: [],
       nextPageToken: { cursor: "after-first-page", kind: "cursor" },
@@ -940,35 +1011,35 @@ describe("Immich client", () => {
       );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.getTimelineAssetsPage({ bucketIndex: 0, kind: "bucket" })).resolves.toEqual(
-      {
-        assets: [
-          {
-            capturedAt: "2026-10-06T18:42:11.000Z",
-            durationMs: null,
-            id: "timeline-image",
-            livePhotoVideoId: "live-video-asset",
-            location: "London, United Kingdom",
-            name: "timeline-image",
-            type: "image"
-          },
-          {
-            capturedAt: "2026-10-06T19:12:00.000Z",
-            durationMs: 64000,
-            id: "timeline-video",
-            livePhotoVideoId: null,
-            location: null,
-            name: "timeline-video",
-            type: "video"
-          }
-        ],
-        nextPageToken: {
-          bucketIndex: 1,
-          kind: "bucket"
+    await expect(
+      client.getTimelineAssetsPage("newest-first", { bucketIndex: 0, kind: "bucket" })
+    ).resolves.toEqual({
+      assets: [
+        {
+          capturedAt: "2026-10-06T18:42:11.000Z",
+          durationMs: null,
+          id: "timeline-image",
+          livePhotoVideoId: "live-video-asset",
+          location: "London, United Kingdom",
+          name: "timeline-image",
+          type: "image"
         },
-        total: 3
-      }
-    );
+        {
+          capturedAt: "2026-10-06T19:12:00.000Z",
+          durationMs: 64000,
+          id: "timeline-video",
+          livePhotoVideoId: null,
+          location: null,
+          name: "timeline-video",
+          type: "video"
+        }
+      ],
+      nextPageToken: {
+        bucketIndex: 1,
+        kind: "bucket"
+      },
+      total: 3
+    });
 
     expect(fetchImpl).toHaveBeenNthCalledWith(
       2,
@@ -1016,7 +1087,9 @@ describe("Immich client", () => {
     );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.getAlbumAssetsPage("album-id", "asc", null)).resolves.toMatchObject({
+    await expect(
+      client.getAlbumAssetsPage("album-id", "oldest-first", null)
+    ).resolves.toMatchObject({
       assets: [
         {
           capturedAt: "2026-10-06T18:42:11.000Z",
@@ -1046,7 +1119,9 @@ describe("Immich client", () => {
     );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.getAlbumAssetsPage("album-id", "desc", null)).resolves.toMatchObject({
+    await expect(
+      client.getAlbumAssetsPage("album-id", "newest-first", null)
+    ).resolves.toMatchObject({
       assets: [{ durationMs }]
     });
   });
@@ -1077,7 +1152,9 @@ describe("Immich client", () => {
     );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.getAlbumAssetsPage("album-id", "desc", null)).resolves.toMatchObject({
+    await expect(
+      client.getAlbumAssetsPage("album-id", "newest-first", null)
+    ).resolves.toMatchObject({
       assets: [
         {
           durationMs: 3232,
@@ -1116,7 +1193,7 @@ describe("Immich client", () => {
       assetCount: 2,
       id: "album-id",
       name: "Direct assets",
-      order: "desc",
+      order: "newest-first",
       thumbnailAssetId: null
     });
 
@@ -1158,7 +1235,9 @@ describe("Immich client", () => {
       );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.getAlbumAssetsPage("album-id", "desc", null)).resolves.toMatchObject({
+    await expect(
+      client.getAlbumAssetsPage("album-id", "newest-first", null)
+    ).resolves.toMatchObject({
       assets: [
         {
           id: "first-asset"
@@ -1171,7 +1250,7 @@ describe("Immich client", () => {
     });
 
     await expect(
-      client.getAlbumAssetsPage("album-id", "desc", {
+      client.getAlbumAssetsPage("album-id", "newest-first", {
         cursor: "cursor-2",
         kind: "cursor"
       })
@@ -1250,7 +1329,9 @@ describe("Immich client", () => {
     );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.getAlbumAssetsPage("album-id", "desc", null)).resolves.toMatchObject({
+    await expect(
+      client.getAlbumAssetsPage("album-id", "newest-first", null)
+    ).resolves.toMatchObject({
       assets: [
         {
           id: "first-asset"
@@ -1280,7 +1361,9 @@ describe("Immich client", () => {
     );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.getAlbumAssetsPage("album-id", "desc", null)).resolves.toMatchObject({
+    await expect(
+      client.getAlbumAssetsPage("album-id", "newest-first", null)
+    ).resolves.toMatchObject({
       assets: expect.arrayContaining([
         expect.objectContaining({
           id: "asset-0"
@@ -1322,9 +1405,11 @@ describe("Immich client", () => {
     );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.getAlbumAssetsPage("album-id", "desc", null)).rejects.toMatchObject({
-      kind: "invalid-response"
-    });
+    await expect(client.getAlbumAssetsPage("album-id", "newest-first", null)).rejects.toMatchObject(
+      {
+        kind: "invalid-response"
+      }
+    );
   });
 
   it("rejects malformed album responses", async () => {
@@ -1437,13 +1522,20 @@ describe("Immich client", () => {
     [
       "People",
       (client: ReturnType<typeof createImmichClient>) =>
-        client.getPersonAssetsPage("person", { kind: "page", page: 1 })
+        client.getPersonAssetsPage("person", "newest-first", { kind: "page", page: 1 })
     ],
     ["Albums", (client: ReturnType<typeof createImmichClient>) => client.getAlbums()],
     ["Favourites", (client: ReturnType<typeof createImmichClient>) => client.getFavoriteAssets(18)],
     ["Videos", (client: ReturnType<typeof createImmichClient>) => client.getVideoAssets(18)],
-    ["Videos", (client: ReturnType<typeof createImmichClient>) => client.getVideoAssetsPage(null)],
-    ["Photos", (client: ReturnType<typeof createImmichClient>) => client.getTimelineBuckets()],
+    [
+      "Videos",
+      (client: ReturnType<typeof createImmichClient>) =>
+        client.getVideoAssetsPage("newest-first", null)
+    ],
+    [
+      "Photos",
+      (client: ReturnType<typeof createImmichClient>) => client.getTimelineBuckets("newest-first")
+    ],
     [
       "photos and videos",
       (client: ReturnType<typeof createImmichClient>) => client.getAssetThumbnail("asset")
@@ -1472,9 +1564,14 @@ describe("Immich client", () => {
   it.each([
     [
       "Favourites",
-      (client: ReturnType<typeof createImmichClient>) => client.getFavoriteAssetsPage(null)
+      (client: ReturnType<typeof createImmichClient>) =>
+        client.getFavoriteAssetsPage("newest-first", null)
     ],
-    ["Videos", (client: ReturnType<typeof createImmichClient>) => client.getVideoAssetsPage(null)],
+    [
+      "Videos",
+      (client: ReturnType<typeof createImmichClient>) =>
+        client.getVideoAssetsPage("newest-first", null)
+    ],
     [
       "Recently Added",
       (client: ReturnType<typeof createImmichClient>) => client.getRecentlyAddedAssetsPage(null)

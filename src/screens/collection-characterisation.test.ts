@@ -1,7 +1,7 @@
 import { defaultAppSettings } from "../domain/app-settings";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AlbumService } from "../app/album-service";
-import type { AlbumAsset, AlbumAssetPageToken, TimelineBucket } from "../domain/album";
+import type { AlbumAsset, AlbumAssetPageToken, SortOrder, TimelineBucket } from "../domain/album";
 import { TestDocument } from "../test/document";
 import { mountAlbumDetailScreen } from "./album-detail-screen";
 
@@ -57,15 +57,17 @@ function fixture(
   const albumAssets = Array.from({ length: options.albumAssets ?? 14 }, (_, index) =>
     asset(`a${index}`)
   );
-  const loadTimelineAssetsPage = vi.fn(async (token: AlbumAssetPageToken | null) => {
-    const index = token?.kind === "bucket" ? token.bucketIndex : 0;
-    return {
-      assets: bucketAssets(index),
-      nextPageToken:
-        index + 1 < buckets.length ? { bucketIndex: index + 1, kind: "bucket" as const } : null,
-      total: options.pageTotal === undefined ? buckets.length * 8 : options.pageTotal
-    };
-  });
+  const loadTimelineAssetsPage = vi.fn(
+    async (_order: SortOrder, token: AlbumAssetPageToken | null) => {
+      const index = token?.kind === "bucket" ? token.bucketIndex : 0;
+      return {
+        assets: bucketAssets(index),
+        nextPageToken:
+          index + 1 < buckets.length ? { bucketIndex: index + 1, kind: "bucket" as const } : null,
+        total: options.pageTotal === undefined ? buckets.length * 8 : options.pageTotal
+      };
+    }
+  );
   const onBack = vi.fn();
   const onReturnToShell = vi.fn();
   const onViewerOpened = vi.fn();
@@ -214,8 +216,14 @@ describe("album grid remote navigation", () => {
     f.press(keys.up);
     expect(f.focused()).toBe("1");
 
+    // Up from the first row reaches the header's sort button; Down returns to
+    // the first item.
     f.press(keys.up);
-    expect(f.focused()).toBe("1");
+    expect(f.documentRef.activeElement).toBe(f.byId("collection-sort-order"));
+    expect(f.byId("collection-sort-order").textContent).toBe("Newest first");
+    f.press(keys.down);
+    expect(f.focused()).toBe("0");
+    f.press(keys.right);
 
     f.press(keys.left);
     f.press(keys.left);
@@ -302,7 +310,7 @@ describe("Photos timeline remote navigation", () => {
     const f = await openPhotos();
 
     expect(f.byId("album-detail-title").textContent).toBe("Timeline");
-    expect(f.loadTimelineAssetsPage.mock.calls.map(([token]) => token)).toEqual([
+    expect(f.loadTimelineAssetsPage.mock.calls.map(([, token]) => token)).toEqual([
       { bucketIndex: 0, kind: "bucket" },
       { bucketIndex: 1, kind: "bucket" },
       { bucketIndex: 2, kind: "bucket" }
@@ -390,7 +398,7 @@ describe("Photos timeline remote navigation", () => {
     // Moving focus near the loaded end has already paged in bucket 3.
     const bucketsRequested = () =>
       f.loadTimelineAssetsPage.mock.calls.map(
-        ([token]) => (token as { bucketIndex: number }).bucketIndex
+        ([, token]) => (token as { bucketIndex: number }).bucketIndex
       );
     expect(bucketsRequested()).toEqual([0, 1, 2, 3]);
     f.press(keys.enter);
@@ -420,7 +428,7 @@ describe("Photos timeline remote navigation", () => {
     const f = await openPhotos(6);
     const bucketsRequested = () =>
       f.loadTimelineAssetsPage.mock.calls.map(
-        ([token]) => (token as { bucketIndex: number }).bucketIndex
+        ([, token]) => (token as { bucketIndex: number }).bucketIndex
       );
 
     // Three buckets fill the first screen; focusing it prefetches the next.

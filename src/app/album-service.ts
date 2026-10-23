@@ -6,7 +6,7 @@ import type {
   AlbumAssetPage,
   AlbumAssetPageToken,
   AlbumDetail,
-  AssetOrder,
+  SortOrder,
   TimelineBucket
 } from "../domain/album";
 import type { ConnectionSettings } from "../domain/connection";
@@ -27,23 +27,34 @@ type AlbumServiceOptions = {
 export type AlbumService = {
   loadAlbumAssetsPage(
     albumId: string,
-    order: AssetOrder,
+    order: SortOrder,
     page: AlbumAssetPageToken | null
   ): Promise<AlbumAssetPage>;
-  loadTimelineAssetsPage(page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
-  loadTimelineBuckets(): Promise<TimelineBucket[]>;
+  loadTimelineAssetsPage(
+    order: SortOrder,
+    page: AlbumAssetPageToken | null
+  ): Promise<AlbumAssetPage>;
+  loadTimelineBuckets(order: SortOrder): Promise<TimelineBucket[]>;
   loadFavoriteAssets(limit: number): Promise<AlbumAssetPage>;
-  loadFavoriteAssetsPage(page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
+  loadFavoriteAssetsPage(
+    order: SortOrder,
+    page: AlbumAssetPageToken | null
+  ): Promise<AlbumAssetPage>;
   loadVideoAssets(limit: number): Promise<AlbumAssetPage>;
-  loadVideoAssetsPage(page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
+  loadVideoAssetsPage(order: SortOrder, page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
   loadMemories(limit: number, page?: number, date?: string): Promise<Memory[]>;
   loadMemory(id: string): Promise<Memory>;
   loadMemoriesTotal(date: string): Promise<number>;
   loadPeoplePage(page: number, size: number): Promise<PeoplePage>;
-  loadPersonAssetsPage(personId: string, page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
+  loadPersonAssetsPage(
+    personId: string,
+    order: SortOrder,
+    page: AlbumAssetPageToken | null
+  ): Promise<AlbumAssetPage>;
   loadPersonThumbnailUrl(person: Pick<Person, "id">): Promise<string | null>;
   loadSearchAssetsPage(
     criteria: SearchCriteria,
+    order: SortOrder,
     page: AlbumAssetPageToken | null
   ): Promise<AlbumAssetPage>;
   loadRecentlyAddedAssets(limit: number): Promise<AlbumAssetPage>;
@@ -71,17 +82,17 @@ export function createAlbumService(options: AlbumServiceOptions): AlbumService {
   }
 
   return {
-    loadFavoriteAssetsPage(page) {
-      return client().getFavoriteAssetsPage(page);
+    loadFavoriteAssetsPage(order, page) {
+      return client().getFavoriteAssetsPage(order, page);
     },
     loadVideoAssets(limit) {
       return client().getVideoAssets(limit);
     },
-    loadVideoAssetsPage(page) {
-      return client().getVideoAssetsPage(page);
+    loadVideoAssetsPage(order, page) {
+      return client().getVideoAssetsPage(order, page);
     },
-    loadPersonAssetsPage(personId, page) {
-      return client().getPersonAssetsPage(personId, page);
+    loadPersonAssetsPage(personId, order, page) {
+      return client().getPersonAssetsPage(personId, order, page);
     },
     loadRecentlyAddedAssetsPage(page) {
       return client().getRecentlyAddedAssetsPage(page);
@@ -97,7 +108,7 @@ export function createAlbumService(options: AlbumServiceOptions): AlbumService {
 
       return client.getAlbumAssetsPage(albumId, order, page);
     },
-    loadTimelineAssetsPage(page) {
+    loadTimelineAssetsPage(order, page) {
       const settings = requireSettings(options.store.load());
       const client = createImmichClient({
         fetchImpl: options.fetchImpl,
@@ -106,9 +117,9 @@ export function createAlbumService(options: AlbumServiceOptions): AlbumService {
         settings
       });
 
-      return client.getTimelineAssetsPage(page);
+      return client.getTimelineAssetsPage(order, page);
     },
-    loadTimelineBuckets() {
+    loadTimelineBuckets(order) {
       const settings = requireSettings(options.store.load());
       const client = createImmichClient({
         fetchImpl: options.fetchImpl,
@@ -117,7 +128,7 @@ export function createAlbumService(options: AlbumServiceOptions): AlbumService {
         settings
       });
 
-      return client.getTimelineBuckets();
+      return client.getTimelineBuckets(order);
     },
     loadFavoriteAssets(limit) {
       const settings = requireSettings(options.store.load());
@@ -158,8 +169,8 @@ export function createAlbumService(options: AlbumServiceOptions): AlbumService {
     loadPeoplePage(page, size) {
       return client().getPeoplePage(page, size);
     },
-    loadSearchAssetsPage(criteria, page) {
-      return client().searchAssetsPage(criteria, page);
+    loadSearchAssetsPage(criteria, order, page) {
+      return client().searchAssetsPage(criteria, order, page);
     },
     async loadPersonThumbnailUrl(person) {
       const settings = requireSettings(options.store.load());

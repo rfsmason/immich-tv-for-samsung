@@ -3,6 +3,7 @@ import type {
   AlbumAsset,
   AlbumAssetType,
   AlbumDetail,
+  SortOrder,
   TimelineBucket
 } from "../../domain/album";
 import type { Memory, Person } from "../../domain/home";
@@ -36,7 +37,7 @@ export function mapAlbumDetail(dto: AlbumDetailResponseDto): AlbumDetail {
     id: dto.id,
     name: dto.albumName,
     thumbnailAssetId: dto.albumThumbnailAssetId || null,
-    order: dto.order === "asc" ? "asc" : "desc"
+    order: dto.order === "asc" ? "oldest-first" : "newest-first"
   };
 }
 
@@ -176,4 +177,10 @@ function mapAssetType(type: string): AlbumAssetType {
   }
 
   return "other";
+}
+
+// Immich's order for a domain sort order: capture dates ascending for oldest
+// first.
+export function toImmichAssetOrder(order: SortOrder): "asc" | "desc" {
+  return order === "oldest-first" ? "asc" : "desc";
 }

@@ -1,10 +1,17 @@
 import type { AlbumService } from "../app/album-service";
-import type { Album, AlbumAsset, AlbumAssetPage, AlbumAssetPageToken } from "../domain/album";
+import type {
+  Album,
+  AlbumAsset,
+  AlbumAssetPage,
+  AlbumAssetPageToken,
+  SortOrder
+} from "../domain/album";
 import type { Memory, Person } from "../domain/home";
 import type { SearchCriteria } from "../domain/search";
 import type { ViewingSource } from "../domain/viewing-history";
 import { toUserMessage } from "../errors/app-error";
 import { getKeyCode } from "../platform/tizen/keys";
+import { formatLibraryViewTitle } from "../presentation/library-labels";
 import { formatMemoryContext, formatMemoryTitle } from "../presentation/memory-labels";
 import { formatPersonName } from "../presentation/person-labels";
 import { formatSearchSummary } from "../presentation/search-labels";
@@ -39,6 +46,13 @@ import {
   type RemoteCollection,
   type StaticCollectionInput
 } from "./collection/collection-model";
+import {
+  createCollectionSortControl,
+  readCollectionSort,
+  readSavedSortOrder,
+  reverseSortOrder,
+  saveSortOrder
+} from "./collection/collection-sort";
 import { createPhotosTimeline, type ScheduleFrame } from "./collection/photos-timeline";
 import type { ViewerElements } from "./collection/viewer-types";
 
@@ -52,6 +66,7 @@ type AlbumDetailElements = ViewerElements & {
   grid: HTMLElement;
   retryButton: HTMLButtonElement;
   root: HTMLElement;
+  sortButton: HTMLButtonElement;
   summary: HTMLElement;
   timeline: HTMLElement;
   title: HTMLElement;
@@ -86,6 +101,8 @@ export type FeedCollectionInput = {
 export type AlbumDetailScreenController = {
   destroy(): void;
   focusContent(): void;
+  // Forgets album order reversals, which last until the connection changes.
+  forgetSessionSortOrders(): void;
   hide(): void;
   refreshPhotos(): void;
   show(album: Album, parent: "albums" | "home"): void;
@@ -95,7 +112,8 @@ export type AlbumDetailScreenController = {
   // results still loading.
   showSearchResults(criteria: SearchCriteria): void;
   // Opens a paged Home collection in its summary grid, focused on the chosen
-  // asset, with the Home rail's items shown at once.
+  // asset, with the Home rail's items shown at once. A library view opening
+  // oldest first loads from its start instead.
   showFeedCollection(input: FeedCollectionInput): void;
   showStaticAssetCollection(input: StaticCollectionInput): void;
   showPhotos(): void;
@@ -113,6 +131,23 @@ export function mountAlbumDetailScreen(
   const model = createCollectionModel();
   const plainLayout = createPlainGridLayout(model);
   let backdropUrl: string | null = null;
+  // The album being shown, and album order reversals for this session, by id.
+  let currentAlbum: Album | null = null;
+  let sessionAlbumOrders: Record<string, SortOrder> = {};
+  // The last People or Search collection, reloaded when its order reverses.
+  let lastRemoteCollection: RemoteCollection | null = null;
+  const sortControl = createCollectionSortControl({
+    button: elements.sortButton,
+    onDown: () => focusFirstAsset(),
+    onLeft() {
+      if (!elements.retryButton.hidden) {
+        elements.retryButton.focus();
+      } else {
+        options.onReturnToShell?.();
+      }
+    },
+    onToggle: () => toggleSortOrder()
+  });
 
   const grid = createCollectionGrid({
     elements,
@@ -127,6 +162,11 @@ export function mountAlbumDetailScreen(
       options.onBack();
     },
     focusControls: () => focusScreenControls(),
+    header: {
+      focus: () => sortControl.focus(),
+      handleKeydown: (event, keyCode) => sortControl.handleKeydown(event, keyCode),
+      hasFocus: () => sortControl.isFocused()
+    },
     onOpenAsset: (index) => openViewer(index),
     onRetry: () => retryFailedLoad(),
     onReturnToShell: options.onReturnToShell,
@@ -262,7 +302,7 @@ export function mountAlbumDetailScreen(
     const source = model.source;
 
     if (source?.kind === "photos") {
-      return options.service.loadTimelineAssetsPage(page);
+      return options.service.loadTimelineAssetsPage(source.order, page);
     }
 
     if (source?.kind === "album") {
@@ -280,6 +320,10 @@ export function mountAlbumDetailScreen(
   // Common reset when a different collection starts loading or is shown.
   function beginCollection(source: CollectionSource | null): void {
     model.source = source;
+    // A reload from the sort button keeps the button on screen and focused.
+    if (source || !sortControl.isFocused()) {
+      sortControl.render(readCollectionSort(source)?.order || null);
+    }
     timeline.reset();
     leaveTimelineRail(model);
     model.paging = createCollectionPaging();
@@ -298,6 +342,10 @@ export function mountAlbumDetailScreen(
   // parent; Photos hands it to the left rail, but only when focus is on this
   // screen, so it never pulls focus off the rail (such as from Refresh).
   function focusScreenControls(): void {
+    if (sortControl.isFocused()) {
+      return;
+    }
+
     if (model.source?.kind !== "photos") {
       elements.root.focus();
     } else if (elements.root.contains(documentRef.activeElement)) {
@@ -333,16 +381,17 @@ export function mountAlbumDetailScreen(
       model.source = {
         id: detail.id,
         kind: "album",
-        order: detail.order,
+        order: sessionAlbumOrders[detail.id] || detail.order,
         parent,
         title: detail.name
       };
+      sortControl.render(model.source.order);
       elements.title.textContent = detail.name;
       model.total = detail.assetCount > 0 ? detail.assetCount : null;
 
       const firstAssetPage = await options.service.loadAlbumAssetsPage(
         detail.id,
-        detail.order,
+        model.source.order,
         null
       );
 
@@ -379,10 +428,12 @@ export function mountAlbumDetailScreen(
     }
   }
 
-  async function loadPhotosTimeline(): Promise<void> {
+  async function loadPhotosTimeline(
+    order = readSavedSortOrder(options.settingsStore, "photos")
+  ): Promise<void> {
     const generation = beginAsyncGeneration(model);
 
-    beginCollection({ id: "photos", kind: "photos", title: "Timeline" });
+    beginCollection({ id: "photos", kind: "photos", order, title: "Timeline" });
     model.load = { status: "loading", request: { kind: "photos" } };
     model.view = { kind: "grid", focus: "assets" };
     elements.assetPlaceholder.hidden = true;
@@ -397,7 +448,7 @@ export function mountAlbumDetailScreen(
     grid.resetThumbnails();
 
     try {
-      const buckets = await options.service.loadTimelineBuckets();
+      const buckets = await options.service.loadTimelineBuckets(order);
 
       if (!canApplyAlbumDetail(model.loadGeneration, generation, elements.root.hidden)) {
         return;
@@ -445,38 +496,51 @@ export function mountAlbumDetailScreen(
 
   async function loadRemoteCollection(collection: RemoteCollection): Promise<void> {
     const feed = readRemoteFeed(collection);
+    if (collection.kind === "person" || collection.kind === "search") {
+      lastRemoteCollection = collection;
+    }
     const input: StaticCollectionInput =
-      collection.kind === "person"
+      collection.kind === "library"
         ? {
             assets: [],
             focusedIndex: 0,
             feed: { feed: feed!, nextPage: null },
-            id: `person-${collection.person.id}`,
-            title: formatPersonName(collection.person),
+            id: collection.view,
+            title: formatLibraryViewTitle(collection.view),
             initialView: "grid",
             parent: collection.parent
           }
-        : collection.kind === "search"
+        : collection.kind === "person"
           ? {
               assets: [],
-              emptyMessage: "No photos match. Try fewer people or a wider date range.",
               focusedIndex: 0,
               feed: { feed: feed!, nextPage: null },
-              id: "search",
-              title: formatSearchSummary(collection.criteria),
+              id: `person-${collection.person.id}`,
+              title: formatPersonName(collection.person),
               initialView: "grid",
               parent: collection.parent
             }
-          : {
-              assets: [],
-              focusedIndex: 0,
-              id: collection.memory.id,
-              title: formatMemoryTitle(collection.memory),
-              context: formatMemoryContext(collection.memory),
-              initialView: "grid",
-              parent: collection.parent,
-              viewingKind: "memory"
-            };
+          : collection.kind === "search"
+            ? {
+                assets: [],
+                emptyMessage: "No photos match. Try fewer people or a wider date range.",
+                focusedIndex: 0,
+                feed: { feed: feed!, nextPage: null },
+                id: "search",
+                title: formatSearchSummary(collection.criteria),
+                initialView: "grid",
+                parent: collection.parent
+              }
+            : {
+                assets: [],
+                focusedIndex: 0,
+                id: collection.memory.id,
+                title: formatMemoryTitle(collection.memory),
+                context: formatMemoryContext(collection.memory),
+                initialView: "grid",
+                parent: collection.parent,
+                viewingKind: "memory"
+              };
     loadStaticAssetCollection(input);
     const generation = model.loadGeneration;
     model.load = { status: "loading", request: collection };
@@ -571,6 +635,62 @@ export function mountAlbumDetailScreen(
       loadRandomBackdrop(model.loadGeneration);
     } else {
       openViewer(focusedIndex);
+    }
+  }
+
+  function focusFirstAsset(): void {
+    if (model.assets.length === 0) {
+      return;
+    }
+
+    leaveTimelineRail(model);
+    model.focusedIndex = 0;
+    model.preferredColumn = 0;
+    grid.refreshAroundFocus();
+  }
+
+  // Reverses the collection's order and reloads it from its start. Photos,
+  // Favourites, Videos, People and Search remember the order; an album's
+  // reversal lasts the session.
+  function toggleSortOrder(): void {
+    const source = model.source;
+    const sort = readCollectionSort(source);
+
+    if (!source || !sort) {
+      return;
+    }
+
+    const order = reverseSortOrder(sort.order);
+
+    sortControl.render(order);
+
+    if (sort.kind === "album") {
+      sessionAlbumOrders[source.id] = order;
+      if (currentAlbum && source.kind === "album") {
+        void loadAlbumDetail(currentAlbum, source.parent);
+      }
+      return;
+    }
+
+    saveSortOrder(options.settingsStore, sort.kind, order);
+
+    if (source.kind === "photos") {
+      void loadPhotosTimeline(order);
+      return;
+    }
+
+    if (source.kind !== "feed") {
+      return;
+    }
+
+    const feed = source.feed;
+
+    if (feed.kind === "favorites" || feed.kind === "videos") {
+      void loadRemoteCollection({ kind: "library", order, parent: "home", view: feed.kind });
+    } else if (lastRemoteCollection?.kind === "person") {
+      void loadRemoteCollection({ ...lastRemoteCollection, order });
+    } else if (lastRemoteCollection?.kind === "search") {
+      void loadRemoteCollection({ ...lastRemoteCollection, order });
     }
   }
 
@@ -713,6 +833,9 @@ export function mountAlbumDetailScreen(
       grid.resetThumbnails();
       viewer.resetImages();
     },
+    forgetSessionSortOrders() {
+      sessionAlbumOrders = {};
+    },
     focusContent() {
       model.contentFocusRequested = true;
 
@@ -741,6 +864,7 @@ export function mountAlbumDetailScreen(
       model.view = { kind: "grid", focus: "assets" };
       viewer.clearSelection();
       model.contentFocusRequested = false;
+      currentAlbum = album;
       void loadAlbumDetail(album, parent);
     },
     showFeedCollection(input) {
@@ -748,6 +872,20 @@ export function mountAlbumDetailScreen(
       elements.root.hidden = false;
       model.view = { kind: "grid", focus: "assets" };
       model.contentFocusRequested = false;
+      // The rail's items are newest first, so they cannot start an
+      // oldest-first view.
+      if (
+        (input.feed.kind === "favorites" || input.feed.kind === "videos") &&
+        input.feed.order === "oldest-first"
+      ) {
+        void loadRemoteCollection({
+          kind: "library",
+          order: input.feed.order,
+          parent: "home",
+          view: input.feed.kind
+        });
+        return;
+      }
       loadStaticAssetCollection({
         assets: input.assets,
         feed: { feed: input.feed, nextPage: firstFeedPage() },
@@ -767,12 +905,22 @@ export function mountAlbumDetailScreen(
     showPerson(person, parent) {
       elements.root.hidden = false;
       model.contentFocusRequested = false;
-      void loadRemoteCollection({ kind: "person", parent, person });
+      void loadRemoteCollection({
+        kind: "person",
+        order: readSavedSortOrder(options.settingsStore, "people"),
+        parent,
+        person
+      });
     },
     showSearchResults(criteria) {
       elements.root.hidden = false;
       model.contentFocusRequested = false;
-      void loadRemoteCollection({ criteria, kind: "search", parent: "search" });
+      void loadRemoteCollection({
+        criteria,
+        kind: "search",
+        order: readSavedSortOrder(options.settingsStore, "search"),
+        parent: "search"
+      });
     },
     showMemory(memory, parent) {
       elements.root.hidden = false;
@@ -831,6 +979,7 @@ function readElements(documentRef: Document): AlbumDetailElements {
     backdrop: requireElement<HTMLImageElement>(documentRef, "album-detail-backdrop"),
     grid: requireElement(documentRef, "album-assets-grid"),
     retryButton: requireElement<HTMLButtonElement>(documentRef, "collection-retry"),
+    sortButton: requireElement<HTMLButtonElement>(documentRef, "collection-sort-order"),
     root: requireElement(documentRef, "album-detail-screen"),
     summary: requireElement(documentRef, "album-detail-summary"),
     timeline: requireElement(documentRef, "photos-timeline-rail"),
@@ -841,10 +990,16 @@ function readElements(documentRef: Document): AlbumDetailElements {
 // The paged feed behind a person or search collection.
 function readRemoteFeed(collection: RemoteCollection): CollectionFeed | null {
   if (collection.kind === "person") {
-    return { kind: "person", personId: collection.person.id };
+    return { kind: "person", order: collection.order, personId: collection.person.id };
   }
 
-  return collection.kind === "search" ? { criteria: collection.criteria, kind: "search" } : null;
+  if (collection.kind === "library") {
+    return { kind: collection.view, order: collection.order };
+  }
+
+  return collection.kind === "search"
+    ? { criteria: collection.criteria, kind: "search", order: collection.order }
+    : null;
 }
 
 function requireElement<T extends HTMLElement>(documentRef: Document, id: string): T {

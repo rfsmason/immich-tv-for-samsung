@@ -1,4 +1,19 @@
+import type { SortOrder } from "./album";
 import { homeRailOrder, type HomeRailVisibility } from "./home";
+
+// Collections whose sort order is remembered between visits. An album's
+// order comes from Immich instead, and reversing it lasts the session.
+export type SavedSortOrderKind = "favorites" | "people" | "photos" | "search" | "videos";
+
+export type SavedSortOrders = Record<SavedSortOrderKind, SortOrder>;
+
+const savedSortOrderKinds: SavedSortOrderKind[] = [
+  "favorites",
+  "people",
+  "photos",
+  "search",
+  "videos"
+];
 
 export type AppSettings = {
   autoplayVideos: boolean;
@@ -7,6 +22,7 @@ export type AppSettings = {
   showViewerExif: boolean;
   showViewerTime: boolean;
   slideshowIntervalSeconds: number;
+  sortOrders: SavedSortOrders;
 };
 
 export const defaultSlideshowIntervalSeconds = 8;
@@ -17,7 +33,8 @@ export const defaultAppSettings: AppSettings = {
   showViewerDate: true,
   showViewerExif: true,
   showViewerTime: true,
-  slideshowIntervalSeconds: defaultSlideshowIntervalSeconds
+  slideshowIntervalSeconds: defaultSlideshowIntervalSeconds,
+  sortOrders: normalizeSavedSortOrders(null)
 };
 
 export function normalizeAppSettings(settings: Partial<AppSettings> | null): AppSettings {
@@ -27,7 +44,8 @@ export function normalizeAppSettings(settings: Partial<AppSettings> | null): App
     showViewerDate: settings?.showViewerDate !== false,
     showViewerExif: settings?.showViewerExif !== false,
     showViewerTime: settings?.showViewerTime !== false,
-    slideshowIntervalSeconds: normalizeSlideshowIntervalSeconds(settings?.slideshowIntervalSeconds)
+    slideshowIntervalSeconds: normalizeSlideshowIntervalSeconds(settings?.slideshowIntervalSeconds),
+    sortOrders: normalizeSavedSortOrders(settings?.sortOrders)
   };
 }
 
@@ -60,4 +78,16 @@ export function normalizeHomeRailVisibility(value: unknown): HomeRailVisibility 
 
 export function readEnabledHomeRails(settings: AppSettings): typeof homeRailOrder {
   return homeRailOrder.filter((railId) => settings.homeRails[railId]);
+}
+
+// Newest first unless oldest first was chosen.
+export function normalizeSavedSortOrders(value: unknown): SavedSortOrders {
+  const stored = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const orders = {} as SavedSortOrders;
+
+  savedSortOrderKinds.forEach((kind) => {
+    orders[kind] = stored[kind] === "oldest-first" ? "oldest-first" : "newest-first";
+  });
+
+  return orders;
 }

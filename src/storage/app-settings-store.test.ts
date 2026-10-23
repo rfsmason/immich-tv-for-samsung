@@ -37,7 +37,14 @@ describe("app settings store", () => {
       showViewerDate: true,
       showViewerExif: true,
       showViewerTime: true,
-      slideshowIntervalSeconds: 8
+      slideshowIntervalSeconds: 8,
+      sortOrders: {
+        favorites: "newest-first",
+        people: "newest-first",
+        photos: "newest-first",
+        search: "newest-first",
+        videos: "newest-first"
+      }
     });
   });
 
@@ -60,7 +67,8 @@ describe("app settings store", () => {
       showViewerDate: false,
       showViewerExif: true,
       showViewerTime: false,
-      slideshowIntervalSeconds: 12
+      slideshowIntervalSeconds: 12,
+      sortOrders: { ...defaultAppSettings.sortOrders, photos: "oldest-first" as const }
     };
 
     expect(store.save(settings)).toEqual(settings);
@@ -85,7 +93,14 @@ describe("app settings store", () => {
       showViewerDate: true,
       showViewerExif: true,
       showViewerTime: true,
-      slideshowIntervalSeconds: 8
+      slideshowIntervalSeconds: 8,
+      sortOrders: {
+        favorites: "newest-first",
+        people: "newest-first",
+        photos: "newest-first",
+        search: "newest-first",
+        videos: "newest-first"
+      }
     });
   });
 
@@ -100,6 +115,21 @@ describe("app settings store", () => {
     );
 
     expect(store.load().homeRails).toEqual({ ...allRailsOn, albums: false });
+  });
+
+  it("keeps only a chosen oldest-first order and defaults the rest to newest first", () => {
+    const store = createLocalAppSettingsStore(
+      createMemoryStorage({
+        "immich-tv.app-settings": JSON.stringify({
+          sortOrders: { albums: "oldest-first", people: "oldest-first", photos: "sideways" }
+        })
+      })
+    );
+
+    expect(store.load().sortOrders).toEqual({
+      ...defaultAppSettings.sortOrders,
+      people: "oldest-first"
+    });
   });
 
   it("normalizes unsupported slideshow intervals to the safe default", () => {

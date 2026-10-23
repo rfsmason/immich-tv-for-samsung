@@ -173,6 +173,7 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
       shell.focusActiveDestinationNav();
     },
     onSaved() {
+      collectionScreen.forgetSessionSortOrders();
       memoriesScreen.reset();
       peopleScreen.reset();
       searchScreen.reset();
@@ -468,18 +469,31 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     shell.hideSplash();
     collectionScreen.showFeedCollection({
       assets: input.assets,
-      feed: { kind: input.rail },
+      feed: readHomeFeed(input.rail, input.entry),
       focusedIndex: input.index,
       id: view || `home-${input.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       title: view ? formatLibraryViewTitle(view) : input.title
     });
   }
 
-  // Pages for collections opened from Home. Recently Viewed is the bounded
-  // local history, so it has a single page.
+  // A Home rail's collection. Favourites and Videos open in their saved order
+  // from See more, but newest first, like the rail, from one of its items.
+  function readHomeFeed(rail: HomeAssetRailId, entry: "item" | "see-more"): CollectionFeed {
+    if (rail === "favorites" || rail === "videos") {
+      return {
+        kind: rail,
+        order: entry === "see-more" ? settingsStore.load().sortOrders[rail] : "newest-first"
+      };
+    }
+
+    return { kind: rail };
+  }
+
+  // Pages for paged collections. Recently Viewed is the bounded local
+  // history, so it has a single page.
   function loadFeedPage(feed: CollectionFeed, page: AlbumAssetPageToken): Promise<AlbumAssetPage> {
     if (feed.kind === "favorites") {
-      return albumService.loadFavoriteAssetsPage(page);
+      return albumService.loadFavoriteAssetsPage(feed.order, page);
     }
 
     if (feed.kind === "recently-added") {
@@ -487,15 +501,15 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     }
 
     if (feed.kind === "videos") {
-      return albumService.loadVideoAssetsPage(page);
+      return albumService.loadVideoAssetsPage(feed.order, page);
     }
 
     if (feed.kind === "person") {
-      return albumService.loadPersonAssetsPage(feed.personId, page);
+      return albumService.loadPersonAssetsPage(feed.personId, feed.order, page);
     }
 
     if (feed.kind === "search") {
-      return albumService.loadSearchAssetsPage(feed.criteria, page);
+      return albumService.loadSearchAssetsPage(feed.criteria, feed.order, page);
     }
 
     return viewingHistory

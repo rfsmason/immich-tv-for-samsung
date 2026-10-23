@@ -78,7 +78,11 @@ describe("stalled Immich server", () => {
     const service = createStalledService();
     const screen = mountAlbumDetailScreen({
       loadFeedPage: (feed, page) =>
-        service.loadPersonAssetsPage(feed.kind === "person" ? feed.personId : "", page),
+        service.loadPersonAssetsPage(
+          feed.kind === "person" ? feed.personId : "",
+          "newest-first",
+          page
+        ),
       onBack,
       service,
       settingsStore: { load: () => defaultAppSettings, save: (settings) => settings }
@@ -108,7 +112,11 @@ describe("stalled Immich server", () => {
     const service = createStalledService();
     const screen = mountAlbumDetailScreen({
       loadFeedPage: (feed, page) =>
-        service.loadPersonAssetsPage(feed.kind === "person" ? feed.personId : "", page),
+        service.loadPersonAssetsPage(
+          feed.kind === "person" ? feed.personId : "",
+          "newest-first",
+          page
+        ),
       onBack,
       service,
       settingsStore: { load: () => defaultAppSettings, save: (settings) => settings }

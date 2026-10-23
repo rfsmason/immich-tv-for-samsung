@@ -53,7 +53,7 @@ Immich facts were checked against `immich-app/immich` `main` at `1cf5bb4`:
 
 - The domain order is `SortOrder = "newest-first" | "oldest-first"`. Only the Immich client maps it to `desc`/`asc` (`toImmichAssetOrder`), including the album's own `order`.
 - **Reversible:** Photos, albums, People, Favourites, Videos and Search results. **Fixed:** Memories, Recently Viewed and Recently Added, which show no control.
-- A header button shows a down arrow for newest first and an up arrow for oldest first, with the order in its label (`src/screens/collection/collection-sort.ts`):
+- A header button shows a down arrow for newest first and an up arrow for oldest first, with the order in its label (`src/screens/collection/collection-sort.ts`). It uses the viewer controls' button style and size and sits in the same right-hand column:
   - Up from the grid's first row reaches it (after any newer Photos pages have loaded);
   - OK reverses the order and reloads from the start, keeping focus on the button;
   - Down returns to the first item; Left goes to Retry when shown, otherwise the left rail.

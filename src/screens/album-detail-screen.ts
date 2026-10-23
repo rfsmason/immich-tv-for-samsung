@@ -17,6 +17,7 @@ import { formatPersonName } from "../presentation/person-labels";
 import { formatSearchSummary } from "../presentation/search-labels";
 import type { AppSettingsStore } from "../storage/app-settings-store";
 import { canApplyAlbumDetail } from "./album-assets-window";
+import { chooseBackdropAsset, createScreenBackdrop } from "./screen-backdrop";
 import { getRestoredViewerGridFocus } from "./asset-viewer-window";
 import {
   beginAsyncGeneration,
@@ -24,7 +25,6 @@ import {
   isCurrentGeneration
 } from "./async-generation";
 import { createAssetViewer } from "./collection/asset-viewer";
-import { createCollectionBackdrop } from "./collection/collection-backdrop";
 import {
   createCollectionGrid,
   createPlainGridLayout,
@@ -131,7 +131,10 @@ export function mountAlbumDetailScreen(
   const elements = readElements(documentRef);
   const model = createCollectionModel();
   const plainLayout = createPlainGridLayout(model);
-  const backdrop = createCollectionBackdrop({ image: elements.backdrop, service: options.service });
+  const backdrop = createScreenBackdrop({
+    image: elements.backdrop,
+    revokeUrl: (url) => options.service.revokeThumbnailUrl(url)
+  });
   // The album being shown, and album order reversals for this session, by id.
   let currentAlbum: Album | null = null;
   let sessionAlbumOrders: Record<string, SortOrder> = {};
@@ -331,7 +334,7 @@ export function mountAlbumDetailScreen(
     model.assetOffset = 0;
     model.total = null;
     model.assets = [];
-    backdrop.revoke();
+    backdrop.clear();
     model.focusedIndex = 0;
     model.preferredColumn = 0;
     viewer.clearSelection();
@@ -406,7 +409,7 @@ export function mountAlbumDetailScreen(
       model.paging.previous = null;
       updateTotalFromPage(model, firstAssetPage.total);
       grid.render(true);
-      loadRandomBackdrop(generation);
+      showCollectionBackdrop();
     } catch (error) {
       if (!canApplyAlbumDetail(model.loadGeneration, generation, elements.root.hidden)) {
         return;
@@ -475,7 +478,7 @@ export function mountAlbumDetailScreen(
       model.paging.next = firstAssetPage.nextPageToken;
       updateTotalFromPage(model, firstAssetPage.total);
       grid.render(model.contentFocusRequested);
-      loadRandomBackdrop(generation);
+      showCollectionBackdrop();
     } catch (error) {
       if (!canApplyAlbumDetail(model.loadGeneration, generation, elements.root.hidden)) {
         return;
@@ -633,7 +636,7 @@ export function mountAlbumDetailScreen(
 
     if (input.initialView === "grid") {
       grid.render(shouldFocus);
-      loadRandomBackdrop(model.loadGeneration);
+      showCollectionBackdrop();
     } else {
       openViewer(focusedIndex);
     }
@@ -720,11 +723,14 @@ export function mountAlbumDetailScreen(
     void loadPhotosTimeline();
   }
 
-  function loadRandomBackdrop(generation: number): void {
-    backdrop.load(
-      model.assets,
-      () => isCurrentGeneration(model, generation) && !elements.root.hidden
-    );
+  // A random photo from the collection. A new collection or hiding the
+  // screen clears it, so a late picture never shows over another.
+  function showCollectionBackdrop(): void {
+    const asset = chooseBackdropAsset(model.assets);
+
+    if (asset) {
+      backdrop.show(() => options.service.loadAssetThumbnailUrl(asset));
+    }
   }
 
   function releaseResources(): void {
@@ -798,7 +804,7 @@ export function mountAlbumDetailScreen(
       releaseResources();
       viewer.stopSlideshow();
       viewer.resetPlayback();
-      backdrop.revoke();
+      backdrop.clear();
       grid.resetThumbnails();
       viewer.resetImages();
     },
@@ -823,7 +829,7 @@ export function mountAlbumDetailScreen(
       timeline.suspend();
       viewer.stopSlideshow();
       viewer.resetPlayback();
-      backdrop.revoke();
+      backdrop.clear();
       grid.resetThumbnails();
       viewer.resetImages();
     },

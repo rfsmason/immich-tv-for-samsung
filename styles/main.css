@@ -326,6 +326,12 @@ button.top-nav-item[aria-current="page"] {
   font-weight: 700;
 }
 
+/* While a screen loads, its status says so and Back still works; the hint
+   would read as advice to give up, so it waits until loading ends. */
+.screen:focus > .screen-status[data-state="pending"] ~ .screen-back-hint {
+  display: none;
+}
+
 .screen-back-hint svg {
   width: 34px;
   height: 34px;

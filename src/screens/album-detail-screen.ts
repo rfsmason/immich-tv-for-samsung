@@ -540,7 +540,10 @@ export function mountAlbumDetailScreen(
     const generation = model.loadGeneration;
     model.load = { status: "loading", request: collection };
     elements.retryButton.hidden = true;
-    grid.setStatus("Loading photos and videos...", "pending");
+    grid.setStatus(
+      collection.kind === "search" ? "Searching your library..." : "Loading photos and videos...",
+      "pending"
+    );
     focusScreenControls();
 
     try {

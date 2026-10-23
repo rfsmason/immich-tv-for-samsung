@@ -90,3 +90,29 @@ describe("album detail viewer", () => {
     controller.destroy();
   });
 });
+
+describe("collection loading messages", () => {
+  it("says Search is searching while results load, and other collections are loading", () => {
+    const documentRef = new TestDocument();
+    const controller = mountAlbumDetailScreen({
+      documentRef: documentRef as unknown as Document,
+      loadFeedPage: vi.fn(() => new Promise<never>(() => undefined)),
+      onBack: vi.fn(),
+      service: {
+        loadAssetThumbnailUrl: vi.fn().mockResolvedValue(null),
+        revokeImageUrl: vi.fn(),
+        revokeThumbnailUrl: vi.fn()
+      } as unknown as AlbumService,
+      settingsStore: { load: () => settings(), save: vi.fn() }
+    });
+    const status = documentRef.getElementById("album-detail-summary");
+
+    controller.showSearchResults({ people: [], takenFrom: null, takenTo: null });
+    expect(status.textContent).toBe("Searching your library...");
+    expect(status.getAttribute("data-state")).toBe("pending");
+
+    controller.showPerson({ id: "person", isFavorite: false, name: "Sam Example" }, "people");
+    expect(status.textContent).toBe("Loading photos and videos...");
+    controller.destroy();
+  });
+});

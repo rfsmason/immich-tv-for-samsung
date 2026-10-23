@@ -24,6 +24,7 @@ import {
   isCurrentGeneration
 } from "./async-generation";
 import { createAssetViewer } from "./collection/asset-viewer";
+import { createCollectionBackdrop } from "./collection/collection-backdrop";
 import {
   createCollectionGrid,
   createPlainGridLayout,
@@ -130,7 +131,7 @@ export function mountAlbumDetailScreen(
   const elements = readElements(documentRef);
   const model = createCollectionModel();
   const plainLayout = createPlainGridLayout(model);
-  let backdropUrl: string | null = null;
+  const backdrop = createCollectionBackdrop({ image: elements.backdrop, service: options.service });
   // The album being shown, and album order reversals for this session, by id.
   let currentAlbum: Album | null = null;
   let sessionAlbumOrders: Record<string, SortOrder> = {};
@@ -330,7 +331,7 @@ export function mountAlbumDetailScreen(
     model.assetOffset = 0;
     model.total = null;
     model.assets = [];
-    revokeBackdrop();
+    backdrop.revoke();
     model.focusedIndex = 0;
     model.preferredColumn = 0;
     viewer.clearSelection();
@@ -720,42 +721,10 @@ export function mountAlbumDetailScreen(
   }
 
   function loadRandomBackdrop(generation: number): void {
-    const asset = chooseRandomBackdropAsset(model.assets);
-
-    if (!asset) {
-      return;
-    }
-
-    options.service
-      .loadAssetThumbnailUrl(asset)
-      .then((url) => {
-        if (!url) {
-          return;
-        }
-
-        if (!isCurrentGeneration(model, generation) || elements.root.hidden) {
-          options.service.revokeThumbnailUrl(url);
-          return;
-        }
-
-        revokeBackdrop();
-        backdropUrl = url;
-        elements.backdrop.src = url;
-        elements.backdrop.className = "screen-backdrop is-loaded";
-      })
-      .catch(() => {
-        // A decorative backdrop should never block album asset browsing.
-      });
-  }
-
-  function revokeBackdrop(): void {
-    elements.backdrop.removeAttribute("src");
-    elements.backdrop.className = "screen-backdrop";
-
-    if (backdropUrl) {
-      options.service.revokeThumbnailUrl(backdropUrl);
-      backdropUrl = null;
-    }
+    backdrop.load(
+      model.assets,
+      () => isCurrentGeneration(model, generation) && !elements.root.hidden
+    );
   }
 
   function releaseResources(): void {
@@ -829,7 +798,7 @@ export function mountAlbumDetailScreen(
       releaseResources();
       viewer.stopSlideshow();
       viewer.resetPlayback();
-      revokeBackdrop();
+      backdrop.revoke();
       grid.resetThumbnails();
       viewer.resetImages();
     },
@@ -854,7 +823,7 @@ export function mountAlbumDetailScreen(
       timeline.suspend();
       viewer.stopSlideshow();
       viewer.resetPlayback();
-      revokeBackdrop();
+      backdrop.revoke();
       grid.resetThumbnails();
       viewer.resetImages();
     },
@@ -1010,15 +979,4 @@ function requireElement<T extends HTMLElement>(documentRef: Document, id: string
   }
 
   return element as T;
-}
-
-function chooseRandomBackdropAsset(assets: AlbumAsset[]): AlbumAsset | null {
-  const imageAssets = assets.filter((asset) => asset.type === "image");
-  const candidates = imageAssets.length > 0 ? imageAssets : assets;
-
-  if (candidates.length === 0) {
-    return null;
-  }
-
-  return candidates[Math.floor(Math.random() * candidates.length)] || null;
 }

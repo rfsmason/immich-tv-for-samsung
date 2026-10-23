@@ -551,9 +551,10 @@ async function getTimelineBucketPage(options: {
 }
 
 // Immich sorts the bucket list and the assets within each bucket by this
-// order, so reversing it reverses the whole timeline.
+// order, so reversing it reverses the whole timeline. withPartners delegates
+// partner inclusion to Immich's per-partner "Show in timeline" preferences.
 function timelineQuery(order: SortOrder): string {
-  return `order=${toImmichAssetOrder(order)}&orderBy=takenAt&visibility=timeline&withStacked=true`;
+  return `order=${toImmichAssetOrder(order)}&orderBy=takenAt&visibility=timeline&withPartners=true&withStacked=true`;
 }
 
 function buildAlbumAssetSearchBody(
@@ -587,7 +588,7 @@ function buildAlbumAssetSearchBody(
 }
 
 const recentlyAddedQuery =
-  "order=desc&orderBy=createdAt&visibility=timeline&isTrashed=false&withStacked=true";
+  "order=desc&orderBy=createdAt&visibility=timeline&isTrashed=false&withPartners=true&withStacked=true";
 
 // Recently Added pages one upload month at a time, newest first. The first
 // page fetches the month list once; each later token names its month by

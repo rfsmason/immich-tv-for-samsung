@@ -271,7 +271,7 @@ describe("Immich client", () => {
     });
   });
 
-  it("requests Photos timeline buckets for compressed date navigation", async () => {
+  it("requests Photos timeline buckets including timeline-enabled partners for date navigation", async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse([
         {
@@ -298,7 +298,7 @@ describe("Immich client", () => {
     ]);
 
     expect(fetchImpl).toHaveBeenCalledWith(
-      "http://immich.local:2283/api/timeline/buckets?order=desc&orderBy=takenAt&visibility=timeline&withStacked=true",
+      "http://immich.local:2283/api/timeline/buckets?order=desc&orderBy=takenAt&visibility=timeline&withPartners=true&withStacked=true",
       {
         headers: {
           Accept: "application/json",
@@ -309,7 +309,7 @@ describe("Immich client", () => {
     );
   });
 
-  it("loads Recently Added by upload date across buckets and stops at the rail limit", async () => {
+  it("loads Recently Added with timeline-enabled partners by upload date and stops at the rail limit", async () => {
     const bucketResponse = (ids: string[]) => ({
       id: ids,
       // Capture dates deliberately differ from the upload ordering.
@@ -341,7 +341,7 @@ describe("Immich client", () => {
     expect(page.nextPageToken).toBeNull();
     expect(page.total).toBe(71);
     const query =
-      "order=desc&orderBy=createdAt&visibility=timeline&isTrashed=false&withStacked=true";
+      "order=desc&orderBy=createdAt&visibility=timeline&isTrashed=false&withPartners=true&withStacked=true";
     expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual([
       `http://immich.local:2283/api/timeline/buckets?${query}`,
       `http://immich.local:2283/api/timeline/bucket?timeBucket=2026-10-15&${query}`,
@@ -511,7 +511,10 @@ describe("Immich client", () => {
     // Both timeline endpoints sort by the same order, so bucket indexes agree.
     const timelineUrls = fetchImpl.mock.calls.map(([url]) => String(url));
     expect(timelineUrls).toHaveLength(3);
-    timelineUrls.forEach((url) => expect(url).toContain("order=asc&orderBy=takenAt"));
+    timelineUrls.forEach((url) => {
+      expect(url).toContain("order=asc&orderBy=takenAt");
+      expect(url).toContain("&visibility=timeline&withPartners=true&withStacked=true");
+    });
 
     fetchImpl.mockClear();
     await client.getAlbumAssetsPage("album", "oldest-first", null);
@@ -687,7 +690,7 @@ describe("Immich client", () => {
 
   describe("Recently Added paging by upload month", () => {
     const query =
-      "order=desc&orderBy=createdAt&visibility=timeline&isTrashed=false&withStacked=true";
+      "order=desc&orderBy=createdAt&visibility=timeline&isTrashed=false&withPartners=true&withStacked=true";
     const monthAssets = (ids: string[]) =>
       jsonResponse({
         duration: ids.map(() => null),
@@ -697,7 +700,7 @@ describe("Immich client", () => {
         livePhotoVideoId: ids.map(() => null)
       });
 
-    it("fetches the month list once, then names each later month by timeBucket", async () => {
+    it("includes timeline-enabled partners in the month list and subsequent timeBucket requests", async () => {
       const fetchImpl = vi
         .fn()
         .mockResolvedValueOnce(
@@ -1050,7 +1053,7 @@ describe("Immich client", () => {
     );
   });
 
-  it("loads a selected Photos timeline bucket and maps bucket arrays to assets", async () => {
+  it("loads a selected Photos timeline bucket including timeline-enabled partners and maps its assets", async () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce(
@@ -1110,7 +1113,7 @@ describe("Immich client", () => {
 
     expect(fetchImpl).toHaveBeenNthCalledWith(
       2,
-      "http://immich.local:2283/api/timeline/bucket?timeBucket=2026-10-01&order=desc&orderBy=takenAt&visibility=timeline&withStacked=true",
+      "http://immich.local:2283/api/timeline/bucket?timeBucket=2026-10-01&order=desc&orderBy=takenAt&visibility=timeline&withPartners=true&withStacked=true",
       {
         headers: {
           Accept: "application/json",

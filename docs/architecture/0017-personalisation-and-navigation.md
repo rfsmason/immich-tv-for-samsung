@@ -86,6 +86,12 @@ Immich facts were checked against `immich-app/immich` `main` at `1cf5bb4`:
 - Favourites come from one bounded page (18), fetched once and forgotten when the connection changes or the library is refreshed (`src/app/favorite-backdrops.ts`). With no favourites, those screens show no backdrop.
 - A screen picks a new picture each time it is shown and releases it when it hides; a picture that arrives after the screen has moved on is released at once. Each backdrop is one thumbnail-sized image, so memory stays bounded.
 
+### Partner photos in Photos and Recently Added
+
+- The Photos timeline and Recently Added queries send `withPartners=true`. Immich (`timeline.service.ts`, `utils/asset.util.ts` `getMyPartnerIds` at `1cf5bb4`) then adds the assets of partners who share with this user and whose "Show in timeline" preference is on. Partner inclusion stays an Immich setting, not an app one.
+- Immich accepts `withPartners` only with `visibility=timeline`, with no truthy `isTrashed` and without `isFavorite`. Both queries meet that; Recently Added's `isTrashed=false` is allowed.
+- Both timeline endpoints send the same query, so bucket indexes still agree. The Search date stepper reads its range from the same buckets, so it can reach back to a partner's oldest month; Search results come from structured search and do not include partners.
+
 ### Rail logo
 
 - The logo above the left rail fills a 72 × 64 box, the size of a collapsed rail button.

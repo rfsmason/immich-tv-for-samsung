@@ -77,13 +77,13 @@ Immich facts were checked against `immich-app/immich` `main` at `1cf5bb4`:
 
 ### Screen backdrops
 
-- Every screen shows one random picture faintly behind it, as Albums already did (\`src/screens/screen-backdrop.ts\`, one shared module):
+- Every screen shows one random picture faintly behind it, as Albums already did (`src/screens/screen-backdrop.ts`, one shared module):
   - Albums: a random album cover;
   - Photos and every collection: a random photo from the collection;
   - People and the Search people picker: a random person's face;
   - Memories: a random Memory's cover;
   - Home, Search and Settings: a random favourite.
-- Favourites come from one bounded page (18), fetched once and forgotten when the connection changes or the library is refreshed (\`src/app/favorite-backdrops.ts\`). With no favourites, those screens show no backdrop.
+- Favourites come from one bounded page (18), fetched once and forgotten when the connection changes or the library is refreshed (`src/app/favorite-backdrops.ts`). With no favourites, those screens show no backdrop.
 - A screen picks a new picture each time it is shown and releases it when it hides; a picture that arrives after the screen has moved on is released at once. Each backdrop is one thumbnail-sized image, so memory stays bounded.
 
 ### Rail logo

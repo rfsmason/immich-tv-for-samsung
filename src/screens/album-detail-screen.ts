@@ -706,6 +706,8 @@ export function mountAlbumDetailScreen(
     model.view = { kind: "grid", focus: "assets" };
     timeline.render();
     grid.render(model.contentFocusRequested);
+    // Hiding released the backdrop; a returning visit picks a new one.
+    showCollectionBackdrop();
   }
 
   // Reloads Photos when it is on screen; otherwise forgets the retained

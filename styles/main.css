@@ -195,12 +195,32 @@ select {
   white-space: nowrap;
 }
 
-button.top-nav-item {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
+/* Rail and Settings buttons lay out their icon and label on an inner
+   .button-row: Chromium 63 (the Q950R) ignores display: grid and flex on a
+   <button> itself (supported from Chromium 83), so a grid there fell back
+   to inline text, and a label too wide for the TV's font wrapped under its
+   icon. The label never wraps; a label too long for its button ends in an
+   ellipsis. */
+.button-row {
+  display: flex;
   align-items: center;
-  grid-gap: 12px;
-  gap: 12px;
+  min-width: 0;
+}
+
+.button-row > svg {
+  flex: 0 0 auto;
+  margin-right: 12px;
+}
+
+.button-row-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.top-nav-item {
+  display: block;
   width: 100%;
   min-height: 64px;
   min-width: 0;
@@ -211,12 +231,18 @@ button.top-nav-item {
 }
 
 .app-shell[data-rail="compact"] button.top-nav-item {
-  grid-template-columns: 34px;
-  justify-content: center;
   padding: 0 16px;
 }
 
-.app-shell[data-rail="compact"] button.top-nav-item span {
+.app-shell[data-rail="compact"] .top-nav-item .button-row {
+  justify-content: center;
+}
+
+.app-shell[data-rail="compact"] .top-nav-item .button-row > svg {
+  margin-right: 0;
+}
+
+.app-shell[data-rail="compact"] .top-nav-item .button-row-label {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -433,11 +459,7 @@ h2 {
 }
 
 button.settings-section-button {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  align-items: center;
-  grid-gap: 12px;
-  gap: 12px;
+  display: block;
   width: 100%;
   min-height: 64px;
   min-width: 0;
@@ -465,7 +487,7 @@ button.settings-section-button[aria-selected="true"] {
   background: rgba(66, 165, 245, 0.42);
 }
 
-button.settings-section-button[data-dirty] span::after {
+button.settings-section-button[data-dirty] .button-row-label::after {
   content: "";
 }
 
@@ -1805,10 +1827,11 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   }
 
   button.settings-section-button {
-    grid-template-columns: 34px minmax(0, 1fr);
-    grid-gap: 14px;
-    gap: 14px;
     padding: 0 18px;
+  }
+
+  .settings-section-button .button-row > svg {
+    margin-right: 14px;
   }
 
   .settings-section-icon {

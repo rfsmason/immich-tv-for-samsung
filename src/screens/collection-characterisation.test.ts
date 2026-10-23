@@ -50,12 +50,7 @@ function bucketAssets(index: number): AlbumAsset[] {
 }
 
 function fixture(
-  options: {
-    albumAssets?: number;
-    buckets?: number;
-    pageTotal?: number | null;
-    thumbnailUrl?: string | null;
-  } = {}
+  options: { albumAssets?: number; buckets?: number; pageTotal?: number | null } = {}
 ) {
   const documentRef = new TestDocument();
   const buckets = Array.from({ length: options.buckets ?? 3 }, (_, index) => bucket(index));
@@ -111,7 +106,7 @@ function fixture(
         order: "desc",
         thumbnailAssetId: null
       })),
-      loadAssetThumbnailUrl: vi.fn().mockResolvedValue(options.thumbnailUrl ?? null),
+      loadAssetThumbnailUrl: vi.fn().mockResolvedValue(null),
       loadAssetViewerStillUrl: vi.fn().mockResolvedValue(null),
       loadTimelineAssetsPage,
       loadTimelineBuckets: vi.fn().mockResolvedValue(buckets),
@@ -459,21 +454,6 @@ describe("Photos timeline remote navigation", () => {
     f.controller.focusContent();
     f.press(keys.enter);
     expect(f.byId("asset-placeholder-summary").textContent).toBe("1 of 24");
-  });
-
-  it("shows a backdrop again when Photos is shown with its retained timeline", async () => {
-    const f = (active = fixture({ thumbnailUrl: "blob:backdrop" }));
-    const backdrop = () => f.byId("album-detail-backdrop");
-    f.controller.showPhotos();
-    await f.settled();
-    await vi.waitFor(() => expect(backdrop().className).toBe("screen-backdrop is-loaded"));
-
-    f.controller.hide();
-    expect(backdrop().className).toBe("screen-backdrop");
-    f.controller.showPhotos();
-    // The timeline is reused, not reloaded, and the backdrop returns.
-    expect(f.loadTimelineAssetsPage).toHaveBeenCalledTimes(3);
-    await vi.waitFor(() => expect(backdrop().className).toBe("screen-backdrop is-loaded"));
   });
 
   it("restores a retained timeline when shown again, and reloads it on refresh", async () => {

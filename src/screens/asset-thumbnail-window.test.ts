@@ -448,6 +448,52 @@ describe("asset thumbnail window", () => {
     );
   });
 
+  it("loads every thumbnail when a reload reuses the state while old requests wait in a shared queue", async () => {
+    // Home's case: a reload (for example after changing rails) revokes and
+    // reuses each rail's state, and the previous load's requests still wait
+    // in the Home-wide queue. As each stale one finishes it starts the next
+    // queued request, which now belongs to the new load.
+    const state = createAssetThumbnailState();
+    const assets = Array.from({ length: 10 }, (_, index) => asset(`video-${index}`));
+    const sharedQueue: Array<() => Promise<unknown>> = [];
+    const schedule = (_index: number, run: () => Promise<unknown>) => {
+      sharedQueue.push(run);
+    };
+    const loaded = vi.fn();
+    const revokeThumbnailUrl = vi.fn();
+    // As Home: one live "current load" check, and the same tile renderer.
+    let currentGeneration = 0;
+    const reconcile = (generation: number) =>
+      reconcileAssetThumbnails({
+        assets,
+        focusedIndex: 0,
+        generation,
+        isCurrentGeneration: (candidate) => candidate === currentGeneration,
+        isHidden: () => false,
+        loadThumbnailUrl: async (item) => `blob:${generation}:${item.id}`,
+        onThumbnailLoaded: loaded,
+        revokeThumbnailUrl,
+        schedule,
+        state,
+        window: { endIndex: assets.length, startIndex: 0 }
+      });
+
+    currentGeneration = 1;
+    reconcile(1);
+    revokeAllAssetThumbnails(state, revokeThumbnailUrl);
+    currentGeneration = 2;
+    reconcile(2);
+
+    while (sharedQueue.length > 0) {
+      await sharedQueue.shift()!();
+      await flushPromises();
+    }
+
+    expect(Object.keys(state.thumbnailUrls).sort()).toEqual(assets.map((item) => item.id).sort());
+    expect(loaded).toHaveBeenCalledTimes(10);
+    expect(state.thumbnailRequests).toEqual({});
+  });
+
   it("revokes all retained URLs during cleanup", () => {
     const state = createAssetThumbnailState();
     const revokeThumbnailUrl = vi.fn();

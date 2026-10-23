@@ -10,6 +10,7 @@ import type {
   TimelineBucket
 } from "../domain/album";
 import type { ConnectionSettings } from "../domain/connection";
+import type { AssetFace } from "../domain/face";
 import type { Memory, PeoplePage, Person } from "../domain/home";
 import type { SearchCriteria } from "../domain/search";
 import { isAppError } from "../errors/app-error";
@@ -52,6 +53,7 @@ export type AlbumService = {
     page: AlbumAssetPageToken | null
   ): Promise<AlbumAssetPage>;
   loadPersonThumbnailUrl(person: Pick<Person, "id">): Promise<string | null>;
+  loadAssetFaces(assetId: string): Promise<AssetFace[]>;
   loadSearchAssetsPage(
     criteria: SearchCriteria,
     order: SortOrder,
@@ -165,6 +167,9 @@ export function createAlbumService(options: AlbumServiceOptions): AlbumService {
         logger: options.logger,
         settings: requireSettings(options.store.load())
       }).getMemory(id);
+    },
+    loadAssetFaces(assetId) {
+      return client().getAssetFaces(assetId);
     },
     loadPeoplePage(page, size) {
       return client().getPeoplePage(page, size);

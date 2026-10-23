@@ -8,6 +8,7 @@ import type {
   TimelineBucket
 } from "../../domain/album";
 import type { ConnectionSettings, CurrentUser, ServerVersion } from "../../domain/connection";
+import type { AssetFace } from "../../domain/face";
 import { localMemoryDate, type Memory, type PeoplePage } from "../../domain/home";
 import type { SearchCriteria } from "../../domain/search";
 import { AppError } from "../../errors/app-error";
@@ -24,6 +25,7 @@ import { buildSearchCriteriaFilter } from "./search-filter";
 import type {
   AlbumDetailResponseDto,
   AlbumResponseDto,
+  AssetFaceResponseDto,
   AssetResponseDto,
   MemoryResponseDto,
   PeopleResponseDto,
@@ -38,12 +40,14 @@ import {
   mapMemory,
   mapPerson,
   mapTimelineBucket,
+  mapAssetFaces,
   mapTimelineBucketAssets,
   toImmichAssetOrder
 } from "./mappers";
 import {
   isAlbumDetailResponse,
   isAlbumResponseList,
+  isAssetFaceResponseList,
   isAssetResponse,
   isCurrentUser,
   isMemoryResponseList,
@@ -85,6 +89,8 @@ export type ImmichClient = {
     page: AlbumAssetPageToken | null
   ): Promise<AlbumAssetPage>;
   getPersonThumbnail(personId: string): Promise<Blob>;
+  // The faces Immich has detected in an asset, without hidden people.
+  getAssetFaces(assetId: string): Promise<AssetFace[]>;
   // Assets matching search criteria in the given order, paged by search cursor.
   searchAssetsPage(
     criteria: SearchCriteria,
@@ -302,6 +308,16 @@ export function createImmichClient(options: CreateImmichClientOptions): ImmichCl
         ),
         feature: "People"
       });
+    },
+    getAssetFaces(assetId) {
+      return http
+        .json<AssetFaceResponseDto[]>({
+          auth: true,
+          feature: "Face tags",
+          path: `/faces?id=${encodeURIComponent(assetId)}`,
+          validate: isAssetFaceResponseList
+        })
+        .then(mapAssetFaces);
     },
     getPersonThumbnail(personId) {
       return http.blob({

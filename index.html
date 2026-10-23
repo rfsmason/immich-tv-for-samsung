@@ -168,6 +168,7 @@
         <div id="asset-placeholder" class="asset-viewer" hidden>
           <div class="asset-viewer-stage">
             <img id="asset-viewer-image" class="asset-viewer-image" alt="" hidden>
+            <div id="asset-viewer-face-overlay" class="asset-viewer-face-overlay" aria-hidden="true" hidden></div>
             <video id="asset-viewer-video" class="asset-viewer-video" preload="metadata" playsinline hidden></video>
             <div id="asset-viewer-placeholder" class="asset-viewer-placeholder">
               <span id="asset-viewer-spinner" class="asset-viewer-spinner" aria-hidden="true"></span>
@@ -195,6 +196,12 @@
             aria-live="polite"
             hidden
           >Slideshow paused</p>
+          <p
+            id="asset-viewer-faces-status"
+            class="asset-viewer-slideshow-status asset-viewer-faces-status"
+            aria-live="polite"
+            hidden
+          ></p>
           <div class="asset-viewer-controls" aria-label="Viewer controls">
             <button
               id="asset-viewer-play"
@@ -236,6 +243,22 @@
                   <rect x="17" y="14" width="5" height="20" rx="1"></rect>
                   <rect x="26" y="14" width="5" height="20" rx="1"></rect>
                 </g>
+              </svg>
+            </button>
+            <button
+              id="asset-viewer-faces"
+              class="focusable icon-action asset-viewer-control asset-viewer-faces"
+              type="button"
+              data-action="toggle-viewer-faces"
+              aria-label="Show face tags"
+              aria-pressed="false"
+              title="Show face tags"
+              hidden
+            >
+              <svg class="asset-viewer-control-icon asset-viewer-faces-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M8 17V8h9M31 8h9v9M40 31v9h-9M17 40H8v-9"></path>
+                <circle cx="24" cy="21" r="6"></circle>
+                <path d="M14 35c2-6 6-8 10-8s8 2 10 8"></path>
               </svg>
             </button>
             <button

@@ -534,6 +534,73 @@ describe("Immich client", () => {
     }
   });
 
+  it("reads an asset's faces, normalised and without hidden people", async () => {
+    const person = (name: string, isHidden = false) => ({
+      id: `person-${name}`,
+      isHidden,
+      name,
+      thumbnailPath: "/thumb"
+    });
+    const face = (id: string, extra: Record<string, unknown>) => ({
+      boundingBoxX1: 100,
+      boundingBoxX2: 300,
+      boundingBoxY1: 50,
+      boundingBoxY2: 250,
+      id,
+      imageHeight: 500,
+      imageWidth: 1000,
+      ...extra
+    });
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse([
+          face("named", { person: person("Sam Example") }),
+          face("unnamed", { person: person("") }),
+          face("unassigned", { person: null }),
+          face("hidden", { person: person("Hidden", true) }),
+          face("no-size", { imageWidth: 0, person: null }),
+          face("overflowing", { boundingBoxX2: 1200, person: null })
+        ])
+      );
+    const client = createImmichClient({ fetchImpl, settings });
+
+    await expect(client.getAssetFaces("asset/1")).resolves.toEqual([
+      {
+        box: { bottom: 0.5, left: 0.1, right: 0.3, top: 0.1 },
+        id: "named",
+        personName: "Sam Example"
+      },
+      { box: { bottom: 0.5, left: 0.1, right: 0.3, top: 0.1 }, id: "unnamed", personName: null },
+      { box: { bottom: 0.5, left: 0.1, right: 0.3, top: 0.1 }, id: "unassigned", personName: null },
+      { box: { bottom: 0.5, left: 0.1, right: 1, top: 0.1 }, id: "overflowing", personName: null }
+    ]);
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toContain("/api/faces?id=asset%2F1");
+  });
+
+  it("reports a refused face request as a Face tags permission error", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ message: "Missing" }, { status: 403 }));
+    const client = createImmichClient({ fetchImpl, settings });
+
+    await expect(client.getAssetFaces("asset")).rejects.toMatchObject({
+      feature: "Face tags",
+      kind: "permission"
+    });
+  });
+
+  it("rejects malformed face responses", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse([{ id: "face", boundingBoxX1: "10", person: null }]));
+    const client = createImmichClient({ fetchImpl, settings });
+
+    await expect(client.getAssetFaces("asset")).rejects.toMatchObject({
+      kind: "invalid-response"
+    });
+  });
+
   it("keeps Home's rails newest first", async () => {
     const fetchImpl = vi
       .fn()

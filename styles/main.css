@@ -1633,6 +1633,63 @@ button.asset-viewer-slideshow[data-slideshow-progress="running"]::after {
   pointer-events: none;
 }
 
+.asset-viewer-faces-icon path,
+.asset-viewer-faces-icon circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+/* Faces on: the button stays lit, like a pressed switch. */
+button.asset-viewer-faces[aria-pressed="true"] {
+  background: var(--immich-primary);
+  opacity: 1;
+}
+
+button.asset-viewer-faces[aria-pressed="true"]:focus {
+  background: #ffffff;
+  box-shadow: inset 0 0 0 4px var(--immich-primary);
+}
+
+/* Face tags over the photo: a light outline with a dark edge reads on any
+   photo from across the room; names sit on a solid label. */
+.asset-viewer-face-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.asset-viewer-face-box {
+  position: absolute;
+  border: 3px solid #ffffff;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 2px rgba(5, 7, 17, 0.7),
+    inset 0 0 0 2px rgba(5, 7, 17, 0.7);
+}
+
+.asset-viewer-face-label {
+  position: absolute;
+  max-width: 420px;
+  overflow: hidden;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: rgba(5, 7, 17, 0.86);
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .asset-viewer-live-photo-symbol,
 .asset-viewer-video-symbol,
 .asset-viewer-pause-symbol {

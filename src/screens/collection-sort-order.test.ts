@@ -1,11 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AlbumService } from "../app/album-service";
-import type {
-  AlbumAsset,
-  AlbumAssetPage,
-  SortOrder,
-  TimelineBucket
-} from "../domain/album";
+import type { AlbumAsset, AlbumAssetPage, SortOrder, TimelineBucket } from "../domain/album";
 import { defaultAppSettings, type AppSettings } from "../domain/app-settings";
 import { TestDocument } from "../test/document";
 import { mountAlbumDetailScreen } from "./album-detail-screen";

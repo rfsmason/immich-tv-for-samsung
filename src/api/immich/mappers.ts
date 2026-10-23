@@ -6,10 +6,12 @@ import type {
   SortOrder,
   TimelineBucket
 } from "../../domain/album";
+import type { AssetFace } from "../../domain/face";
 import type { Memory, Person } from "../../domain/home";
 import type {
   AlbumDetailResponseDto,
   AlbumResponseDto,
+  AssetFaceResponseDto,
   AssetResponseDto,
   MemoryResponseDto,
   PersonResponseDto,
@@ -183,4 +185,36 @@ function mapAssetType(type: string): AlbumAssetType {
 // first.
 export function toImmichAssetOrder(order: SortOrder): "asc" | "desc" {
   return order === "oldest-first" ? "asc" : "desc";
+}
+
+// Faces of hidden people are left out, as Immich Web leaves them out. A box
+// is normalised by the size of the image it was detected in, as Immich Web
+// does, and clamped to the photo; an empty box or image size is dropped.
+export function mapAssetFaces(dtos: AssetFaceResponseDto[]): AssetFace[] {
+  const faces: AssetFace[] = [];
+
+  dtos.forEach((dto) => {
+    if (dto.person?.isHidden || dto.imageWidth <= 0 || dto.imageHeight <= 0) {
+      return;
+    }
+
+    const box = {
+      bottom: clampFraction(dto.boundingBoxY2 / dto.imageHeight),
+      left: clampFraction(dto.boundingBoxX1 / dto.imageWidth),
+      right: clampFraction(dto.boundingBoxX2 / dto.imageWidth),
+      top: clampFraction(dto.boundingBoxY1 / dto.imageHeight)
+    };
+
+    if (box.right <= box.left || box.bottom <= box.top) {
+      return;
+    }
+
+    faces.push({ box, id: dto.id, personName: dto.person?.name?.trim() || null });
+  });
+
+  return faces;
+}
+
+function clampFraction(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }

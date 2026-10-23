@@ -18,6 +18,8 @@ const savedSortOrderKinds: SavedSortOrderKind[] = [
 export type AppSettings = {
   autoplayVideos: boolean;
   homeRails: HomeRailVisibility;
+  // Face tags over photos in the viewer (the viewer's Faces button).
+  showFaceTags: boolean;
   showViewerDate: boolean;
   showViewerExif: boolean;
   showViewerTime: boolean;
@@ -30,6 +32,7 @@ export const defaultSlideshowIntervalSeconds = 8;
 export const defaultAppSettings: AppSettings = {
   autoplayVideos: false,
   homeRails: normalizeHomeRailVisibility(null),
+  showFaceTags: false,
   showViewerDate: true,
   showViewerExif: true,
   showViewerTime: true,
@@ -41,6 +44,7 @@ export function normalizeAppSettings(settings: Partial<AppSettings> | null): App
   return {
     autoplayVideos: settings?.autoplayVideos === true,
     homeRails: normalizeHomeRailVisibility(settings?.homeRails),
+    showFaceTags: settings?.showFaceTags === true,
     showViewerDate: settings?.showViewerDate !== false,
     showViewerExif: settings?.showViewerExif !== false,
     showViewerTime: settings?.showViewerTime !== false,

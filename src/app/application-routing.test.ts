@@ -70,6 +70,7 @@ function createServices(
     Promise.resolve({ assets: items, nextPageToken: null, total: items.length });
   const albumService = {
     loadAlbumAssetsPage: vi.fn(() => page(assets.slice(0, 2))),
+    loadAssetFaces: vi.fn(async () => []),
     loadAlbumDetail: vi.fn(async (id: string) => ({
       ...albums.find((album) => album.id === id)!,
       order: "newest-first" as const

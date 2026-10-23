@@ -263,6 +263,8 @@ describe("album grid remote navigation", () => {
     f.press(keys.up);
     expect(f.documentRef.activeElement).toBe(f.byId("asset-viewer-slideshow"));
     f.press(keys.down);
+    expect(f.documentRef.activeElement).toBe(f.byId("asset-viewer-faces"));
+    f.press(keys.down);
     expect(f.documentRef.activeElement).toBe(f.byId("asset-placeholder-back"));
 
     f.press(keys.back);

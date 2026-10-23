@@ -34,6 +34,7 @@ describe("app settings store", () => {
     expect(store.load()).toEqual({
       autoplayVideos: false,
       homeRails: allRailsOn,
+      showFaceTags: false,
       showViewerDate: true,
       showViewerExif: true,
       showViewerTime: true,
@@ -64,6 +65,7 @@ describe("app settings store", () => {
     const settings = {
       autoplayVideos: true,
       homeRails: { ...allRailsOn, people: false },
+      showFaceTags: true,
       showViewerDate: false,
       showViewerExif: true,
       showViewerTime: false,
@@ -90,6 +92,7 @@ describe("app settings store", () => {
     expect(store.load()).toEqual({
       autoplayVideos: true,
       homeRails: allRailsOn,
+      showFaceTags: false,
       showViewerDate: true,
       showViewerExif: true,
       showViewerTime: true,

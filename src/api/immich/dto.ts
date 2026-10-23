@@ -53,6 +53,19 @@ export type PersonResponseDto = {
   name?: string | null;
 };
 
+// GET /faces?id= (AssetFaceResponseDto). The box is in pixels of the image
+// Immich detected faces in, whose size is imageWidth by imageHeight.
+export type AssetFaceResponseDto = {
+  boundingBoxX1: number;
+  boundingBoxX2: number;
+  boundingBoxY1: number;
+  boundingBoxY2: number;
+  id: string;
+  imageHeight: number;
+  imageWidth: number;
+  person: PersonResponseDto | null;
+};
+
 export type MemoryResponseDto = {
   assets: AssetResponseDto[];
   data: {

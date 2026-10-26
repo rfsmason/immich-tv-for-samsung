@@ -620,10 +620,10 @@ button.compact-action {
   min-width: 0;
 }
 
+/* Not flex or grid: Chromium 63 ignores both on a <button> (scripts/css-compat-rules.mjs). */
 button.icon-action {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  text-align: center;
   width: 72px;
   min-width: 72px;
   height: 72px;
@@ -632,6 +632,12 @@ button.icon-action {
   background: transparent;
   line-height: 0;
   padding: 0;
+}
+
+/* A block icon is centred by its margins, not by text-align. */
+button.icon-action > svg {
+  margin-right: auto;
+  margin-left: auto;
 }
 
 .button-icon {
@@ -938,10 +944,10 @@ h1.screen-heading-subtle {
   height: 0;
 }
 
+/* Block: the cover and name are absolutely positioned inside. */
 .focusable.album-tile {
   position: relative;
-  display: grid;
-  grid-template-rows: 1fr auto;
+  display: block;
   min-width: 0;
   width: 100%;
   height: var(--album-tile-size);
@@ -1080,9 +1086,10 @@ h1.screen-heading-subtle {
   min-height: 0;
 }
 
+/* Block: the thumbnail and badges are absolutely positioned inside. */
 .focusable.asset-tile {
   position: relative;
-  display: grid;
+  display: block;
   min-width: 0;
   width: 100%;
   height: var(--asset-tile-size);
@@ -1147,12 +1154,11 @@ h1.screen-heading-subtle {
   display: none;
 }
 
+/* Not flex or grid: Chromium 63 ignores both on a <button> (scripts/css-compat-rules.mjs). */
 button.focusable.timeline-marker {
   position: relative;
-  display: grid;
+  display: block;
   flex: 1 1 0;
-  align-items: center;
-  justify-content: end;
   min-height: 7px;
   width: 100%;
   max-width: 78px;
@@ -1178,13 +1184,17 @@ button.focusable.timeline-marker:focus {
   box-shadow: none;
 }
 
+/* Right-aligned and vertically centred in its marker. */
 .timeline-marker-tick {
+  position: absolute;
+  top: 50%;
+  right: 2px;
   display: block;
   box-sizing: border-box;
   width: 12px;
   height: 2px;
-  margin-right: 2px;
   border-radius: 2px;
+  transform: translateY(-50%);
   background: rgba(247, 248, 255, 0.34);
 }
 
@@ -1217,10 +1227,12 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   color: var(--immich-yellow);
 }
 
+/* Centred on the marker's middle, then lifted above its tick. */
 .timeline-marker-label {
   position: absolute;
+  top: 50%;
   right: 0;
-  transform: translateY(-20px);
+  transform: translateY(-50%) translateY(-20px);
   color: rgba(247, 248, 255, 0.86);
   font-size: 20px;
   font-weight: 800;
@@ -2212,17 +2224,18 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   }
 }
 
+/* Block, centred: the button itself centres its content vertically. */
 .home-more-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  text-align: center;
   background: rgba(255, 255, 255, 0.08);
 }
 
 .home-more-icon {
+  display: block;
   width: 56px;
   height: 56px;
+  margin: 0 auto;
   fill: currentColor;
 }
 
@@ -2428,16 +2441,18 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   margin-bottom: 12px;
 }
 
+/* One row of inline pieces rather than flex (not on a <button>). */
 .search-panel .focusable.search-chip {
-  display: flex;
-  align-items: center;
+  display: block;
+  white-space: nowrap;
   padding: 0 18px 0 6px;
   border-radius: 32px;
 }
 
 .search-chip-face {
   position: relative;
-  display: block;
+  display: inline-block;
+  vertical-align: middle;
   width: 44px;
   height: 44px;
   overflow: hidden;
@@ -2458,6 +2473,8 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 }
 
 .search-chip-name {
+  display: inline-block;
+  vertical-align: middle;
   max-width: 260px;
   overflow: hidden;
   margin-left: 12px;
@@ -2466,6 +2483,8 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 }
 
 .search-chip-remove {
+  display: inline-block;
+  vertical-align: middle;
   margin-left: 12px;
 }
 

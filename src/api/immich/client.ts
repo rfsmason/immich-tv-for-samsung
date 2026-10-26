@@ -10,7 +10,7 @@ import type {
 import type { ConnectionSettings, CurrentUser, ServerVersion } from "../../domain/connection";
 import type { AssetFace } from "../../domain/face";
 import { localMemoryDate, type Memory, type PeoplePage } from "../../domain/home";
-import type { SearchCriteria } from "../../domain/search";
+import type { SearchCriteria, SearchPlaceLevel, SearchPlaceParent } from "../../domain/search";
 import { AppError } from "../../errors/app-error";
 import type { Logger } from "../../logging/logger";
 import { silentLogger } from "../../logging/logger";
@@ -21,7 +21,7 @@ import {
   type ImmichHttp,
   type RequestTimeouts
 } from "./http";
-import { buildSearchCriteriaFilter } from "./search-filter";
+import { buildPlaceSuggestionQuery, buildSearchCriteriaFilter } from "./search-filter";
 import type {
   AlbumDetailResponseDto,
   AlbumResponseDto,
@@ -42,6 +42,7 @@ import {
   mapTimelineBucket,
   mapAssetFaces,
   mapTimelineBucketAssets,
+  mapPlaceSuggestions,
   toImmichAssetOrder
 } from "./mappers";
 import {
@@ -54,6 +55,7 @@ import {
   isPeopleResponse,
   isSearchAssetResponse,
   isServerVersion,
+  isSuggestionList,
   isTimelineBucketAssetsResponse,
   isTimelineBucketResponseList
 } from "./validators";
@@ -98,6 +100,9 @@ export type ImmichClient = {
     order: SortOrder,
     page: AlbumAssetPageToken | null
   ): Promise<AlbumAssetPage>;
+  // The distinct place names at one level within the parent, sorted and
+  // bounded (`maxPlaceSuggestions`).
+  getPlaceSuggestions(level: SearchPlaceLevel, parent: SearchPlaceParent): Promise<string[]>;
   getHistoryAsset(assetId: string): Promise<AlbumAsset | null>;
   getRecentlyAddedAssets(limit: number): Promise<AlbumAssetPage>;
   // Recently added assets one upload-date bucket at a time, newest first.
@@ -320,6 +325,16 @@ export function createImmichClient(options: CreateImmichClientOptions): ImmichCl
         path: `/people/${encodeURIComponent(personId)}/thumbnail`
       });
     },
+    async getPlaceSuggestions(level, parent) {
+      const values = await http.json<Array<string | null>>({
+        auth: true,
+        feature: "Places",
+        path: `/search/suggestions?${buildPlaceSuggestionQuery(level, parent)}`,
+        validate: isSuggestionList
+      });
+
+      return mapPlaceSuggestions(values);
+    },
     searchAssetsPage(criteria, order, page) {
       return getPagedFilteredAssetPage({
         http,
@@ -329,7 +344,8 @@ export function createImmichClient(options: CreateImmichClientOptions): ImmichCl
           order,
           page
         ),
-        feature: "Search"
+        // An album the key may not read is refused before the search runs.
+        feature: criteria.albums.length > 0 ? "Albums" : "Search"
       });
     },
     getRecentlyAddedAssets(limit) {

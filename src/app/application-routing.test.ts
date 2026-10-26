@@ -113,6 +113,7 @@ function createServices(
       page([asset("t1", "2026-10-15T10:00:00.000Z"), asset("t2", "2026-10-15T09:00:00.000Z")])
     ),
     loadSearchAssetsPage: vi.fn(() => page(assets.slice(0, 2))),
+    loadPlaceSuggestions: vi.fn(async () => ["Exampleland"]),
     loadVideoAssets: vi.fn(() => page(assets.slice(0, 2))),
     loadVideoAssetsPage: vi.fn(() => page(assets.slice(0, 2))),
     loadTimelineBuckets: vi.fn(async () => [bucket]),
@@ -819,7 +820,14 @@ describe("application routing", () => {
 
     await collectionGridReady();
     expect(albumService.loadSearchAssetsPage).toHaveBeenCalledWith(
-      { people: [{ id: "person-1", name: "Alex" }], takenFrom: null, takenTo: null },
+      {
+        albums: [],
+        mediaType: "all",
+        people: [{ id: "person-1", name: "Alex" }],
+        place: null,
+        takenFrom: null,
+        takenTo: null
+      },
       "newest-first",
       { kind: "page", page: 1 }
     );

@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { emptySearchCriteria } from "../domain/search";
 import { formatTimelineBucketLabel, formatTimelineBucketYear } from "./date-labels";
 import { formatDurationLabel } from "./duration-labels";
 import { formatMemoryContext, formatMemoryTitle } from "./memory-labels";
 import { formatPersonName } from "./person-labels";
-import { formatCalendarDate, formatSearchDate, formatSearchSummary } from "./search-labels";
+import {
+  formatCalendarDate,
+  formatSearchAlbumsSummary,
+  formatSearchDate,
+  formatSearchPlace,
+  formatSearchSummary
+} from "./search-labels";
 
 describe("timeline bucket labels", () => {
   it("formats a bucket's start date with its UTC weekday", () => {
@@ -75,7 +82,7 @@ describe("search labels", () => {
   });
 
   it("summarises people and dates briefly", () => {
-    const empty = { people: [], takenFrom: null, takenTo: null };
+    const empty = emptySearchCriteria();
 
     expect(formatSearchSummary(empty)).toBe("Search");
     expect(formatSearchSummary({ ...empty, people: [person("Robin Example")] })).toBe(
@@ -86,6 +93,7 @@ describe("search labels", () => {
     );
     expect(
       formatSearchSummary({
+        ...emptySearchCriteria(),
         people: [person("A"), person("B"), person("C")],
         takenFrom: date(2020, 1, 1),
         takenTo: date(2020, 12, 31)
@@ -93,5 +101,43 @@ describe("search labels", () => {
     ).toBe("3 people · 1 Jan 2020 – 31 Dec 2020");
     expect(formatSearchSummary({ ...empty, takenFrom: date(2020, 1, 1) })).toBe("From 1 Jan 2020");
     expect(formatSearchSummary({ ...empty, takenTo: date(2020, 1, 1) })).toBe("Until 1 Jan 2020");
+  });
+
+  it("summarises type, place and albums, falling back to counts when long", () => {
+    const empty = emptySearchCriteria();
+    const exampleton = { city: "Exampleton", country: "Exampleland", state: "Example County" };
+    const album = (name: string) => ({ id: name, name });
+
+    expect(formatSearchPlace(exampleton)).toBe("Exampleton, Example County, Exampleland");
+    expect(formatSearchPlace({ city: null, country: "Testonia", state: null })).toBe("Testonia");
+    expect(formatSearchAlbumsSummary([])).toBeNull();
+    expect(formatSearchAlbumsSummary([album("Summer Example")])).toBe("Summer Example");
+    expect(formatSearchAlbumsSummary([album("A"), album("B")])).toBe("2 albums");
+
+    expect(
+      formatSearchSummary({
+        ...empty,
+        mediaType: "videos",
+        people: [person("Sam Example")],
+        place: exampleton
+      })
+    ).toBe("Sam Example · Videos · Exampleton");
+    expect(
+      formatSearchSummary({
+        ...empty,
+        mediaType: "live-photos",
+        place: { city: null, country: "Testonia", state: null }
+      })
+    ).toBe("Live Photos · Testonia");
+    expect(
+      formatSearchSummary({
+        ...empty,
+        albums: [album("Summer Example"), album("Winter Example")],
+        mediaType: "photos",
+        people: [person("Robin Example"), person("Sam Example")],
+        takenFrom: date(2020, 1, 1),
+        takenTo: date(2020, 12, 31)
+      })
+    ).toBe("2 people · 2 albums · Photos · 1 Jan 2020 – 31 Dec 2020");
   });
 });

@@ -26,6 +26,11 @@ export function isCurrentUser(body: unknown): body is CurrentUser {
   return requiredString(user.email) && requiredString(user.id) && requiredString(user.name);
 }
 
+// Search suggestions: names, with null for assets missing the value.
+export function isSuggestionList(body: unknown): body is Array<string | null> {
+  return Array.isArray(body) && body.every((value) => value === null || typeof value === "string");
+}
+
 export function isAlbumResponseList(body: unknown): body is AlbumResponseDto[] {
   return Array.isArray(body) && body.every(isAlbumListResponse);
 }

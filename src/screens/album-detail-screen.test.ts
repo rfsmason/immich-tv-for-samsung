@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { emptySearchCriteria } from "../domain/search";
 import type { AlbumService } from "../app/album-service";
 import type { AlbumAsset } from "../domain/album";
 import { defaultAppSettings, type AppSettings } from "../domain/app-settings";
@@ -107,7 +108,7 @@ describe("collection loading messages", () => {
     });
     const status = documentRef.getElementById("album-detail-summary");
 
-    controller.showSearchResults({ people: [], takenFrom: null, takenTo: null });
+    controller.showSearchResults(emptySearchCriteria());
     expect(status.textContent).toBe("Searching your library...");
     expect(status.getAttribute("data-state")).toBe("pending");
 

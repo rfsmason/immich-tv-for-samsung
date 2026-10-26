@@ -12,7 +12,7 @@ import type {
 import type { ConnectionSettings } from "../domain/connection";
 import type { AssetFace } from "../domain/face";
 import type { Memory, PeoplePage, Person } from "../domain/home";
-import type { SearchCriteria } from "../domain/search";
+import type { SearchCriteria, SearchPlaceLevel, SearchPlaceParent } from "../domain/search";
 import { isAppError } from "../errors/app-error";
 import type { Logger } from "../logging/logger";
 import type { ConnectionSettingsStore } from "../storage/connection-settings-store";
@@ -59,6 +59,7 @@ export type AlbumService = {
     order: SortOrder,
     page: AlbumAssetPageToken | null
   ): Promise<AlbumAssetPage>;
+  loadPlaceSuggestions(level: SearchPlaceLevel, parent: SearchPlaceParent): Promise<string[]>;
   loadRecentlyAddedAssets(limit: number): Promise<AlbumAssetPage>;
   loadRecentlyAddedAssetsPage(page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
   loadAlbumDetail(albumId: string): Promise<AlbumDetail>;
@@ -176,6 +177,9 @@ export function createAlbumService(options: AlbumServiceOptions): AlbumService {
     },
     loadSearchAssetsPage(criteria, order, page) {
       return client().searchAssetsPage(criteria, order, page);
+    },
+    loadPlaceSuggestions(level, parent) {
+      return client().getPlaceSuggestions(level, parent);
     },
     async loadPersonThumbnailUrl(person) {
       const settings = requireSettings(options.store.load());

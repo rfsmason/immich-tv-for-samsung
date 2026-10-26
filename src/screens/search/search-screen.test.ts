@@ -354,7 +354,10 @@ describe("Search criteria panel", () => {
     pressKey(remoteKeys.enter);
 
     expect(f.onShowPhotos).toHaveBeenCalledWith({
+      albums: [],
+      mediaType: "all",
       people: [person(1)],
+      place: null,
       takenFrom: null,
       takenTo: null
     });

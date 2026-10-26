@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addSearchAlbum,
   addSearchPerson,
   calendarDateFromLocal,
   canSearch,
@@ -12,10 +13,15 @@ import {
   isEmptyCriteria,
   isLeapYear,
   isValidCalendarDate,
+  maxSearchAlbums,
   maxSearchPeople,
   nextCalendarDate,
+  removeSearchAlbum,
   removeSearchPerson,
+  setSearchAlbums,
+  setSearchMediaType,
   setSearchPeople,
+  setSearchPlace,
   setTakenFrom,
   setTakenTo
 } from "./search";
@@ -23,6 +29,8 @@ import {
 const date = (year: number, month: number, day: number) => ({ day, month, year });
 const mum = { id: "mum", name: "Mum" };
 const dad = { id: "dad", name: "Dad" };
+const summer = { id: "summer", name: "Summer Example" };
+const winter = { id: "winter", name: "Winter Example" };
 
 describe("search criteria", () => {
   it("starts empty and cannot search until a criterion is set", () => {
@@ -77,12 +85,55 @@ describe("search criteria", () => {
     expect(setSearchPeople(criteria, many).people).toHaveLength(maxSearchPeople);
   });
 
+  it("counts media type, place and albums as one criterion each", () => {
+    const videos = setSearchMediaType(emptySearchCriteria(), "videos");
+    expect(countSetCriteria(videos)).toBe(1);
+    expect(canSearch(videos)).toBe(true);
+    expect(isEmptyCriteria(setSearchMediaType(videos, "all"))).toBe(true);
+
+    const place = setSearchPlace(emptySearchCriteria(), {
+      city: null,
+      country: "Exampleland",
+      state: null
+    });
+    expect(countSetCriteria(place)).toBe(1);
+    expect(isEmptyCriteria(setSearchPlace(place, null))).toBe(true);
+
+    const albums = setSearchAlbums(emptySearchCriteria(), [summer, winter]);
+    expect(countSetCriteria(albums)).toBe(1);
+    expect(
+      countSetCriteria(setSearchMediaType(setSearchPlace(albums, place.place), "photos"))
+    ).toBe(3);
+  });
+
+  it("adds albums once, in order, removes them, and caps the selection", () => {
+    let criteria = addSearchAlbum(addSearchAlbum(emptySearchCriteria(), summer), winter);
+    criteria = addSearchAlbum(criteria, summer);
+    expect(criteria.albums.map((album) => album.id)).toEqual(["summer", "winter"]);
+
+    criteria = removeSearchAlbum(criteria, "summer");
+    expect(criteria.albums).toEqual([winter]);
+
+    const many = Array.from({ length: maxSearchAlbums + 1 }, (_, index) => ({
+      id: `a${index}`,
+      name: `Album ${index}`
+    }));
+    const capped = setSearchAlbums(criteria, many);
+    expect(capped.albums).toHaveLength(maxSearchAlbums);
+    expect(addSearchAlbum(capped, { id: "extra", name: "Extra" })).toBe(capped);
+  });
+
   it("never changes the criteria it is given", () => {
     const original = emptySearchCriteria();
     const from = date(2020, 5, 5);
 
     const next = setTakenFrom(addSearchPerson(original, mum), from);
     from.day = 9;
+
+    const place = { city: "Exampleton", country: "Exampleland", state: null };
+    const placed = setSearchPlace(next, place);
+    place.city = "Elsewhere";
+    expect(placed.place?.city).toBe("Exampleton");
 
     expect(original).toEqual(emptySearchCriteria());
     expect(next.takenFrom).toEqual(date(2020, 5, 5));

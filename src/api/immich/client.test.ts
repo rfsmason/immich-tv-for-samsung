@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { emptySearchCriteria } from "../../domain/search";
 import { AppError, toUserMessage } from "../../errors/app-error";
 import { createImmichClient } from "./client";
 
@@ -542,11 +543,7 @@ describe("Immich client", () => {
     await client.getAlbumAssetsPage("album", "oldest-first", null);
     await client.getVideoAssetsPage("oldest-first", page);
     await client.getPersonAssetsPage("person", "oldest-first", page);
-    await client.searchAssetsPage(
-      { people: [], takenFrom: null, takenTo: null },
-      "oldest-first",
-      page
-    );
+    await client.searchAssetsPage(emptySearchCriteria(), "oldest-first", page);
     await client.getTimelineAssetsPage("oldest-first", null);
 
     expect(fetchImpl).toHaveBeenCalledTimes(5);

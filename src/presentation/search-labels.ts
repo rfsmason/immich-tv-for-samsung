@@ -1,4 +1,10 @@
-import type { CalendarDate, SearchCriteria } from "../domain/search";
+import type {
+  CalendarDate,
+  SearchAlbum,
+  SearchCriteria,
+  SearchMediaType,
+  SearchPlace
+} from "../domain/search";
 import { shortMonthNames } from "./date-labels";
 import { formatPersonName } from "./person-labels";
 
@@ -6,6 +12,17 @@ import { formatPersonName } from "./person-labels";
 // summaries of what a search is for.
 
 export const searchPeopleRule = "Photos with all of these people";
+export const searchAlbumsRule = "Photos in any of these albums";
+
+// Past this, the results header falls back to counts for people and albums.
+const maxSummaryLength = 48;
+
+export const searchMediaTypeLabels: Record<SearchMediaType, string> = {
+  all: "All",
+  "live-photos": "Live Photos",
+  photos: "Photos",
+  videos: "Videos"
+};
 
 export function formatCalendarDate(date: CalendarDate): string {
   return `${date.day} ${shortMonthNames[date.month - 1] || ""} ${date.year}`;
@@ -45,13 +62,59 @@ export function formatSearchTakenSummary(
   return takenTo ? `Until ${formatCalendarDate(takenTo)}` : null;
 }
 
-// "Robin Example & Sam Example · 1 Jan 2020 – 31 Dec 2020", or
-// "3 people · From 1 Jan 2020".
-export function formatSearchSummary(criteria: SearchCriteria): string {
-  const parts = [
-    formatSearchPeopleSummary(criteria.people),
-    formatSearchTakenSummary(criteria.takenFrom, criteria.takenTo)
-  ].filter((part): part is string => part !== null);
+// "Exampleton, Example County, Exampleland": the place from most to least
+// specific.
+export function formatSearchPlace(place: SearchPlace): string {
+  return [place.city, place.state, place.country].filter((part) => part).join(", ");
+}
 
-  return parts.join(" · ") || "Search";
+// The place's most specific part, for short summaries.
+export function formatSearchPlaceShort(place: SearchPlace): string {
+  return place.city || place.state || place.country;
+}
+
+// One album's name, or "3 albums"; null with none chosen.
+export function formatSearchAlbumsSummary(albums: SearchAlbum[]): string | null {
+  if (albums.length === 1) {
+    return albums[0]!.name || "1 album";
+  }
+
+  return albums.length > 1 ? `${albums.length} albums` : null;
+}
+
+function formatCount(count: number, one: string, many: string): string | null {
+  if (count === 0) {
+    return null;
+  }
+
+  return count === 1 ? `1 ${one}` : `${count} ${many}`;
+}
+
+// The results header, criteria joined with " · ": for example "Sam Example ·
+// Videos · Exampleton" or "2 albums · Live Photos". When that is
+// long, people and albums become counts ("3 people · 2 albums · Videos").
+export function formatSearchSummary(criteria: SearchCriteria): string {
+  const rest = [
+    criteria.mediaType === "all" ? null : searchMediaTypeLabels[criteria.mediaType],
+    criteria.place ? formatSearchPlaceShort(criteria.place) : null,
+    formatSearchTakenSummary(criteria.takenFrom, criteria.takenTo)
+  ];
+  const join = (parts: Array<string | null>) =>
+    parts.filter((part): part is string => part !== null).join(" · ");
+  const detailed = join(
+    [formatSearchPeopleSummary(criteria.people), formatSearchAlbumsSummary(criteria.albums)].concat(
+      rest
+    )
+  );
+
+  if (detailed.length <= maxSummaryLength) {
+    return detailed || "Search";
+  }
+
+  return join(
+    [
+      formatCount(criteria.people.length, "person", "people"),
+      formatCount(criteria.albums.length, "album", "albums")
+    ].concat(rest)
+  );
 }

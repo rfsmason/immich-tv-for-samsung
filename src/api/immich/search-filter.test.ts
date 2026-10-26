@@ -3,7 +3,12 @@ import { defaultRequestTimeouts } from "./http";
 import { emptySearchCriteria, type SearchCriteria } from "../../domain/search";
 import { toUserMessage } from "../../errors/app-error";
 import { createImmichClient } from "./client";
-import { buildSearchCriteriaFilter, localDayStartIso } from "./search-filter";
+import { maxPlaceSuggestions } from "./mappers";
+import {
+  buildPlaceSuggestionQuery,
+  buildSearchCriteriaFilter,
+  localDayStartIso
+} from "./search-filter";
 
 // Calendar days become this TV's local midnights. Pin a zone with summer time
 // so the expected instants are exact.
@@ -20,6 +25,8 @@ afterAll(() => {
 const settings = { apiKey: "secret-key", serverUrl: "http://immich.local:2283" };
 const mum = { id: "00000000-0000-4000-8000-000000000001", name: "Mum" };
 const dad = { id: "00000000-0000-4000-8000-000000000002", name: null };
+const summer = { id: "00000000-0000-4000-8000-0000000000a1", name: "Summer Example" };
+const winter = { id: "00000000-0000-4000-8000-0000000000a2", name: "Winter Example" };
 const base = { trashedAt: { eq: null }, visibility: { eq: "timeline" } };
 const criteria = (overrides: Partial<SearchCriteria>): SearchCriteria => ({
   ...emptySearchCriteria(),
@@ -65,6 +72,65 @@ describe("search criteria filter", () => {
         personIds: { all: [mum.id] },
         takenAt: { gte: "2026-10-15T23:00:00.000Z", lt: "2026-10-16T23:00:00.000Z" }
       }
+    ],
+    ["Photos", criteria({ mediaType: "photos" }), { type: { eq: "IMAGE" } }],
+    [
+      "Live Photos",
+      criteria({ mediaType: "live-photos" }),
+      { isMotion: { eq: true }, type: { eq: "IMAGE" } }
+    ],
+    ["Videos", criteria({ mediaType: "videos" }), { type: { eq: "VIDEO" } }],
+    ["All as no type", criteria({ mediaType: "all" }), {}],
+    [
+      "a country",
+      criteria({ place: { city: null, country: "Exampleland", state: null } }),
+      { country: { eq: "Exampleland" } }
+    ],
+    [
+      "a region",
+      criteria({ place: { city: null, country: "Exampleland", state: "Example County" } }),
+      { country: { eq: "Exampleland" }, state: { eq: "Example County" } }
+    ],
+    [
+      "a city in a country without regions",
+      criteria({ place: { city: "Sampleport", country: "Sampleshire Isles", state: null } }),
+      { city: { eq: "Sampleport" }, country: { eq: "Sampleshire Isles" } }
+    ],
+    [
+      "a city in a region",
+      criteria({
+        place: { city: "Exampleton", country: "Exampleland", state: "Example County" }
+      }),
+      {
+        city: { eq: "Exampleton" },
+        country: { eq: "Exampleland" },
+        state: { eq: "Example County" }
+      }
+    ],
+    [
+      "albums as any of them",
+      criteria({ albums: [summer, winter] }),
+      { albumIds: { any: [summer.id, winter.id] } }
+    ],
+    [
+      "every criterion together",
+      criteria({
+        albums: [summer],
+        mediaType: "live-photos",
+        people: [mum],
+        place: { city: "Exampleton", country: "Exampleland", state: "Example County" },
+        takenFrom: { day: 1, month: 1, year: 2020 }
+      }),
+      {
+        albumIds: { any: [summer.id] },
+        city: { eq: "Exampleton" },
+        country: { eq: "Exampleland" },
+        isMotion: { eq: true },
+        personIds: { all: [mum.id] },
+        state: { eq: "Example County" },
+        takenAt: { gte: "2020-01-01T00:00:00.000Z" },
+        type: { eq: "IMAGE" }
+      }
     ]
   ])("maps %s", (_name, input, expected) => {
     expect(buildSearchCriteriaFilter(input)).toEqual({ ...base, ...expected });
@@ -72,6 +138,88 @@ describe("search criteria filter", () => {
 
   it("keeps years before 100 as written", () => {
     expect(localDayStartIso({ day: 1, month: 1, year: 99 }).startsWith("0099-")).toBe(true);
+  });
+});
+
+describe("place suggestions", () => {
+  it.each([
+    ["country", { country: null, state: null }, "type=country"],
+    ["state", { country: "Exampleland", state: null }, "type=state&country=Exampleland"],
+    [
+      "city",
+      { country: "Sampleshire Isles", state: null },
+      "type=city&country=Sampleshire%20Isles"
+    ],
+    [
+      "city",
+      { country: "Exampleland", state: "Example & County" },
+      "type=city&country=Exampleland&state=Example%20%26%20County"
+    ]
+  ] as const)("asks for %s names within %j", (level, parent, query) => {
+    expect(buildPlaceSuggestionQuery(level, parent)).toBe(query);
+  });
+
+  it("drops blanks, removes duplicates, sorts and bounds the names", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse(["Testonia", null, "", "  ", "Exampleland", "Testonia", "Ålandia"])
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(
+          Array.from({ length: maxPlaceSuggestions + 20 }, (_, index) => `Town ${index}`)
+        )
+      );
+    const client = createImmichClient({ fetchImpl, settings });
+
+    await expect(
+      client.getPlaceSuggestions("country", { country: null, state: null })
+    ).resolves.toEqual(["Ålandia", "Exampleland", "Testonia"].sort((a, b) => a.localeCompare(b)));
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe(
+      "http://immich.local:2283/api/search/suggestions?type=country"
+    );
+    await expect(
+      client.getPlaceSuggestions("city", { country: "Exampleland", state: null })
+    ).resolves.toHaveLength(maxPlaceSuggestions);
+  });
+
+  it("rejects a malformed response", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse([1, 2]));
+    const client = createImmichClient({ fetchImpl, settings });
+
+    await expect(
+      client.getPlaceSuggestions("country", { country: null, state: null })
+    ).rejects.toMatchObject({ kind: "invalid-response" });
+  });
+
+  it("names Places in a permission error", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ message: "Missing permission" }, { status: 403 }));
+    const client = createImmichClient({ fetchImpl, settings });
+    const error = await client
+      .getPlaceSuggestions("country", { country: null, state: null })
+      .catch((reason: unknown) => reason);
+
+    expect(error).toMatchObject({ feature: "Places", kind: "permission" });
+    expect(toUserMessage(error)).toContain("not allowed to show Places");
+  });
+
+  it("times out a stalled request", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchImpl = vi.fn(() => new Promise<Response>(() => undefined));
+      const client = createImmichClient({ fetchImpl, settings });
+      const result = client
+        .getPlaceSuggestions("country", { country: null, state: null })
+        .catch((reason: unknown) => reason);
+
+      await vi.advanceTimersByTimeAsync(defaultRequestTimeouts.jsonMs);
+
+      await expect(result).resolves.toMatchObject({ kind: "timeout" });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -160,6 +308,20 @@ describe("search request", () => {
 
     expect(error).toMatchObject({ feature: "Search", kind: "permission" });
     expect(toUserMessage(error)).toContain("not allowed to show Search");
+  });
+
+  it("names Albums in a permission error for an album search", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ message: "Not found or no album.read access" }, { status: 403 })
+      );
+    const client = createImmichClient({ fetchImpl, settings });
+    const error = await client
+      .searchAssetsPage(criteria({ albums: [summer] }), "newest-first", null)
+      .catch((reason: unknown) => reason);
+
+    expect(error).toMatchObject({ feature: "Albums", kind: "permission" });
   });
 
   it("times out a stalled search", async () => {

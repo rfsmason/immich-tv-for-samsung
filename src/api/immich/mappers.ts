@@ -183,6 +183,26 @@ function mapAssetType(type: string): AlbumAssetType {
 
 // Immich's order for a domain sort order: capture dates ascending for oldest
 // first.
+// A place level lists at most this many names; a library with more cities
+// in one region than this is not expected.
+export const maxPlaceSuggestions = 500;
+
+// Place names as Immich stores them (search filters match them exactly):
+// blanks dropped, each once, in alphabetical order, bounded.
+export function mapPlaceSuggestions(values: Array<string | null>): string[] {
+  const seen: Record<string, true> = {};
+  const names: string[] = [];
+
+  values.forEach((value) => {
+    if (value && value.trim() && !seen[value]) {
+      seen[value] = true;
+      names.push(value);
+    }
+  });
+
+  return names.sort((left, right) => left.localeCompare(right)).slice(0, maxPlaceSuggestions);
+}
+
 export function toImmichAssetOrder(order: SortOrder): "asc" | "desc" {
   return order === "oldest-first" ? "asc" : "desc";
 }

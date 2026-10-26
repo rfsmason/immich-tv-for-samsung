@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { defaultAmbientSettings } from "../domain/ambient";
 import { defaultAppSettings } from "../domain/app-settings";
 import { appSettingsSchemaVersion, createLocalAppSettingsStore } from "./app-settings-store";
 import type { KeyValueStorage } from "./connection-settings-store";
@@ -32,6 +33,7 @@ describe("app settings store", () => {
     const store = createLocalAppSettingsStore(createMemoryStorage());
 
     expect(store.load()).toEqual({
+      ambient: defaultAmbientSettings,
       autoplayVideos: false,
       homeRails: allRailsOn,
       showFaceTags: false,
@@ -63,6 +65,17 @@ describe("app settings store", () => {
     const storage = createMemoryStorage();
     const store = createLocalAppSettingsStore(storage);
     const settings = {
+      ambient: {
+        album: { id: "album-1", name: "Summer Example" },
+        includeVideos: true,
+        intervalSeconds: 60,
+        order: "in-order" as const,
+        showClock: false,
+        showDetails: true,
+        source: "album" as const,
+        startAfterIdleMinutes: 10,
+        stopAfterHours: 2
+      },
       autoplayVideos: true,
       homeRails: { ...allRailsOn, people: false },
       showFaceTags: true,
@@ -90,6 +103,7 @@ describe("app settings store", () => {
     );
 
     expect(store.load()).toEqual({
+      ambient: defaultAmbientSettings,
       autoplayVideos: true,
       homeRails: allRailsOn,
       showFaceTags: false,
@@ -104,6 +118,52 @@ describe("app settings store", () => {
         search: "newest-first",
         videos: "newest-first"
       }
+    });
+  });
+
+  it("migrates version 1 settings to version 2 with ambient mode's defaults", () => {
+    const store = createLocalAppSettingsStore(
+      createMemoryStorage({
+        "immich-tv.app-settings": JSON.stringify({
+          autoplayVideos: true,
+          schemaVersion: 1,
+          slideshowIntervalSeconds: 12
+        })
+      })
+    );
+
+    expect(appSettingsSchemaVersion).toBe(2);
+    expect(store.load()).toEqual({
+      ...defaultAppSettings,
+      ambient: defaultAmbientSettings,
+      autoplayVideos: true,
+      slideshowIntervalSeconds: 12
+    });
+  });
+
+  it("falls back safely from unknown ambient values", () => {
+    const store = createLocalAppSettingsStore(
+      createMemoryStorage({
+        "immich-tv.app-settings": JSON.stringify({
+          ambient: {
+            album: { id: 7 },
+            includeVideos: "yes",
+            intervalSeconds: 45,
+            order: "sideways",
+            showClock: false,
+            source: "everything",
+            startAfterIdleMinutes: 5,
+            stopAfterHours: 3
+          },
+          schemaVersion: 2
+        })
+      })
+    );
+
+    expect(store.load().ambient).toEqual({
+      ...defaultAmbientSettings,
+      showClock: false,
+      startAfterIdleMinutes: 5
     });
   });
 

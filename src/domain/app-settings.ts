@@ -1,4 +1,5 @@
 import type { SortOrder } from "./album";
+import { defaultAmbientSettings, normalizeAmbientSettings, type AmbientSettings } from "./ambient";
 import { homeRailOrder, type HomeRailVisibility } from "./home";
 
 // Collections whose sort order is remembered between visits. An album's
@@ -16,6 +17,7 @@ const savedSortOrderKinds: SavedSortOrderKind[] = [
 ];
 
 export type AppSettings = {
+  ambient: AmbientSettings;
   autoplayVideos: boolean;
   homeRails: HomeRailVisibility;
   // Face tags over photos in the viewer (the viewer's Faces button).
@@ -30,6 +32,7 @@ export type AppSettings = {
 export const defaultSlideshowIntervalSeconds = 8;
 
 export const defaultAppSettings: AppSettings = {
+  ambient: defaultAmbientSettings,
   autoplayVideos: false,
   homeRails: normalizeHomeRailVisibility(null),
   showFaceTags: false,
@@ -42,6 +45,7 @@ export const defaultAppSettings: AppSettings = {
 
 export function normalizeAppSettings(settings: Partial<AppSettings> | null): AppSettings {
   return {
+    ambient: normalizeAmbientSettings(settings?.ambient),
     autoplayVideos: settings?.autoplayVideos === true,
     homeRails: normalizeHomeRailVisibility(settings?.homeRails),
     showFaceTags: settings?.showFaceTags === true,

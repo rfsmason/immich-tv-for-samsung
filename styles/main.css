@@ -2557,17 +2557,17 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 
 /* People picker: a selected person has a green ring and a check mark, so the
    state never relies on colour alone. */
-.search-people-actions {
+.search-picker-actions {
   display: flex;
   align-items: center;
   margin-top: 18px;
 }
 
-.search-people-actions > * + * {
+.search-picker-actions > * + * {
   margin-left: 20px;
 }
 
-.search-people-actions > .focusable {
+.search-picker-actions > .focusable {
   min-height: 78px;
   padding: 0 32px;
 }
@@ -2614,7 +2614,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
     0 0 0 16px #ffffff;
 }
 
-.person-check {
+.picker-check {
   position: absolute;
   top: 4px;
   left: 4px;

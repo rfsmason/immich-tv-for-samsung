@@ -96,14 +96,14 @@ describe("Search people picker", () => {
     expect(f.card("person-1")).toBe(card);
     expect(card.getAttribute("data-selected")).toBe("true");
     expect(card.getAttribute("aria-pressed")).toBe("true");
-    expect(card.querySelectorAll(".person-check")).toHaveLength(1);
+    expect(card.querySelectorAll(".picker-check")).toHaveLength(1);
     expect(card.getAttribute("aria-label")).toBe("Person 1, selected");
 
     pressKey(remoteKeys.enter);
     expect(f.card("person-1")).toBe(card);
     expect(card.hasAttribute("data-selected")).toBe(false);
     expect(card.getAttribute("aria-pressed")).toBe("false");
-    expect(card.querySelector(".person-check")).toBeNull();
+    expect(card.querySelector(".picker-check")).toBeNull();
     expect(card.getAttribute("aria-label")).toBe("Person 1");
     expect(document.activeElement).toBe(card);
   });
@@ -137,7 +137,7 @@ describe("Search people picker", () => {
     expect(f.selectedIds()).toEqual(["person-2"]);
     expect(f.card("person-2")?.getAttribute("aria-pressed")).toBe("true");
     expect(f.card("person-2")?.getAttribute("aria-label")).toBe("Person 2, selected");
-    expect(f.card("person-2")?.querySelector(".person-check")).not.toBeNull();
+    expect(f.card("person-2")?.querySelector(".picker-check")).not.toBeNull();
     expect(byId("search-people-done").textContent).toBe("Done (1 selected)");
   });
 

@@ -125,7 +125,12 @@ export function mountPeopleGrid(options: PeopleGridOptions): PeopleGridControlle
       return;
     }
 
+    // Chromium 63 ignores preventScroll and scrolls a focused card into view
+    // itself, centring it; undo that so rows only ever move by whole rows.
+    const scrollTop = elements.grid.scrollTop;
+
     focusWithoutPageScroll(card);
+    elements.grid.scrollTop = scrollTop;
     scrollToCardRow(card);
   }
 

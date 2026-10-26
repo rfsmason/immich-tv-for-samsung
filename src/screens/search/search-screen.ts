@@ -169,13 +169,6 @@ export function mountSearchScreen(options: SearchScreenOptions): SearchScreenCon
     state.message = null;
   }
 
-  // Arrow navigation onto `key`, which its row may handle itself.
-  function arriveAt(key: string): void {
-    if (!searchRows.some((row) => row.arrive?.(key))) {
-      focusKey(key);
-    }
-  }
-
   function activate(key: string): void {
     searchRows.some((row) => row.activate(key));
   }
@@ -248,14 +241,14 @@ export function mountSearchScreen(options: SearchScreenOptions): SearchScreenCon
           options.onReturnToShell();
         }
       } else {
-        arriveAt(row[column - 1]!);
+        focusKey(row[column - 1]!);
       }
       return;
     }
 
     if (direction === "right") {
       if (column < row.length - 1) {
-        arriveAt(row[column + 1]!);
+        focusKey(row[column + 1]!);
       }
       return;
     }
@@ -263,7 +256,7 @@ export function mountSearchScreen(options: SearchScreenOptions): SearchScreenCon
     const target = grid[rowIndex + (direction === "up" ? -1 : 1)];
 
     if (target) {
-      arriveAt(target[Math.min(column, target.length - 1)]!);
+      focusKey(target[Math.min(column, target.length - 1)]!);
     }
   }
 

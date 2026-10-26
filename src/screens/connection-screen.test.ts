@@ -220,7 +220,9 @@ describe("Settings remote navigation and actions", () => {
     pressKey(remoteKeys.right);
     pressKey(remoteKeys.enter);
     for (let step = 0; step < 4; step += 1) pressKey(remoteKeys.down);
-    // Arriving on the interval opens its list on the current value.
+    // Arriving only focuses the interval; OK opens its list on the current value.
+    expect(document.activeElement).toBe(byId("slideshow-interval"));
+    pressKey(remoteKeys.enter);
     expect(document.activeElement?.textContent).toBe("✓8 seconds");
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
@@ -238,7 +240,7 @@ describe("Settings remote navigation and actions", () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 
-  it("opens the slideshow interval like Search's drop-downs, and never traps focus", () => {
+  it("opens the slideshow interval with OK, like Search's drop-downs, and never traps focus", () => {
     const { settingsStore } = mount();
     const interval = () => byId("slideshow-interval");
     const list = () => byId("settings-panel-display").querySelector(".dropdown-list");
@@ -246,8 +248,13 @@ describe("Settings remote navigation and actions", () => {
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);
     for (let step = 0; step < 4; step += 1) pressKey(remoteKeys.down);
+    expect(document.activeElement).toBe(interval());
+    expect(list()).toBeNull();
+
+    // OK opens the list on the current value.
+    pressKey(remoteKeys.enter);
     expect(interval().getAttribute("aria-expanded")).toBe("true");
-    expect(list()?.querySelector('[aria-selected="true"]')?.textContent).toBe("✓8 seconds");
+    expect(document.activeElement?.textContent).toBe("✓8 seconds");
 
     // Back closes the list unchanged and stays in Settings.
     pressKey(remoteKeys.back);
@@ -256,7 +263,7 @@ describe("Settings remote navigation and actions", () => {
     expect(interval().getAttribute("aria-expanded")).toBe("false");
     expect(byId("settings-panel-display").hidden).toBe(false);
 
-    // OK reopens it; Left closes it unchanged.
+    // Left closes it unchanged.
     pressKey(remoteKeys.enter);
     expect(list()).not.toBeNull();
     pressKey(remoteKeys.left);
@@ -272,8 +279,10 @@ describe("Settings remote navigation and actions", () => {
     pressKey(remoteKeys.up);
     expect(document.activeElement).toBe(byId("show-viewer-exif"));
 
-    // Arriving from above opens it again; choose 20 seconds and save.
+    // Coming back does not open it; choose 20 seconds and save.
     pressKey(remoteKeys.down);
+    expect(list()).toBeNull();
+    pressKey(remoteKeys.enter);
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);

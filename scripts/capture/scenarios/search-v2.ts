@@ -47,7 +47,8 @@ export const searchV2Panel: Scenario = {
     await remote.back(control("add-people"));
     await remote.down(control("from"));
     await remote.right(control("to"));
-    await remote.right(control("asset-type:all")); // Arriving opens the list.
+    await remote.right(control("asset-type"));
+    await remote.ok(control("asset-type:all")); // OK opens the list.
     await remote.down(control("asset-type:photos"));
     await remote.ok(control("asset-type"));
     await remote.down(control("choose-place"));

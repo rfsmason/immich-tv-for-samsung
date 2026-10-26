@@ -206,14 +206,6 @@ export function createDatesRow(context: SearchPanelContext, options: DatesRowOpt
 
       return false;
     },
-    arrive(key) {
-      if (key !== assetTypeKey) {
-        return false;
-      }
-
-      openAssetType();
-      return true;
-    },
     handleModalKey(event, keyCode) {
       const direction = readArrowDirection(keyCode);
 

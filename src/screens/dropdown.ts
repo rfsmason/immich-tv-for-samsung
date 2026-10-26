@@ -2,7 +2,8 @@ import { readArrowDirection, remoteKeys } from "../platform/tizen/keys";
 
 // The app's drop-down field, shared by Search's Asset type and Settings'
 // slideshow interval so both behave alike on the remote:
-// - arriving on the field by an arrow key opens its list on the current value;
+// - focus moves onto the field like any other control; OK opens its list on
+//   the current value;
 // - Up and Down move through the list;
 // - OK chooses and closes it, leaving focus on the field;
 // - Back closes it unchanged;

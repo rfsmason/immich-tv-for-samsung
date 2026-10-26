@@ -417,17 +417,19 @@ describe("Search criteria panel", () => {
     expect(f.text("from")).toContain("Any date");
   });
 
-  it("opens the Asset type list on arrival, chooses with Up, Down and OK, and never traps focus", async () => {
+  it("opens the Asset type list with OK, chooses with Up, Down and OK, and never traps focus", async () => {
     const f = setup();
     const list = () => byId("search-panel").querySelector(".dropdown-list");
     await f.open();
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);
+    pressKey(remoteKeys.right);
+
+    // Arriving only focuses the field; OK opens the list on the current type.
+    expect(f.focused()).toBe("asset-type");
     expect(f.text("asset-type")).toContain("All");
     expect(list()).toBeNull();
-
-    // Arriving opens the list on the current type.
-    pressKey(remoteKeys.right);
+    pressKey(remoteKeys.enter);
     expect(f.focused()).toBe("asset-type:all");
     expect(f.control("asset-type")?.getAttribute("aria-expanded")).toBe("true");
     expect(f.control("asset-type:all")?.getAttribute("aria-selected")).toBe("true");
@@ -443,16 +445,20 @@ describe("Search criteria panel", () => {
     expect(controller!.criteria().mediaType).toBe("live-photos");
     expect(f.control("show")?.hasAttribute("aria-disabled")).toBe(false);
 
-    // Closed, arrows move on; OK opens it again on the chosen type.
+    // Closed, arrows move on and coming back does not open it.
     pressKey(remoteKeys.left);
     expect(f.focused()).toBe("to");
     pressKey(remoteKeys.right);
+    expect(f.focused()).toBe("asset-type");
+    expect(list()).toBeNull();
+
+    // Back and Left close it unchanged.
+    pressKey(remoteKeys.enter);
     expect(f.focused()).toBe("asset-type:live-photos");
     pressKey(remoteKeys.back);
     expect(f.focused()).toBe("asset-type");
     expect(controller!.criteria().mediaType).toBe("live-photos");
     pressKey(remoteKeys.enter);
-    expect(f.focused()).toBe("asset-type:live-photos");
     pressKey(remoteKeys.left);
     expect(list()).toBeNull();
     expect(f.focused()).toBe("asset-type");
@@ -468,9 +474,9 @@ describe("Search criteria panel", () => {
 
     // All clears the criterion.
     pressKey(remoteKeys.up);
-    expect(f.focused()).toBe("from");
     pressKey(remoteKeys.right);
     pressKey(remoteKeys.right);
+    pressKey(remoteKeys.enter);
     for (let step = 0; step < 2; step += 1) pressKey(remoteKeys.up);
     expect(f.focused()).toBe("asset-type:all");
     pressKey(remoteKeys.enter);

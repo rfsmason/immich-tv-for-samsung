@@ -478,9 +478,6 @@ export function mountConnectionScreen(
 
     if (nextControl) {
       nextControl.focus();
-
-      // Arriving on a drop-down opens its list, as in Search.
-      dropdowns.filter((dropdown) => dropdown.control === nextControl)[0]?.open();
     }
 
     return true;

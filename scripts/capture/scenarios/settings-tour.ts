@@ -23,8 +23,9 @@ export const settingsTour: Scenario = {
     await remote.down("#show-viewer-time");
     await remote.down("#show-viewer-exif");
     await remote.ok("#show-viewer-exif");
-    // Arriving on the interval opens its list on the seeded interval.
-    await remote.down('#settings-panel-display .dropdown-option[aria-selected="true"]');
+    // OK opens the interval's list on the seeded interval.
+    await remote.down("#slideshow-interval");
+    await remote.ok('#settings-panel-display .dropdown-option[aria-selected="true"]');
     await guide?.highlight(
       "#settings-panel-display .dropdown-list",
       "Choose the slideshow interval"

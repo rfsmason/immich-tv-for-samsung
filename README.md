@@ -7,7 +7,7 @@ The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It 
 ## Current Status
 
 - Target device: Samsung QE55Q950RBTXXU, 2019, Tizen 5.0 / Chromium M63. Application ID `imchTV0001.ImmichTV`.
-- Milestones 1-11.5 are complete on `main`:
+- Milestones 1-15 are complete on `main`, and physical-TV acceptance of Milestones 12-15 passed on 26 October 2026. They include:
   - Home: bounded rails (Recently Added, Favourites, Videos, People, Recently Viewed, Albums and Memories).
   - Photos: the main timeline, with date sections and a timeline rail.
   - Albums: an album grid and album detail.
@@ -21,10 +21,11 @@ The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It 
   - decomposition of the shared collection screen and Home;
   - a screen registry for routing;
   - a minified bundle, an enforced formatter, and coverage thresholds.
-- Milestone 12, People, is complete on `main` and awaiting physical-TV acceptance. Home's People rail ends with See more, which opens a paged grid of every recognised person. Choosing a person opens their photos and videos in the shared grid, viewer and slideshow. See [ADR 0013](docs/architecture/0013-people.md) and [docs/project-brief.md](docs/project-brief.md).
-- Milestone 13, Search v1, is complete on `main` and awaiting physical-TV acceptance, together with Milestone 12. Search finds photos by one or more people, a From and To date, or both, with remote-only controls: a people picker, chips and an inline date stepper. Results open in the shared grid, viewer and slideshow. See [ADR 0014](docs/architecture/0014-search.md).
-- Milestone 14, Favorites and Library Views, is complete on `main` and awaiting physical-TV acceptance, together with Milestones 12 and 13. Favourites, a new Videos rail and Recently added open as library views from Home, using the shared grid, viewer and slideshow. See [ADR 0016](docs/architecture/0016-library-views.md).
-- Milestone 15, Personalisation and Navigation, is implemented on its branch and awaiting physical-TV acceptance. Held Up/Down on the Photos date rail speed up from months to years, CH ▲/▼ jump a year, Settings can turn each Home rail on or off, collections can be reversed between newest and oldest first, the viewer can show face tags, and every screen sits on one standard background. See [ADR 0017](docs/architecture/0017-personalisation-and-navigation.md).
+- Milestone 12, People: Home's People rail ends with See more, which opens a paged grid of every recognised person. Choosing a person opens their photos and videos in the shared grid, viewer and slideshow. See [ADR 0013](docs/architecture/0013-people.md) and [docs/project-brief.md](docs/project-brief.md).
+- Milestone 13, Search v1: Search finds photos by one or more people, a From and To date, or both, with remote-only controls: a people picker, chips and an inline date stepper. Results open in the shared grid, viewer and slideshow. See [ADR 0014](docs/architecture/0014-search.md).
+- Milestone 14, Favorites and Library Views: Favourites, a new Videos rail and Recently added open as library views from Home, using the shared grid, viewer and slideshow. See [ADR 0016](docs/architecture/0016-library-views.md).
+- Milestone 15, Personalisation and Navigation: held Up/Down on the Photos date rail speed up from months to years, CH ▲/▼ jump a year, Settings can turn each Home rail on or off, collections can be reversed between newest and oldest first, the viewer can show face tags, and every screen sits on one standard background. See [ADR 0017](docs/architecture/0017-personalisation-and-navigation.md).
+- Milestone 16, Search v2, is in progress: media type, place and album criteria for Search.
 - Requires Immich v3.2.0 or later (see [Immich Configuration](#immich-configuration)).
 
 ## Project Layout

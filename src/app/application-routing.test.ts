@@ -113,6 +113,7 @@ function createServices(
       page([asset("t1", "2026-10-15T10:00:00.000Z"), asset("t2", "2026-10-15T09:00:00.000Z")])
     ),
     loadSearchAssetsPage: vi.fn(() => page(assets.slice(0, 2))),
+    loadPlaceSuggestions: vi.fn(async () => ["Exampleland"]),
     loadVideoAssets: vi.fn(() => page(assets.slice(0, 2))),
     loadVideoAssetsPage: vi.fn(() => page(assets.slice(0, 2))),
     loadTimelineBuckets: vi.fn(async () => [bucket]),
@@ -317,10 +318,11 @@ describe("application routing", () => {
   it("continues a rail with more items in its summary from See more", async () => {
     await start({
       overrides: {
+        // The rail's total counts every favourite.
         loadFavoriteAssets: vi.fn(async () => ({
           assets: assets.slice(0, 2),
-          nextPageToken: { cursor: "more", kind: "cursor" as const },
-          total: null
+          nextPageToken: null,
+          total: 40
         }))
       }
     });
@@ -343,8 +345,8 @@ describe("application routing", () => {
     const moreThanShown = {
       loadFavoriteAssets: vi.fn(async () => ({
         assets: assets.slice(0, 2),
-        nextPageToken: { cursor: "more", kind: "cursor" as const },
-        total: null
+        nextPageToken: null,
+        total: 40
       })),
       loadRecentlyAddedAssets: vi.fn(async () => ({
         assets: assets.slice(0, 2),
@@ -812,13 +814,23 @@ describe("application routing", () => {
 
     expect(byId("search-people-screen").hidden).toBe(true);
     expect(byId("search-screen").hidden).toBe(false);
-    expect(searchControl()).toBe("show");
+    // Back from the picker lands on its own row; Show photos is four rows down.
+    expect(searchControl()).toBe("add-people");
     expect(byId("search-panel").textContent).toContain("Alex");
+    for (let row = 0; row < 4; row += 1) pressKey(remoteKeys.down);
+    expect(searchControl()).toBe("show");
     pressKey(remoteKeys.enter);
 
     await collectionGridReady();
     expect(albumService.loadSearchAssetsPage).toHaveBeenCalledWith(
-      { people: [{ id: "person-1", name: "Alex" }], takenFrom: null, takenTo: null },
+      {
+        albums: [],
+        mediaType: "all",
+        people: [{ id: "person-1", name: "Alex" }],
+        place: null,
+        takenFrom: null,
+        takenTo: null
+      },
       "newest-first",
       { kind: "page", page: 1 }
     );
@@ -842,6 +854,47 @@ describe("application routing", () => {
     expect(byId("search-panel").textContent).toContain("Alex");
   });
 
+  it("Search → place picker and album picker → each returns to its own row with the choice", async () => {
+    const { albumService } = await start();
+    await openSearch();
+    for (let row = 0; row < 2; row += 1) pressKey(remoteKeys.down);
+    expect(searchControl()).toBe("choose-place");
+    pressKey(remoteKeys.enter);
+
+    expect(byId("search-place-screen").hidden).toBe(false);
+    await vi.waitFor(() => expect(active()?.textContent).toBe("Exampleland"));
+    pressKey(remoteKeys.enter);
+    // Anywhere in Exampleland chooses the whole country.
+    await vi.waitFor(() => expect(active()?.textContent).toBe("Anywhere in Exampleland"));
+    pressKey(remoteKeys.enter);
+
+    expect(byId("search-place-screen").hidden).toBe(true);
+    expect(searchControl()).toBe("place-chip");
+    pressKey(remoteKeys.down);
+    expect(searchControl()).toBe("add-albums");
+    pressKey(remoteKeys.enter);
+
+    expect(byId("search-albums-screen").hidden).toBe(false);
+    await vi.waitFor(() => expect(active()?.hasAttribute("data-album-id")).toBe(true));
+    pressKey(remoteKeys.enter);
+    pressKey(remoteKeys.back);
+
+    expect(byId("search-albums-screen").hidden).toBe(true);
+    expect(searchControl()).toBe("add-albums");
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.enter);
+
+    await collectionGridReady();
+    expect(albumService.loadSearchAssetsPage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        albums: [expect.objectContaining({ id: expect.any(String) })],
+        place: { city: null, country: "Exampleland", state: null }
+      }),
+      "newest-first",
+      { kind: "page", page: 1 }
+    );
+  });
+
   it("explains empty search results, and Back returns to the unchanged criteria", async () => {
     await start({
       overrides: {
@@ -852,12 +905,13 @@ describe("application routing", () => {
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
     pressKey(remoteKeys.enter);
-    pressKey(remoteKeys.down);
+    // Taken → Place → Albums → Show photos.
+    for (let row = 0; row < 3; row += 1) pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
 
     await vi.waitFor(() =>
       expect(byId("album-detail-summary").textContent).toBe(
-        "No photos match. Try fewer people or a wider date range."
+        "No photos match. Try fewer filters or a wider date range."
       )
     );
     expect(active()).toBe(byId("album-detail-screen"));
@@ -887,7 +941,8 @@ describe("application routing", () => {
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
     pressKey(remoteKeys.enter);
-    pressKey(remoteKeys.down);
+    // Taken → Place → Albums → Show photos.
+    for (let row = 0; row < 3; row += 1) pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
     pressKey(remoteKeys.back);
     expect(searchControl()).toBe("show");

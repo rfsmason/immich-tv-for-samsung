@@ -24,6 +24,20 @@ export const asset = '[data-asset-index="0"]';
 export const person = '#people-grid [data-person-index="0"]';
 export const slideshow = "#asset-viewer-slideshow";
 
+export const searchControl = (name: string): string => `[data-search-control="${name}"]`;
+
+// Search's rows from People down, as their first control is with nothing
+// chosen below People (Taken, Place, Albums, then Show photos).
+const searchColumnZero = ["add-people", "from", "choose-place", "add-albums", "show"];
+
+// Moves Down the Search panel's first column to Show photos, from a row
+// whose first control is `from` and with no place or albums chosen.
+export async function toShowPhotos(remote: Remote, from: string): Promise<void> {
+  for (const control of searchColumnZero.slice(searchColumnZero.indexOf(from) + 1)) {
+    await remote.down(searchControl(control));
+  }
+}
+
 // All scenarios begin on Home with the Home nav button focused.
 export async function destination(
   remote: Remote,

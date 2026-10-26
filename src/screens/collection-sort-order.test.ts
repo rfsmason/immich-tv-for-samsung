@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { emptySearchCriteria } from "../domain/search";
 import type { AlbumService } from "../app/album-service";
 import type { AlbumAsset, AlbumAssetPage, SortOrder, TimelineBucket } from "../domain/album";
 import { defaultAppSettings, type AppSettings } from "../domain/app-settings";
@@ -231,7 +232,7 @@ describe("collection sort order", () => {
     expect(f.settings().sortOrders.people).toBe("newest-first");
     expect(f.documentRef.activeElement).toBe(f.sortButton());
 
-    const criteria = { people: [], takenFrom: null, takenTo: null };
+    const criteria = emptySearchCriteria();
     f.controller.showSearchResults(criteria);
     await f.settled();
     expect(f.loadFeedPage).toHaveBeenLastCalledWith(

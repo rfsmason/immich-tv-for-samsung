@@ -10,7 +10,7 @@ import type {
 import type { ConnectionSettings, CurrentUser, ServerVersion } from "../../domain/connection";
 import type { AssetFace } from "../../domain/face";
 import { localMemoryDate, type Memory, type PeoplePage } from "../../domain/home";
-import type { SearchCriteria } from "../../domain/search";
+import type { SearchCriteria, SearchPlaceLevel, SearchPlaceParent } from "../../domain/search";
 import { AppError } from "../../errors/app-error";
 import type { Logger } from "../../logging/logger";
 import { silentLogger } from "../../logging/logger";
@@ -21,7 +21,7 @@ import {
   type ImmichHttp,
   type RequestTimeouts
 } from "./http";
-import { buildSearchCriteriaFilter } from "./search-filter";
+import { buildPlaceSuggestionQuery, buildSearchCriteriaFilter } from "./search-filter";
 import type {
   AlbumDetailResponseDto,
   AlbumResponseDto,
@@ -42,6 +42,7 @@ import {
   mapTimelineBucket,
   mapAssetFaces,
   mapTimelineBucketAssets,
+  mapPlaceSuggestions,
   toImmichAssetOrder
 } from "./mappers";
 import {
@@ -54,6 +55,7 @@ import {
   isPeopleResponse,
   isSearchAssetResponse,
   isServerVersion,
+  isSuggestionList,
   isTimelineBucketAssetsResponse,
   isTimelineBucketResponseList
 } from "./validators";
@@ -66,9 +68,10 @@ export type ImmichClient = {
     order: SortOrder,
     page: AlbumAssetPageToken | null
   ): Promise<AlbumAssetPage>;
-  // The Favourites rail's first page, newest first.
+  // The Favourites rail: your own favourites, newest first. Its total is
+  // every favourite, so Home can tell whether more exist.
   getFavoriteAssets(limit: number): Promise<AlbumAssetPage>;
-  // Every favourite in the given order, paged by search cursor.
+  // Every favourite of your own in the given order, a month at a time.
   getFavoriteAssetsPage(
     order: SortOrder,
     page: AlbumAssetPageToken | null
@@ -97,6 +100,9 @@ export type ImmichClient = {
     order: SortOrder,
     page: AlbumAssetPageToken | null
   ): Promise<AlbumAssetPage>;
+  // The distinct place names at one level within the parent, sorted and
+  // bounded (`maxPlaceSuggestions`).
+  getPlaceSuggestions(level: SearchPlaceLevel, parent: SearchPlaceParent): Promise<string[]>;
   getHistoryAsset(assetId: string): Promise<AlbumAsset | null>;
   getRecentlyAddedAssets(limit: number): Promise<AlbumAssetPage>;
   // Recently added assets one upload-date bucket at a time, newest first.
@@ -175,16 +181,11 @@ export function createImmichClient(options: CreateImmichClientOptions): ImmichCl
       });
     },
     getFavoriteAssets(limit) {
-      // The rail's first page; its next cursor tells Home whether more exist.
-      return getPagedFilteredAssetPage({
+      return getBucketRailPage({
+        feature: "Favourites",
         http,
-        body: buildFilteredSearchBody(
-          favoriteAssetFilter(),
-          railSearchSize(limit),
-          "newest-first",
-          null
-        ),
-        feature: "Favourites"
+        limit,
+        query: favoritesQuery("newest-first")
       });
     },
     getVideoAssets(limit) {
@@ -207,11 +208,7 @@ export function createImmichClient(options: CreateImmichClientOptions): ImmichCl
       });
     },
     getFavoriteAssetsPage(order, page) {
-      return getPagedFilteredAssetPage({
-        http,
-        body: buildFilteredSearchBody(favoriteAssetFilter(), filteredSearchPageSize, order, page),
-        feature: "Favourites"
-      });
+      return getBucketFeedPage({ feature: "Favourites", http, page, query: favoritesQuery(order) });
     },
     getMemories(limit, page = 1, date = localMemoryDate()) {
       if (
@@ -328,6 +325,16 @@ export function createImmichClient(options: CreateImmichClientOptions): ImmichCl
         path: `/people/${encodeURIComponent(personId)}/thumbnail`
       });
     },
+    async getPlaceSuggestions(level, parent) {
+      const values = await http.json<Array<string | null>>({
+        auth: true,
+        feature: "Places",
+        path: `/search/suggestions?${buildPlaceSuggestionQuery(level, parent)}`,
+        validate: isSuggestionList
+      });
+
+      return mapPlaceSuggestions(values);
+    },
     searchAssetsPage(criteria, order, page) {
       return getPagedFilteredAssetPage({
         http,
@@ -337,17 +344,25 @@ export function createImmichClient(options: CreateImmichClientOptions): ImmichCl
           order,
           page
         ),
-        feature: "Search"
+        // An album the key may not read is refused before the search runs.
+        feature: criteria.albums.length > 0 ? "Albums" : "Search"
       });
     },
     getRecentlyAddedAssets(limit) {
-      return getRecentlyAddedAssetPage({
+      return getBucketRailPage({
+        feature: "Recently Added",
         http,
-        limit
+        limit,
+        query: recentlyAddedQuery
       });
     },
     getRecentlyAddedAssetsPage(page) {
-      return getRecentlyAddedBucketPage({ http, page });
+      return getBucketFeedPage({
+        feature: "Recently Added",
+        http,
+        page,
+        query: recentlyAddedQuery
+      });
     },
     getTimelineAssetsPage(order, page) {
       return getTimelineAssetPage({
@@ -590,14 +605,25 @@ function buildAlbumAssetSearchBody(
 const recentlyAddedQuery =
   "order=desc&orderBy=createdAt&visibility=timeline&isTrashed=false&withPartners=true&withStacked=true";
 
-// Recently Added pages one upload month at a time, newest first. The first
-// page fetches the month list once; each later token names its month by
-// timeBucket and carries the months still to come, so a month created by a
-// new upload between pages cannot shift, duplicate or skip a month, and each
+// Favourites come from the timeline, as in Immich Web, rather than from
+// structured search: structured search also covers partners whose "Show in
+// timeline" is on, and `isFavorite` is each owner's own flag, so it would
+// show a partner's favourites as yours. Without withPartners the timeline
+// covers only your own assets (Immich refuses isFavorite with partners).
+function favoritesQuery(order: SortOrder): string {
+  return `order=${toImmichAssetOrder(order)}&orderBy=takenAt&visibility=timeline&isTrashed=false&isFavorite=true&withStacked=true`;
+}
+
+// A timeline-bucket feed (Recently Added, Favourites) pages one month at a
+// time. The first page fetches the month list once; each later token names
+// its month by timeBucket and carries the months still to come, so a month
+// created between pages cannot shift, duplicate or skip a month, and each
 // later page costs one request.
-async function getRecentlyAddedBucketPage(options: {
+async function getBucketFeedPage(options: {
+  feature: string;
   http: ImmichHttp;
   page: AlbumAssetPageToken | null;
+  query: string;
 }): Promise<AlbumAssetPage> {
   let months: string[];
 
@@ -607,8 +633,8 @@ async function getRecentlyAddedBucketPage(options: {
     months = (
       await options.http.json<TimelineBucketResponseDto[]>({
         auth: true,
-        feature: "Recently Added",
-        path: `/timeline/buckets?${recentlyAddedQuery}`,
+        feature: options.feature,
+        path: `/timeline/buckets?${options.query}`,
         validate: isTimelineBucketResponseList
       })
     )
@@ -624,8 +650,8 @@ async function getRecentlyAddedBucketPage(options: {
 
   const response = await options.http.json<TimelineBucketAssetsResponseDto>({
     auth: true,
-    feature: "Recently Added",
-    path: `/timeline/bucket?timeBucket=${encodeURIComponent(month)}&${recentlyAddedQuery}`,
+    feature: options.feature,
+    path: `/timeline/bucket?timeBucket=${encodeURIComponent(month)}&${options.query}`,
     validate: isTimelineBucketAssetsResponse
   });
   const later = months.slice(1);
@@ -639,18 +665,22 @@ async function getRecentlyAddedBucketPage(options: {
   };
 }
 
-// Timeline date-added ordering is distinct from metadata search's supported sort fields.
-async function getRecentlyAddedAssetPage(options: {
+// A Home rail from timeline buckets (Recently Added, by date added, which
+// structured search cannot order by; Favourites, your own only): the first
+// `limit` assets across months, and the total across every month.
+async function getBucketRailPage(options: {
+  feature: string;
   http: ImmichHttp;
   limit: number;
+  query: string;
 }): Promise<AlbumAssetPage> {
   const limit = Number.isFinite(options.limit)
     ? Math.max(1, Math.min(24, Math.floor(options.limit)))
     : 18;
-  const query = recentlyAddedQuery;
+  const query = options.query;
   const buckets = await options.http.json<TimelineBucketResponseDto[]>({
     auth: true,
-    feature: "Recently Added",
+    feature: options.feature,
     path: `/timeline/buckets?${query}`,
     validate: isTimelineBucketResponseList
   });
@@ -660,7 +690,7 @@ async function getRecentlyAddedAssetPage(options: {
   for (const bucket of buckets.filter((bucket) => bucket.count > 0).slice(0, limit)) {
     const response = await options.http.json<TimelineBucketAssetsResponseDto>({
       auth: true,
-      feature: "Recently Added",
+      feature: options.feature,
       path: `/timeline/bucket?timeBucket=${encodeURIComponent(bucket.timeBucket)}&${query}`,
       validate: isTimelineBucketAssetsResponse
     });
@@ -702,20 +732,6 @@ function videoAssetFilter(): Record<string, unknown> {
     },
     type: {
       eq: "VIDEO"
-    },
-    visibility: {
-      eq: "timeline"
-    }
-  };
-}
-
-function favoriteAssetFilter(): Record<string, unknown> {
-  return {
-    isFavorite: {
-      eq: true
-    },
-    trashedAt: {
-      eq: null
     },
     visibility: {
       eq: "timeline"

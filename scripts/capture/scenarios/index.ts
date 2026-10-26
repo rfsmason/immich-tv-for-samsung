@@ -10,6 +10,7 @@ import { favorites } from "./favorites";
 import { videos } from "./videos";
 import { recentlyAdded } from "./recently-added";
 import { search } from "./search";
+import { searchAlbumPicker, searchPlacePicker, searchV2Panel } from "./search-v2";
 import { settingsHome } from "./settings-home";
 import { viewerFaces } from "./viewer-faces";
 import { tour } from "./tour";
@@ -33,6 +34,9 @@ export const scenarios = [
   videos,
   recentlyAdded,
   search,
+  searchV2Panel,
+  searchPlacePicker,
+  searchAlbumPicker,
   settingsHome,
   viewerFaces,
   tour,

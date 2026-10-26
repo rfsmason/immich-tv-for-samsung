@@ -80,6 +80,7 @@ Immich facts were checked against `immich-app/immich` `main` at `1cf5bb4`:
 - The Photos timeline and Recently Added queries send `withPartners=true`. Immich (`timeline.service.ts`, `utils/asset.util.ts` `getMyPartnerIds` at `1cf5bb4`) then adds the assets of partners who share with this user and whose "Show in timeline" preference is on. Partner inclusion stays an Immich setting, not an app one.
 - Immich accepts `withPartners` only with `visibility=timeline`, with no truthy `isTrashed` and without `isFavorite`. Both queries meet that; Recently Added's `isTrashed=false` is allowed.
 - Both timeline endpoints send the same query, so bucket indexes still agree. The Search date stepper reads its range from the same buckets, so it can reach back to a partner's oldest month; Search results come from structured search and do not include partners.
+- **Correction (26 October 2026, Milestone 16 review).** The sentence above is wrong. Structured search (`resolveSearchScopeV3` → `getUserIdsToSearch` in `search.service.ts`, Immich `main` `c6d1e15`) also covers partners whose "Show in timeline" is on, so Search, Favourites, Videos and person results can all include partners' photos. Milestone 16 records this in ADR 0018 and makes Favourites show only your own favourites (ADR 0016 update).
 
 ### Standard background
 
@@ -112,3 +113,9 @@ Immich facts were checked against `immich-app/immich` `main` at `1cf5bb4`:
   - label legibility.
 
 Supersedes nothing. Updates ADR 0005 (viewer controls), ADR 0008 (collection order and header) and ADR 0009 (rail visibility).
+
+## TV result (26 October 2026)
+
+Physical Q950R acceptance passed on 26 October 2026 (user confirmation), covering every item on PR #3's combined checklist, including the date rail's hold acceleration and the CH keys.
+
+**Open note for the user:** whether Tizen sets `KeyboardEvent.repeat` on held keys and sends `keyup` on release isn't recorded. The accelerator works either way (`event.repeat`, or the same key within 250 ms), so this is a record of which path the TV takes, not a defect. Please note it here once checked.

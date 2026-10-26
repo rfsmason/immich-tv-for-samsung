@@ -1,9 +1,8 @@
 import type { Person } from "../../domain/home";
 import { formatPersonName } from "../../presentation/person-labels";
 
-// A person as a remote-focusable card: a circular face above the name. The
-// People browser uses it now; a Search people picker (Milestone 13) can reuse
-// it with its own selection state.
+// A person as a remote-focusable card: a circular face above the name, for
+// the People browser and Search's people picker.
 
 // The card's spoken label before any screen adds its own state to it.
 export function personCardLabel(person: Person): string {
@@ -12,18 +11,13 @@ export function personCardLabel(person: Person): string {
   return person.isFavorite ? `${name}, favourite` : name;
 }
 
-export function createPersonCard(
-  documentRef: Document,
-  person: Person,
-  index: number
-): HTMLButtonElement {
+// The card grid adds the id and index attributes.
+export function createPersonCard(documentRef: Document, person: Person): HTMLButtonElement {
   const card = documentRef.createElement("button");
   const name = formatPersonName(person);
 
   card.className = "focusable person-card";
   card.type = "button";
-  card.setAttribute("data-person-index", String(index));
-  card.setAttribute("data-person-id", person.id);
   card.setAttribute("aria-label", personCardLabel(person));
 
   const face = documentRef.createElement("span");

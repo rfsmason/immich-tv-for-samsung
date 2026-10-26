@@ -11,10 +11,7 @@ import type { SearchCriteria } from "../domain/search";
 import type { ViewingSource } from "../domain/viewing-history";
 import { toUserMessage } from "../errors/app-error";
 import { getKeyCode } from "../platform/tizen/keys";
-import { formatLibraryViewTitle } from "../presentation/library-labels";
 import { formatMemoryContext, formatMemoryTitle } from "../presentation/memory-labels";
-import { formatPersonName } from "../presentation/person-labels";
-import { formatSearchSummary } from "../presentation/search-labels";
 import type { AppSettingsStore } from "../storage/app-settings-store";
 import { canApplyAlbumDetail } from "./album-assets-window";
 import { getRestoredViewerGridFocus } from "./asset-viewer-window";
@@ -53,23 +50,18 @@ import {
   reverseSortOrder,
   saveSortOrder
 } from "./collection/collection-sort";
+import { readCollectionElements } from "./collection/collection-elements";
 import { createPhotosTimeline, type ScheduleFrame } from "./collection/photos-timeline";
-import type { ViewerElements } from "./collection/viewer-types";
+import {
+  readRemoteCollectionInput,
+  readRemoteCollectionLoadingMessage,
+  readRemoteFeed
+} from "./collection/remote-collections";
 
 // The shared collection screen (ADR 0008, ADR 0012): composes the collection
 // grid, the Photos timeline extension and the full-screen viewer over one
 // collection model, and loads albums, Photos, People, Memories and Home
 // collections into it.
-
-type AlbumDetailElements = ViewerElements & {
-  grid: HTMLElement;
-  retryButton: HTMLButtonElement;
-  root: HTMLElement;
-  sortButton: HTMLButtonElement;
-  summary: HTMLElement;
-  timeline: HTMLElement;
-  title: HTMLElement;
-};
 
 type AlbumDetailScreenOptions = {
   documentRef?: Document;
@@ -126,7 +118,7 @@ export function mountAlbumDetailScreen(
   options: AlbumDetailScreenOptions
 ): AlbumDetailScreenController {
   const documentRef = options.documentRef || document;
-  const elements = readElements(documentRef);
+  const elements = readCollectionElements(documentRef);
   const model = createCollectionModel();
   const plainLayout = createPlainGridLayout(model);
   // The album being shown, and album order reversals for this session, by id.
@@ -494,56 +486,12 @@ export function mountAlbumDetailScreen(
     if (collection.kind === "person" || collection.kind === "search") {
       lastRemoteCollection = collection;
     }
-    const input: StaticCollectionInput =
-      collection.kind === "library"
-        ? {
-            assets: [],
-            focusedIndex: 0,
-            feed: { feed: feed!, nextPage: null },
-            id: collection.view,
-            title: formatLibraryViewTitle(collection.view),
-            initialView: "grid",
-            parent: collection.parent
-          }
-        : collection.kind === "person"
-          ? {
-              assets: [],
-              focusedIndex: 0,
-              feed: { feed: feed!, nextPage: null },
-              id: `person-${collection.person.id}`,
-              title: formatPersonName(collection.person),
-              initialView: "grid",
-              parent: collection.parent
-            }
-          : collection.kind === "search"
-            ? {
-                assets: [],
-                emptyMessage: "No photos match. Try fewer people or a wider date range.",
-                focusedIndex: 0,
-                feed: { feed: feed!, nextPage: null },
-                id: "search",
-                title: formatSearchSummary(collection.criteria),
-                initialView: "grid",
-                parent: collection.parent
-              }
-            : {
-                assets: [],
-                focusedIndex: 0,
-                id: collection.memory.id,
-                title: formatMemoryTitle(collection.memory),
-                context: formatMemoryContext(collection.memory),
-                initialView: "grid",
-                parent: collection.parent,
-                viewingKind: "memory"
-              };
+    const input = readRemoteCollectionInput(collection, feed);
     loadStaticAssetCollection(input);
     const generation = model.loadGeneration;
     model.load = { status: "loading", request: collection };
     elements.retryButton.hidden = true;
-    grid.setStatus(
-      collection.kind === "search" ? "Searching your library..." : "Loading photos and videos...",
-      "pending"
-    );
+    grid.setStatus(readRemoteCollectionLoadingMessage(collection), "pending");
     focusScreenControls();
 
     try {
@@ -908,64 +856,4 @@ export function mountAlbumDetailScreen(
       void loadPhotosTimeline();
     }
   };
-}
-
-function readElements(documentRef: Document): AlbumDetailElements {
-  return {
-    assetPlaceholder: requireElement(documentRef, "asset-placeholder"),
-    assetPlaceholderBack: requireElement<HTMLButtonElement>(documentRef, "asset-placeholder-back"),
-    assetPlaceholderSummary: requireElement(documentRef, "asset-placeholder-summary"),
-    assetViewerExif: requireElement(documentRef, "asset-viewer-exif"),
-    assetViewerImage: requireElement<HTMLImageElement>(documentRef, "asset-viewer-image"),
-    assetViewerPlaceholder: requireElement(documentRef, "asset-viewer-placeholder"),
-    assetViewerPlaceholderMessage: requireElement(documentRef, "asset-viewer-placeholder-message"),
-    assetViewerPlayer: requireElement(documentRef, "asset-viewer-player"),
-    assetViewerPlayerBuffered: requireElement(documentRef, "asset-viewer-buffered"),
-    assetViewerPlayerDuration: requireElement(documentRef, "asset-viewer-duration"),
-    assetViewerPlayerElapsed: requireElement(documentRef, "asset-viewer-elapsed"),
-    assetViewerPlayerProgress: requireElement(documentRef, "asset-viewer-progress-fill"),
-    assetViewerPlayerStatus: requireElement(documentRef, "asset-viewer-status"),
-    assetViewerPlayerStatusText: requireElement(documentRef, "asset-viewer-status-text"),
-    assetViewerPlay: requireElement<HTMLButtonElement>(documentRef, "asset-viewer-play"),
-    assetViewerSlideshow: requireElement<HTMLButtonElement>(documentRef, "asset-viewer-slideshow"),
-    assetViewerSlideshowStatus: requireElement(documentRef, "asset-viewer-slideshow-status"),
-    assetViewerFaceOverlay: requireElement(documentRef, "asset-viewer-face-overlay"),
-    assetViewerFaces: requireElement<HTMLButtonElement>(documentRef, "asset-viewer-faces"),
-    assetViewerFacesStatus: requireElement(documentRef, "asset-viewer-faces-status"),
-    assetViewerSpinner: requireElement(documentRef, "asset-viewer-spinner"),
-    assetViewerTitle: requireElement(documentRef, "asset-viewer-title"),
-    assetViewerVideo: requireElement<HTMLVideoElement>(documentRef, "asset-viewer-video"),
-    grid: requireElement(documentRef, "album-assets-grid"),
-    retryButton: requireElement<HTMLButtonElement>(documentRef, "collection-retry"),
-    sortButton: requireElement<HTMLButtonElement>(documentRef, "collection-sort-order"),
-    root: requireElement(documentRef, "album-detail-screen"),
-    summary: requireElement(documentRef, "album-detail-summary"),
-    timeline: requireElement(documentRef, "photos-timeline-rail"),
-    title: requireElement(documentRef, "album-detail-title")
-  };
-}
-
-// The paged feed behind a person or search collection.
-function readRemoteFeed(collection: RemoteCollection): CollectionFeed | null {
-  if (collection.kind === "person") {
-    return { kind: "person", order: collection.order, personId: collection.person.id };
-  }
-
-  if (collection.kind === "library") {
-    return { kind: collection.view, order: collection.order };
-  }
-
-  return collection.kind === "search"
-    ? { criteria: collection.criteria, kind: "search", order: collection.order }
-    : null;
-}
-
-function requireElement<T extends HTMLElement>(documentRef: Document, id: string): T {
-  const element = documentRef.getElementById(id);
-
-  if (!element) {
-    throw new Error(`Missing required element: ${id}`);
-  }
-
-  return element as T;
 }

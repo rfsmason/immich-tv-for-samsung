@@ -3,9 +3,10 @@ import type { Person } from "../../domain/home";
 import { maxSearchPeople, type SearchPerson } from "../../domain/search";
 import { formatPersonName } from "../../presentation/person-labels";
 import { mountPeopleGrid } from "../people/people-grid";
+import { createPickerSelection } from "./picker-selection";
 
 // Search's people picker (ADR 0014): the shared people grid with OK toggling a
-// person in or out of the selection. Done and Back both return the selection;
+// person in or out of the selection (picker-selection.ts). Done and Back both return the selection;
 // cancelling a multi-select by accident would be frustrating on a remote.
 
 type PeoplePickerOptions = {
@@ -27,74 +28,27 @@ export type PeoplePickerController = {
 export function mountPeoplePicker(options: PeoplePickerOptions): PeoplePickerController {
   const documentRef = options.documentRef || document;
   const done = requireElement(documentRef, "search-people-done");
-  const message = requireElement(documentRef, "search-people-message");
-  let selected: SearchPerson[] = [];
-
-  function isSelected(id: string): boolean {
-    return selected.some((person) => person.id === id);
-  }
-
-  function renderDone(): void {
-    done.textContent = selected.length ? `Done (${selected.length} selected)` : "Done";
-  }
-
-  function setMessage(text: string): void {
-    message.textContent = text;
-    message.hidden = !text;
-  }
+  const selection = createPickerSelection<SearchPerson>({
+    capMessage: (name) =>
+      `You can choose up to ${maxSearchPeople} people. Remove someone to add ${name}.`,
+    documentRef,
+    done,
+    max: maxSearchPeople,
+    message: requireElement(documentRef, "search-people-message")
+  });
 
   function toggle(person: Person): void {
-    if (isSelected(person.id)) {
-      selected = selected.filter((item) => item.id !== person.id);
-      setMessage("");
-    } else if (selected.length >= maxSearchPeople) {
-      setMessage(
-        `You can choose up to ${maxSearchPeople} people. Remove someone to add ${formatPersonName(person)}.`
-      );
-      return;
-    } else {
-      selected = selected.concat({ id: person.id, name: person.name });
-      setMessage("");
+    if (selection.toggle({ id: person.id, name: person.name }, formatPersonName(person))) {
+      grid.refreshCards();
     }
-
-    renderDone();
-    grid.refreshCards();
   }
 
   function finish(): void {
-    options.onDone(selected.slice());
+    options.onDone(selection.selected());
   }
 
   const grid = mountPeopleGrid({
-    // Runs again on cards that stay on screen, so it clears as well as sets.
-    decorateCard(card, person) {
-      const chosen = isSelected(person.id);
-      const check = card.querySelector(".person-check");
-
-      card.setAttribute("aria-pressed", chosen ? "true" : "false");
-
-      if (!chosen) {
-        card.removeAttribute("data-selected");
-
-        if (check) {
-          card.removeChild(check);
-        }
-
-        return;
-      }
-
-      card.setAttribute("data-selected", "true");
-      card.setAttribute("aria-label", `${card.getAttribute("aria-label") || ""}, selected`);
-
-      if (!check) {
-        const mark = documentRef.createElement("span");
-
-        mark.className = "person-check";
-        mark.setAttribute("aria-hidden", "true");
-        mark.textContent = "✓";
-        card.appendChild(mark);
-      }
-    },
+    decorateCard: (card, person) => selection.decorateCard(card, person.id),
     documentRef,
     elements: {
       grid: requireElement(documentRef, "search-people-grid"),
@@ -127,14 +81,12 @@ export function mountPeoplePicker(options: PeoplePickerOptions): PeoplePickerCon
       grid.hide();
     },
     open(people) {
-      selected = people.slice(0, maxSearchPeople);
-      setMessage("");
-      renderDone();
+      selection.open(people);
       grid.show();
     },
     reset() {
       grid.reset();
-      selected = [];
+      selection.open([]);
     }
   };
 }

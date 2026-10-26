@@ -278,8 +278,11 @@ export async function loadFavoritesRail(
     }
 
     state.favorites.items = page.assets.slice(0, favoriteAssetLimit);
-    // A search page reports its own size, so a next page is the signal.
-    state.favorites.more = state.favorites.items.length > 0 && page.nextPageToken !== null;
+    // The page's total counts every favourite (timeline buckets).
+    state.favorites.more =
+      state.favorites.items.length > 0 &&
+      page.total !== null &&
+      page.total > state.favorites.items.length;
     state.favorites.focusedIndex = restoreRailFocus(state.favorites, previousAssetId);
     state.favorites.hasLoaded = true;
     state.favorites.error = null;

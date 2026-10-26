@@ -7,6 +7,7 @@ import type { AppSettingsStore } from "../storage/app-settings-store";
 import { createConnectionSection } from "./settings/connection-section";
 import { createDisplaySection } from "./settings/display-section";
 import { createHomeSection } from "./settings/home-section";
+import type { SettingsDropdown } from "./settings/settings-dropdown";
 import {
   requireElement,
   type SettingsSection,
@@ -69,6 +70,10 @@ export function mountConnectionScreen(
         .call(elements.root.querySelectorAll(".focusable:not([hidden])"))
         .filter(isVisibleElement),
     () => documentRef.activeElement
+  );
+  const dropdowns = sections.reduce<SettingsDropdown[]>(
+    (all, section) => all.concat(section.dropdowns || []),
+    []
   );
   let activeSection: SettingsSection = connection;
   let savedSnapshot = "";
@@ -267,6 +272,23 @@ export function mountConnectionScreen(
   function handleKeydown(event: KeyboardEvent): void {
     const keyCode = getKeyCode(event);
     const activeElement = documentRef.activeElement;
+    const openDropdown = dropdowns.filter((dropdown) => dropdown.isOpen())[0];
+
+    // An open list takes every key, Back included, until it closes.
+    if (openDropdown) {
+      event.preventDefault();
+      openDropdown.handleKey(keyCode);
+      updateDirtyStatus();
+      return;
+    }
+
+    const focusedDropdown = dropdowns.filter((dropdown) => dropdown.control === activeElement)[0];
+
+    if (focusedDropdown && keyCode === remoteKeys.enter) {
+      event.preventDefault();
+      focusedDropdown.open();
+      return;
+    }
 
     if (keyCode === remoteKeys.back) {
       event.preventDefault();
@@ -310,22 +332,6 @@ export function mountConnectionScreen(
       } else if (keyCode === remoteKeys.down) {
         event.preventDefault();
         connection.disableTextEntry();
-        focusSettingsPanelByOffset(activeElement, 1);
-      }
-
-      updateDirtyStatus();
-      return;
-    }
-
-    if (activeElement instanceof HTMLSelectElement) {
-      if (keyCode === remoteKeys.left || keyCode === remoteKeys.right) {
-        event.preventDefault();
-        moveSelectOption(activeElement, keyCode === remoteKeys.left ? -1 : 1);
-      } else if (keyCode === remoteKeys.up) {
-        event.preventDefault();
-        focusSettingsPanelByOffset(activeElement, -1);
-      } else if (keyCode === remoteKeys.down) {
-        event.preventDefault();
         focusSettingsPanelByOffset(activeElement, 1);
       }
 
@@ -442,6 +448,7 @@ export function mountConnectionScreen(
   }
 
   function hideSettingsPanels(): void {
+    dropdowns.forEach((dropdown) => dropdown.close());
     sections.forEach((section) => {
       section.panel.hidden = true;
       section.button.setAttribute("aria-selected", "false");
@@ -572,15 +579,4 @@ function findActionElement(target: EventTarget | null): HTMLElement | null {
   const actionElement = target.closest("[data-action]");
 
   return actionElement instanceof HTMLElement ? actionElement : null;
-}
-
-function moveSelectOption(element: HTMLSelectElement, offset: number): void {
-  if (element.options.length === 0) {
-    return;
-  }
-
-  element.selectedIndex = Math.max(
-    0,
-    Math.min(element.options.length - 1, element.selectedIndex + offset)
-  );
 }

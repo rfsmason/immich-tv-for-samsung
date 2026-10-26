@@ -2,12 +2,12 @@
 
 Immich TV for Samsung is an unofficial, TV-first, read-only Samsung Tizen Web Application for browsing an Immich photo library.
 
-The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It connects directly to an Immich server and offers Home, Photos, Albums, People and Memories browsing, Search by people and dates, a full-screen viewer with video and Live Photo playback, a slideshow, and Settings, all operable with the Samsung Smart Remote.
+The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It connects directly to an Immich server and offers Home, Photos, Albums, People and Memories browsing, Search by people, dates, type, place and albums, a full-screen viewer with video and Live Photo playback, a slideshow, and Settings, all operable with the Samsung Smart Remote.
 
 ## Current Status
 
 - Target device: Samsung QE55Q950RBTXXU, 2019, Tizen 5.0 / Chromium M63. Application ID `imchTV0001.ImmichTV`.
-- Milestones 1-11.5 are complete on `main`:
+- Milestones 1-15 are complete on `main`, and physical-TV acceptance of Milestones 12-15 passed on 26 October 2026. They include:
   - Home: bounded rails (Recently Added, Favourites, Videos, People, Recently Viewed, Albums and Memories).
   - Photos: the main timeline, with date sections and a timeline rail.
   - Albums: an album grid and album detail.
@@ -21,10 +21,11 @@ The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It 
   - decomposition of the shared collection screen and Home;
   - a screen registry for routing;
   - a minified bundle, an enforced formatter, and coverage thresholds.
-- Milestone 12, People, is complete on `main` and awaiting physical-TV acceptance. Home's People rail ends with See more, which opens a paged grid of every recognised person. Choosing a person opens their photos and videos in the shared grid, viewer and slideshow. See [ADR 0013](docs/architecture/0013-people.md) and [docs/project-brief.md](docs/project-brief.md).
-- Milestone 13, Search v1, is complete on `main` and awaiting physical-TV acceptance, together with Milestone 12. Search finds photos by one or more people, a From and To date, or both, with remote-only controls: a people picker, chips and an inline date stepper. Results open in the shared grid, viewer and slideshow. See [ADR 0014](docs/architecture/0014-search.md).
-- Milestone 14, Favorites and Library Views, is complete on `main` and awaiting physical-TV acceptance, together with Milestones 12 and 13. Favourites, a new Videos rail and Recently added open as library views from Home, using the shared grid, viewer and slideshow. See [ADR 0016](docs/architecture/0016-library-views.md).
-- Milestone 15, Personalisation and Navigation, is implemented on its branch and awaiting physical-TV acceptance. Held Up/Down on the Photos date rail speed up from months to years, CH ▲/▼ jump a year, Settings can turn each Home rail on or off, collections can be reversed between newest and oldest first, the viewer can show face tags, and every screen sits on one standard background. See [ADR 0017](docs/architecture/0017-personalisation-and-navigation.md).
+- Milestone 12, People: Home's People rail ends with See more, which opens a paged grid of every recognised person. Choosing a person opens their photos and videos in the shared grid, viewer and slideshow. See [ADR 0013](docs/architecture/0013-people.md) and [docs/project-brief.md](docs/project-brief.md).
+- Milestone 13, Search v1: Search finds photos by one or more people, a From and To date, or both, with remote-only controls: a people picker, chips and an inline date stepper. Results open in the shared grid, viewer and slideshow. See [ADR 0014](docs/architecture/0014-search.md).
+- Milestone 14, Favorites and Library Views: Favourites, a new Videos rail and Recently added open as library views from Home, using the shared grid, viewer and slideshow. See [ADR 0016](docs/architecture/0016-library-views.md).
+- Milestone 15, Personalisation and Navigation: held Up/Down on the Photos date rail speed up from months to years, CH ▲/▼ jump a year, Settings can turn each Home rail on or off, collections can be reversed between newest and oldest first, the viewer can show face tags, and every screen sits on one standard background. See [ADR 0017](docs/architecture/0017-personalisation-and-navigation.md).
+- Milestone 16, Search v2: Search also finds photos by type (Photos, Live Photos or Videos), one place chosen from country down to city, and any of up to ten albums, each picked with the remote. Physical-TV acceptance is pending. See [ADR 0018](docs/architecture/0018-search-v2.md).
 - Requires Immich v3.2.0 or later (see [Immich Configuration](#immich-configuration)).
 
 ## Project Layout
@@ -38,11 +39,12 @@ src/api/immich/             Immich REST client, HTTP transport (timeouts, status
                             response DTOs, validators, mappers and the minimum version
 src/domain/                 Application domain types
 src/presentation/           Household-facing date, duration, Memory, person and Search labels
-src/screens/                Screens and shared grid presentation
+src/screens/                Screens, the shared card grid and grid presentation
 src/screens/collection/     Shared collection grid, Photos timeline, viewer and playback
 src/screens/home/           Home rails: model, loaders, rendering, navigation, thumbnails
 src/screens/people/         People grid and person card shared by the People browser and Search
-src/screens/search/         Search criteria panel, date stepper and people picker
+src/screens/albums/         Album tile shared by Albums and the Search album picker
+src/screens/search/         Search criteria panel and rows, date stepper, and people, place and album pickers
 src/platform/tizen/         Remote keys, lifecycle and exit, Tizen runtime typings
 src/storage/                localStorage-backed settings and viewing history
 src/navigation/             Grid and focus navigation helpers
@@ -123,13 +125,13 @@ This is an intentional lightweight credential choice for the local TV app. The A
 
 ### Required API key permissions
 
-The app only reads from Immich. An API key needs these permissions, taken from the `@Authenticated` decorators of the Immich endpoints the app calls (Immich `main` at `1cf5bb4`):
+The app only reads from Immich. An API key needs these permissions, taken from the `@Authenticated` decorators of the Immich endpoints the app calls (Immich `main` at `1cf5bb4`; `GET /search/suggestions` checked at `c6d1e15`):
 
 | Permission | Used for | Endpoints |
 | --- | --- | --- |
-| `asset.read` | Photos timeline, Recently Added, album, Favourites, Videos, People and Search grids, and Recently Viewed | `GET /timeline/buckets`, `GET /timeline/bucket`, `POST /search/metadata`, `GET /assets/{id}` |
+| `asset.read` | Photos timeline, Recently Added, album, Favourites, Videos, People and Search grids, Search places, and Recently Viewed | `GET /timeline/buckets`, `GET /timeline/bucket`, `POST /search/metadata`, `GET /search/suggestions`, `GET /assets/{id}` |
 | `asset.view` | Thumbnails, viewer previews and video playback | `GET /assets/{id}/thumbnail`, `GET /assets/{id}/video/playback` |
-| `album.read` | Albums | `GET /albums`, `GET /albums/{id}` |
+| `album.read` | Albums, and the Search album picker and filter | `GET /albums`, `GET /albums/{id}` |
 | `person.read` | People and the Search people picker | `GET /people`, `GET /people/{id}/thumbnail` |
 | `memory.read` | Memories | `GET /memories` |
 | `memory.statistics` | The Memories rail's View all | `GET /memories/statistics` |

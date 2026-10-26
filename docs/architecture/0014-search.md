@@ -68,7 +68,7 @@ Search has been a top-level destination with a placeholder since Milestone 8. Mi
 ### Results
 
 - Show photos opens a typed `search` feed (carrying the criteria) in the shared collection, with route `{ kind: "search-results"; parent: "search" }`. There is no search-specific grid or viewer; images, video, Live Photos, slideshow and lifecycle pause use the existing paths.
-- The header is a short summary, for example "Rory & Sam · From 1 Jul 2012" or "3 people · 1 Jan 2020 – 31 Dec 2020".
+- The header is a short summary, for example "Robin Example & Sam Example · From 1 Jul 2012" or "3 people · 1 Jan 2020 – 31 Dec 2020".
 - Empty results read "No photos match. Try fewer people or a wider date range.", and the Back control reads "Back to Search".
 - Viewer Back returns to the last viewed asset; grid Back returns to Search on Show photos with the criteria unchanged. A new search starts a new collection generation, so a slower earlier result is dropped.
 - Viewing history records a `search` source kind (title only, not the criteria), a backward-compatible extension of the version 1 store. Older entries still load.
@@ -103,4 +103,14 @@ Against Immich `main` at `e5094d5` and release v3.3.3:
 - No framework, date library, router, dependency, text input or native date control was added. The CSS uses sibling margins, not flex `gap`; the compatibility checks pass.
 - Search keeps one small criteria object and at most four chip faces. The picker holds at most 120 people's metadata, 42 cards and about 54 faces. Results use the shared windowed grid and viewer.
 - No new timers or media were added. Faces and pages are released on hide, reset and destroy, and stale completions are revoked or dropped by generation.
-- Physical Q950R acceptance is pending, together with Milestone 12's.
+- Physical Q950R acceptance passed on 26 October 2026, together with Milestone 12's.
+
+## Update: Search v2 (Milestone 16, 26 October 2026)
+
+ADR 0018 extends this design without changing its shape:
+
+- An Asset type drop-down sits beside the dates, and Place and Albums rows sit between Taken and the actions.
+- Returning from a picker lands on that picker's own row rather than on Show photos.
+- `people/people-grid.ts` is now a configuration of the generic card grid (`src/screens/card-grid.ts`), which the album picker also uses.
+- Empty results read "No photos match. Try fewer filters or a wider date range."
+- The criteria model, filter mapper, people semantics, date stepper and results routing are unchanged.

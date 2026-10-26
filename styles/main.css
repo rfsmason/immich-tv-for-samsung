@@ -50,8 +50,7 @@ body {
 }
 
 button,
-input,
-select {
+input {
   font: inherit;
 }
 
@@ -475,7 +474,7 @@ button.settings-section-button[aria-selected="true"] {
 }
 
 .settings-layout input.focusable:focus,
-.settings-layout select.focusable:focus {
+.settings-layout .focusable.dropdown-control:focus {
   background: rgba(66, 165, 245, 0.42);
 }
 
@@ -586,7 +585,7 @@ button.settings-section-button[data-dirty] .button-row-label::after {
 }
 
 input.focusable,
-select.focusable {
+.settings-layout .focusable.dropdown-control {
   width: 100%;
   padding: 0 28px;
 }
@@ -620,10 +619,10 @@ button.compact-action {
   min-width: 0;
 }
 
+/* Not flex or grid: Chromium 63 ignores both on a <button> (scripts/css-compat-rules.mjs). */
 button.icon-action {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  text-align: center;
   width: 72px;
   min-width: 72px;
   height: 72px;
@@ -632,6 +631,12 @@ button.icon-action {
   background: transparent;
   line-height: 0;
   padding: 0;
+}
+
+/* A block icon is centred by its margins, not by text-align. */
+button.icon-action > svg {
+  margin-right: auto;
+  margin-left: auto;
 }
 
 .button-icon {
@@ -938,10 +943,10 @@ h1.screen-heading-subtle {
   height: 0;
 }
 
+/* Block: the cover and name are absolutely positioned inside. */
 .focusable.album-tile {
   position: relative;
-  display: grid;
-  grid-template-rows: 1fr auto;
+  display: block;
   min-width: 0;
   width: 100%;
   height: var(--album-tile-size);
@@ -1080,9 +1085,10 @@ h1.screen-heading-subtle {
   min-height: 0;
 }
 
+/* Block: the thumbnail and badges are absolutely positioned inside. */
 .focusable.asset-tile {
   position: relative;
-  display: grid;
+  display: block;
   min-width: 0;
   width: 100%;
   height: var(--asset-tile-size);
@@ -1127,6 +1133,9 @@ h1.screen-heading-subtle {
   line-height: 1.2;
 }
 
+/* The markers' labels and ticks end on the same vertical line as the sort
+   order button above them: the rail sits 4px further right than the header's
+   buttons, less its 4px right padding. */
 .photos-timeline-rail {
   position: fixed;
   top: 172px;
@@ -1138,7 +1147,7 @@ h1.screen-heading-subtle {
   justify-content: stretch;
   box-sizing: border-box;
   width: 118px;
-  padding: 8px 28px 8px 18px;
+  padding: 8px 4px 8px 18px;
   border-left: 2px solid rgba(255, 255, 255, 0.14);
   overflow: visible;
 }
@@ -1147,13 +1156,13 @@ h1.screen-heading-subtle {
   display: none;
 }
 
+/* Not flex or grid: Chromium 63 ignores both on a <button> (scripts/css-compat-rules.mjs). */
 button.focusable.timeline-marker {
   position: relative;
-  display: grid;
+  display: block;
   flex: 1 1 0;
-  align-items: center;
-  justify-content: end;
   min-height: 7px;
+  align-self: flex-end;
   width: 100%;
   max-width: 78px;
   min-width: 0;
@@ -1178,13 +1187,17 @@ button.focusable.timeline-marker:focus {
   box-shadow: none;
 }
 
+/* Right-aligned and vertically centred in its marker. */
 .timeline-marker-tick {
+  position: absolute;
+  top: 50%;
+  right: 0;
   display: block;
   box-sizing: border-box;
   width: 12px;
   height: 2px;
-  margin-right: 2px;
   border-radius: 2px;
+  transform: translateY(-50%);
   background: rgba(247, 248, 255, 0.34);
 }
 
@@ -1217,10 +1230,12 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   color: var(--immich-yellow);
 }
 
+/* Centred on the marker's middle, then lifted above its tick. */
 .timeline-marker-label {
   position: absolute;
+  top: 50%;
   right: 0;
-  transform: translateY(-20px);
+  transform: translateY(-50%) translateY(-20px);
   color: rgba(247, 248, 255, 0.86);
   font-size: 20px;
   font-weight: 800;
@@ -1873,7 +1888,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   }
 
   input.focusable,
-  select.focusable {
+  .settings-layout .focusable.dropdown-control {
     padding: 0 22px;
   }
 
@@ -1885,6 +1900,11 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   .header-actions {
     top: 56px;
     right: 38px;
+  }
+
+  /* Keeps the date rail's markers ending under the header buttons. */
+  .photos-timeline-rail {
+    right: 34px;
   }
 
   .header-actions > :not([hidden]) ~ :not([hidden]) {
@@ -2212,17 +2232,18 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   }
 }
 
+/* Block, centred: the button itself centres its content vertically. */
 .home-more-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  text-align: center;
   background: rgba(255, 255, 255, 0.08);
 }
 
 .home-more-icon {
+  display: block;
   width: 56px;
   height: 56px;
+  margin: 0 auto;
   fill: currentColor;
 }
 
@@ -2380,7 +2401,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
    flex gap on Chromium 63). */
 /* Inset like the grids' images, so Search lines up with the other screens. */
 .search-screen {
-  max-width: 1500px;
+  max-width: 1700px;
   padding: 24px 0 0 20px;
 }
 
@@ -2400,8 +2421,9 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   font-size: 20px;
 }
 
+/* Six rows, a date stepper and both rules fit within 1080 px. */
 .search-panel > * + * {
-  margin-top: 32px;
+  margin-top: 26px;
 }
 
 .search-row-label {
@@ -2428,16 +2450,18 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   margin-bottom: 12px;
 }
 
+/* One row of inline pieces rather than flex (not on a <button>). */
 .search-panel .focusable.search-chip {
-  display: flex;
-  align-items: center;
+  display: block;
+  white-space: nowrap;
   padding: 0 18px 0 6px;
   border-radius: 32px;
 }
 
 .search-chip-face {
   position: relative;
-  display: block;
+  display: inline-block;
+  vertical-align: middle;
   width: 44px;
   height: 44px;
   overflow: hidden;
@@ -2457,8 +2481,11 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   object-fit: cover;
 }
 
+/* Four people chips and "+N more" fit on one line. */
 .search-chip-name {
-  max-width: 260px;
+  display: inline-block;
+  vertical-align: middle;
+  max-width: 170px;
   overflow: hidden;
   margin-left: 12px;
   text-overflow: ellipsis;
@@ -2466,7 +2493,24 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 }
 
 .search-chip-remove {
+  display: inline-block;
+  vertical-align: middle;
   margin-left: 12px;
+}
+
+/* A chip without a face: its name and the × mark. */
+.search-panel .focusable.search-chip.search-chip-text {
+  padding: 0 18px;
+}
+
+/* Four album chips and "+N more" fit on one line. */
+.search-chip-text .search-chip-name {
+  max-width: 170px;
+  margin-left: 0;
+}
+
+.search-place-chip .search-chip-name {
+  max-width: 900px;
 }
 
 .search-rule {
@@ -2538,17 +2582,17 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 
 /* People picker: a selected person has a green ring and a check mark, so the
    state never relies on colour alone. */
-.search-people-actions {
+.search-picker-actions {
   display: flex;
   align-items: center;
   margin-top: 18px;
 }
 
-.search-people-actions > * + * {
+.search-picker-actions > * + * {
   margin-left: 20px;
 }
 
-.search-people-actions > .focusable {
+.search-picker-actions > .focusable {
   min-height: 78px;
   padding: 0 32px;
 }
@@ -2581,8 +2625,29 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   line-height: 1.3;
 }
 
-.search-people-grid {
+.search-people-grid,
+.search-albums-grid {
   max-height: calc(100vh - 330px);
+}
+
+/* The card grid counts a spacer as N rows and N - 1 gaps, as for people. */
+.album-pick-spacer {
+  grid-column: 1 / -1;
+  height: calc(
+    var(--album-spacer-rows) * (var(--album-tile-size) + var(--album-grid-gap)) -
+      var(--album-grid-gap)
+  );
+  min-height: 0;
+}
+
+.focusable.album-tile[data-selected] {
+  box-shadow: inset 0 0 0 8px var(--immich-green);
+}
+
+.focusable.album-tile[data-selected]:focus {
+  box-shadow:
+    inset 0 0 0 8px var(--immich-green),
+    0 0 0 8px rgba(66, 81, 176, 0.46);
 }
 
 .focusable.person-card[data-selected] .person-face {
@@ -2595,7 +2660,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
     0 0 0 16px #ffffff;
 }
 
-.person-check {
+.picker-check {
   position: absolute;
   top: 4px;
   left: 4px;
@@ -2609,6 +2674,126 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   font-weight: 800;
   line-height: 42px;
   text-align: center;
+}
+
+/* Drop-down fields (Search's Asset type, Settings' slideshow interval): the
+   list drops down over what lies beneath, so opening it never moves the
+   page. The chosen value has a check mark as well as its colour. */
+.dropdown-field {
+  position: relative;
+}
+
+.focusable.dropdown-control {
+  display: block;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.search-panel .focusable.dropdown-control {
+  width: auto;
+  min-width: 240px;
+}
+
+.dropdown-arrow {
+  float: right;
+  margin-left: 16px;
+}
+
+.focusable.dropdown-control[aria-expanded="true"] {
+  border-color: var(--immich-primary);
+}
+
+.dropdown-list {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  left: 0;
+  min-width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border: 4px solid var(--immich-primary);
+  border-radius: 12px;
+  background: #1b1f33;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+}
+
+.dropdown-list > * + * {
+  margin-top: 8px;
+}
+
+.dropdown-list .focusable.dropdown-option {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dropdown-check {
+  display: inline-block;
+  width: 32px;
+  font-weight: 800;
+}
+
+/* Place picker: one name per row, only the rows near focus rendered; a
+   spacer stands for the rows above or below at one row pitch each. */
+.search-place-screen {
+  --place-row-height: 64px;
+  --place-row-gap: 12px;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  max-height: calc(100vh - 96px);
+  padding-top: 8px;
+}
+
+.search-place-screen > :not(.search-place-list) {
+  flex-shrink: 0;
+}
+
+.search-place-path {
+  margin: 0 32px 0 0;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.search-place-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-width: 900px;
+  margin-top: 12px;
+  padding: 16px 20px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.search-place-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.focusable.search-place-row {
+  display: block;
+  width: 100%;
+  height: var(--place-row-height);
+  min-height: 0;
+  margin-bottom: var(--place-row-gap);
+  padding: 0 24px;
+  overflow: hidden;
+  font-size: 24px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focusable.search-place-anywhere {
+  font-style: italic;
+}
+
+.search-place-spacer {
+  height: calc(var(--place-spacer-rows) * (var(--place-row-height) + var(--place-row-gap)));
 }
 
 /* Every grid's images start as far from the left rail as Home's rail tiles

@@ -1,4 +1,5 @@
 import type { AppSettings } from "../../domain/app-settings";
+import type { SettingsDropdown } from "./settings-dropdown";
 
 export type SettingsSectionId = "connection" | "display" | "home";
 
@@ -7,6 +8,8 @@ export type SettingsSectionId = "connection" | "display" | "home";
 // unsaved-changes guard; each section owns its own controls.
 export type SettingsSection = {
   button: HTMLButtonElement;
+  // The section's drop-down fields, whose open lists take the remote's keys.
+  dropdowns?: SettingsDropdown[];
   id: SettingsSectionId;
   panel: HTMLElement;
   // The control focused when the section opens.

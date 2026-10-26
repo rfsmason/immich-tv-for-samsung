@@ -57,7 +57,7 @@ The application UI should follow established Smart TV design principles througho
 
 ## Current Scope / Status
 
-The current `main` branch contains Milestones 1-14: deployable Tizen app, Immich connectivity, TypeScript application foundation, albums, bounded album asset browsing, a full-screen asset viewer with image, video, and Live Photo support, slideshow mode with configurable interval, pause/resume, viewer control refinements, settings-screen rationalisation, startup splash, the permanent top-level application shell, the Photos / main timeline experience, Home, Memories, foundation hardening (Chromium 63 compatibility enforcement, request timeouts, lifecycle and exit handling, and the structural refactor), the Home polish (paged Home collections, fixed-focus rails, and See more), People, Search v1, and Favorites and Library Views.
+The current `main` branch contains Milestones 1-15: deployable Tizen app, Immich connectivity, TypeScript application foundation, albums, bounded album asset browsing, a full-screen asset viewer with image, video, and Live Photo support, slideshow mode with configurable interval, pause/resume, viewer control refinements, settings-screen rationalisation, startup splash, the permanent top-level application shell, the Photos / main timeline experience, Home, Memories, foundation hardening (Chromium 63 compatibility enforcement, request timeouts, lifecycle and exit handling, and the structural refactor), the Home polish (paged Home collections, fixed-focus rails, and See more), People, Search v1, Favorites and Library Views, and Personalisation and Navigation.
 
 The application remains read-only.
 
@@ -67,17 +67,19 @@ Milestone 11, Memories, is complete on `main`; physical Q950R acceptance passed 
 
 Milestone 11.5, Foundation Hardening and Structural Refactor, is complete on `main` (see [ADR 0012](architecture/0012-foundation-hardening.md)); physical Q950R acceptance passed on 16 October 2026 (user confirmation).
 
-Milestone 12, People, is complete on `main` (see [ADR 0013](architecture/0013-people.md)). Physical Q950R acceptance is pending: parked by user decision on 16 October 2026, to be run together with Milestone 13's, and it does not gate Milestone 13. It adds a paged People browser under Home, reached from the People rail's See more, and opens each person in the shared collection, viewer and slideshow. The seven Milestone 11.5 carry-over tidy-ups are done.
+Milestone 12, People, is complete on `main` (see [ADR 0013](architecture/0013-people.md)); physical Q950R acceptance passed on 26 October 2026 (user confirmation), run together with Milestones 13-15. It adds a paged People browser under Home, reached from the People rail's See more, and opens each person in the shared collection, viewer and slideshow. The seven Milestone 11.5 carry-over tidy-ups are done.
 
-Milestone 13, Search v1, is complete on `main` (see [ADR 0014](architecture/0014-search.md)); physical Q950R acceptance is pending and parked with Milestone 12's. Search replaces the placeholder with a remote-first criteria panel (people, From and To dates), a people picker, and results in the shared collection, viewer and slideshow.
+Milestone 13, Search v1, is complete on `main` (see [ADR 0014](architecture/0014-search.md)); physical Q950R acceptance passed on 26 October 2026 (user confirmation). Search replaces the placeholder with a remote-first criteria panel (people, From and To dates), a people picker, and results in the shared collection, viewer and slideshow.
 
 Development tooling: desktop screenshot and video capture against a demo library ([docs/capture.md](capture.md), [ADR 0015](architecture/0015-desktop-back-key.md)). It is not a milestone and does not replace physical-TV acceptance.
 
-Milestone 14, Favorites and Library Views, is complete on `main` (see [ADR 0016](architecture/0016-library-views.md)); physical Q950R acceptance is pending and will be run with Milestones 12 and 13. Favourites, Videos (a new Home rail) and Recently added open as library views in the shared collection, viewer and slideshow.
+Milestone 14, Favorites and Library Views, is complete on `main` (see [ADR 0016](architecture/0016-library-views.md)); physical Q950R acceptance passed on 26 October 2026 (user confirmation). Favourites, Videos (a new Home rail) and Recently added open as library views in the shared collection, viewer and slideshow.
 
-Fixes from TV testing (picker face flicker, a sharper launcher icon, an earlier splash with Home revealed once its rails have loaded, and Home loading in screen order) are on `main`; their physical-TV checks are pending with Milestones 12-14.
+Fixes from TV testing (picker face flicker, a sharper launcher icon, an earlier splash with Home revealed once its rails have loaded, and Home loading in screen order) are on `main` (PR #2); their physical-TV checks passed on 26 October 2026 (user confirmation).
 
-Milestone 15, Personalisation and Navigation, is implemented on branch `claude/milestone-15-personalisation-navigation` (see [ADR 0017](architecture/0017-personalisation-and-navigation.md)); physical Q950R acceptance is pending. It adds date-rail hold acceleration and CH year jumps, Home rail visibility in Settings, a Newest first / Oldest first toggle on collections, and viewer face tags. The roadmap continues with Milestone 16 (Search v2), then Shared Content, Ambient / Screensaver Mode, Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 17-20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
+Milestone 15, Personalisation and Navigation, is complete on `main` (PR #3, see [ADR 0017](architecture/0017-personalisation-and-navigation.md)); physical Q950R acceptance passed on 26 October 2026 (user confirmation), including every item on PR #3's combined checklist. It adds date-rail hold acceleration and CH year jumps, Home rail visibility in Settings, a Newest first / Oldest first toggle on collections, viewer face tags, a standard background, and partners' photos in Photos and Recently Added.
+
+Milestone 16, Search v2, is implemented (see [ADR 0018](architecture/0018-search-v2.md)); physical Q950R acceptance is pending. Search adds an Asset type drop-down beside the dates (All, Photos, Live Photos, Videos), a place picker (country, region, city) and an album picker, all chosen with the remote. The roadmap continues after it with Shared Content, Ambient / Screensaver Mode, Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 17-20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
 
 ## Post-MVP Product Roadmap
 
@@ -318,7 +320,7 @@ Passed on the physical Q950R on 16 October 2026 (user confirmation). The three e
 
 Success criterion: the app is demonstrably correct on Tizen 5.0 / Chromium 63, compatibility regressions fail the build, network and lifecycle edge cases are handled, and the shared collection and viewer code is decomposed enough that People, Search and Favorites can be added without growing a single module further.
 
-### Milestone 12 - People - complete on main; physical-TV acceptance pending (parked, run with Milestone 13)
+### Milestone 12 - People - complete; physical-TV acceptance passed 26 October 2026
 
 Add first-class browsing by recognised person using Immich's existing facial recognition and People data.
 
@@ -356,7 +358,7 @@ Complete these at the start of Milestone 12, in small separate commits, before P
 
 Success criterion: a user can select a recognised person and browse that person's photos/videos comfortably on the TV.
 
-### Milestone 13 - Search v1 - complete on main; physical-TV acceptance pending (parked with Milestone 12)
+### Milestone 13 - Search v1 - complete; physical-TV acceptance passed 26 October 2026
 
 Add a dedicated Search experience designed for remote control rather than desktop form entry.
 
@@ -381,7 +383,7 @@ Support selecting/clearing people, setting/clearing date boundaries, clearing/re
 
 Success criterion: a user can find assets for a person, a date range, or both using only the Samsung Smart Remote.
 
-### Milestone 14 - Favorites and Library Views - implemented; physical-TV acceptance pending (with Milestones 12 and 13)
+### Milestone 14 - Favorites and Library Views - complete; physical-TV acceptance passed 26 October 2026
 
 Add first-class Favorites browsing and evaluate other simple, useful Immich-backed library views that can reuse the generic asset collection infrastructure, such as:
 
@@ -407,7 +409,7 @@ Success criterion: important common library subsets can be browsed without dupli
 
 ### Milestone 15 - Personalisation and Navigation
 
-**Status:** implemented (ADR 0017); TV acceptance pending.
+**Status:** complete on `main` (ADR 0017); physical-TV acceptance passed 26 October 2026.
 
 Four features chosen from TV use, each reusing the existing shared collection, viewer and Settings patterns. There are no on-screen hints for the date-rail acceleration or the channel keys (user decision).
 
@@ -441,11 +443,26 @@ Success criterion: everyday browsing is faster and more personal on the TV, with
 
 Extend Search v1 (ADR 0014) with three remote-friendly criteria. Each new criterion is one criteria field plus its helpers, one mapper line and one panel row; no query builder.
 
-- **Media type:** one row choosing All, Photos, Live Photos or Videos. "Photos" means all still images, including Live Photos (`type` IMAGE). "Live Photos" means `type` IMAGE with `isMotion: { eq: true }` (Immich matches assets whose `livePhotoVideoId` is set). "Videos" means `type` VIDEO.
+- **Media type:** an Asset type drop-down beside the dates, choosing All, Photos, Live Photos or Videos. "Photos" means all still images, including Live Photos (`type` IMAGE). "Live Photos" means `type` IMAGE with `isMotion: { eq: true }` (Immich matches assets whose `livePhotoVideoId` is set). "Videos" means `type` VIDEO.
 - **Location:** one place, chosen by drilling down from a country to an optional region and then an optional city, using values from `GET /search/suggestions?type=country|state|city` (asset read). Nothing is typed. The filter uses `country`, `state` and `city`.
 - **Albums:** a multi-select picker reusing the people-picker pattern. It matches photos in *any* chosen album (`albumIds.any`), and the panel says so in plain words.
 
-The API-key permission stays asset read only. Verify the API again at implementation time.
+**Status:** implemented on 26 October 2026 ([ADR 0018](architecture/0018-search-v2.md)); physical Q950R acceptance pending.
+
+**Permissions.** Media type and location need only asset read. The album filter also needs album read on each chosen album (`resolveSearchScopeV3` checks `Permission.AlbumRead`), which the app already uses for Albums, so there is no new permission.
+
+**Scope.** Search covers your own photos and those of partners whose "Show in timeline" is on, and location suggestions come from the same set (`getUserIdsToSearch`). A search that includes albums searches those albums' whole contents instead, including photos other members added to a shared album (`isFullyAlbumConfined`).
+
+**Decisions (October 2026).**
+
+- One place at a time. A city can be chosen within a country with no regions, as the suggestions API filters cities by country alone.
+- Albums match *any* chosen album, deliberately unlike People's *all*; at most 10, like People.
+- All criteria combine as AND.
+- Picking a place and picking albums are child screens of Search (`search-place`, `search-albums`), each returning focus to its row.
+- Live Photos sit inside Photos: Photos means every still image, Live Photos only those with motion.
+- Search v2 also removes partners' favourites from Favourites, to match Immich Web (ADR 0016 update).
+
+Verify the API again at implementation time.
 
 ### Milestone 17 - Shared Content
 

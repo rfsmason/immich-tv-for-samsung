@@ -269,7 +269,7 @@ describe("Home remote activation", () => {
   });
 
   it("opens the People browser from See more and restores the See more tile", async () => {
-    const people = [{ id: "person-0", isFavorite: false, name: "Rory" }];
+    const people = [{ id: "person-0", isFavorite: false, name: "Robin Example" }];
     const { documentRef, controller, onBrowsePeople } = await fixture({
       people: { hasMore: true, page: 1, people, total: 40 }
     });

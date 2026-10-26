@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { emptySearchCriteria } from "../../domain/search";
 import { AppError, toUserMessage } from "../../errors/app-error";
 import { createImmichClient } from "./client";
 
@@ -113,7 +114,7 @@ describe("Immich client", () => {
       jsonResponse({
         email: "me@example.com",
         id: "user-id",
-        name: "Rory"
+        name: "Robin Example"
       })
     );
     const client = createImmichClient({ fetchImpl, settings });
@@ -121,7 +122,7 @@ describe("Immich client", () => {
     await expect(client.getCurrentUser()).resolves.toEqual({
       email: "me@example.com",
       id: "user-id",
-      name: "Rory"
+      name: "Robin Example"
     });
 
     expect(fetchImpl).toHaveBeenCalledWith("http://immich.local:2283/api/users/me", {
@@ -395,72 +396,94 @@ describe("Immich client", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(25);
   });
 
-  it("requests bounded favorite assets for Home", async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(
-      jsonResponse({
-        assets: {
-          items: [],
-          nextCursor: null,
-          total: 0
-        }
-      })
-    );
-    const client = createImmichClient({ fetchImpl, settings });
-
-    await expect(client.getFavoriteAssets(18)).resolves.toEqual({
-      assets: [],
-      nextPageToken: null,
-      total: null
-    });
-
-    expect(fetchImpl).toHaveBeenCalledWith("http://immich.local:2283/api/search/metadata", {
-      body: JSON.stringify({
-        filter: {
-          isFavorite: {
-            eq: true
-          },
-          trashedAt: {
-            eq: null
-          },
-          visibility: {
-            eq: "timeline"
-          }
-        },
-        orderBy: {
-          direction: "desc",
-          field: "fileCreatedAt"
-        },
-        size: 18,
-        withExif: true
-      }),
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "x-api-key": "secret-key"
-      },
-      method: "POST"
-    });
-  });
-
-  it("pages Favourites with Immich's search cursor and no page-sized total", async () => {
+  it("reads the Favourites rail from your own timeline, without partners", async () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce(
-        jsonResponse({ assets: { items: [], nextCursor: null, nextPage: null, total: 120 } })
+        jsonResponse([
+          { count: 2, timeBucket: "2026-10-01" },
+          { count: 30, timeBucket: "2025-01-01" }
+        ])
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          city: [null, null],
+          country: [null, null],
+          duration: [null, null],
+          fileCreatedAt: ["2026-10-06T18:42:11.000Z", "2026-10-05T18:42:11.000Z"],
+          id: ["fav-1", "fav-2"],
+          isImage: [true, true],
+          livePhotoVideoId: [null, null]
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          city: [null],
+          country: [null],
+          duration: [null],
+          fileCreatedAt: ["2025-01-06T18:42:11.000Z"],
+          id: ["fav-3"],
+          isImage: [true],
+          livePhotoVideoId: [null]
+        })
       );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(
-      client.getFavoriteAssetsPage("newest-first", { cursor: "next-cursor", kind: "cursor" })
-    ).resolves.toEqual({ assets: [], nextPageToken: null, total: null });
+    const page = await client.getFavoriteAssets(3);
 
-    const body = JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body));
-    expect(body).toMatchObject({
-      cursor: "next-cursor",
-      filter: { isFavorite: { eq: true }, trashedAt: { eq: null }, visibility: { eq: "timeline" } },
-      orderBy: { direction: "desc", field: "fileCreatedAt" },
-      size: 120
+    expect(page.assets.map((item) => item.id)).toEqual(["fav-1", "fav-2", "fav-3"]);
+    // The total counts every favourite, so Home can offer See more.
+    expect(page.total).toBe(32);
+    const query =
+      "order=desc&orderBy=takenAt&visibility=timeline&isTrashed=false&isFavorite=true&withStacked=true";
+    expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual([
+      `http://immich.local:2283/api/timeline/buckets?${query}`,
+      `http://immich.local:2283/api/timeline/bucket?timeBucket=2026-10-01&${query}`,
+      `http://immich.local:2283/api/timeline/bucket?timeBucket=2025-01-01&${query}`
+    ]);
+  });
+
+  it("pages Favourites a month at a time in the chosen order, never with partners", async () => {
+    const bucket = (id: string) =>
+      jsonResponse({
+        city: [null],
+        country: [null],
+        duration: [null],
+        fileCreatedAt: ["2020-01-06T18:42:11.000Z"],
+        id: [id],
+        isImage: [true],
+        livePhotoVideoId: [null]
+      });
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse([
+          { count: 1, timeBucket: "2020-01-01" },
+          { count: 0, timeBucket: "2021-01-01" },
+          { count: 1, timeBucket: "2022-01-01" }
+        ])
+      )
+      .mockResolvedValueOnce(bucket("old"))
+      .mockResolvedValueOnce(bucket("newer"));
+    const client = createImmichClient({ fetchImpl, settings });
+
+    const first = await client.getFavoriteAssetsPage("oldest-first", { kind: "page", page: 1 });
+
+    expect(first.assets.map((item) => item.id)).toEqual(["old"]);
+    expect(first.nextPageToken).toEqual({
+      kind: "time-bucket",
+      later: [],
+      timeBucket: "2022-01-01"
     });
+    const second = await client.getFavoriteAssetsPage("oldest-first", first.nextPageToken);
+    expect(second).toMatchObject({ nextPageToken: null });
+    expect(second.assets.map((item) => item.id)).toEqual(["newer"]);
+
+    for (const [url] of fetchImpl.mock.calls) {
+      expect(String(url)).toContain("order=asc&orderBy=takenAt");
+      expect(String(url)).toContain("isFavorite=true");
+      expect(String(url)).not.toContain("withPartners");
+    }
   });
 
   it.each([
@@ -476,7 +499,7 @@ describe("Immich client", () => {
         );
       const client = createImmichClient({ fetchImpl, settings });
 
-      await client.getFavoriteAssetsPage("newest-first", token);
+      await client.getVideoAssetsPage("newest-first", token);
       await client.getPersonAssetsPage("person", "newest-first", token);
 
       for (const call of fetchImpl.mock.calls) {
@@ -518,17 +541,12 @@ describe("Immich client", () => {
 
     fetchImpl.mockClear();
     await client.getAlbumAssetsPage("album", "oldest-first", null);
-    await client.getFavoriteAssetsPage("oldest-first", page);
     await client.getVideoAssetsPage("oldest-first", page);
     await client.getPersonAssetsPage("person", "oldest-first", page);
-    await client.searchAssetsPage(
-      { people: [], takenFrom: null, takenTo: null },
-      "oldest-first",
-      page
-    );
+    await client.searchAssetsPage(emptySearchCriteria(), "oldest-first", page);
     await client.getTimelineAssetsPage("oldest-first", null);
 
-    expect(fetchImpl).toHaveBeenCalledTimes(6);
+    expect(fetchImpl).toHaveBeenCalledTimes(5);
     for (const call of fetchImpl.mock.calls) {
       expect(JSON.parse(String(call[1]?.body)).orderBy).toEqual({
         direction: "asc",
@@ -607,17 +625,18 @@ describe("Immich client", () => {
   it("keeps Home's rails newest first", async () => {
     const fetchImpl = vi
       .fn()
-      .mockImplementation(async () =>
-        jsonResponse({ assets: { items: [], nextCursor: null, total: 0 } })
+      .mockImplementation(async (url: string) =>
+        url.indexOf("/timeline/buckets") >= 0
+          ? jsonResponse([])
+          : jsonResponse({ assets: { items: [], nextCursor: null, total: 0 } })
       );
     const client = createImmichClient({ fetchImpl, settings });
 
     await client.getFavoriteAssets(18);
     await client.getVideoAssets(18);
 
-    for (const call of fetchImpl.mock.calls) {
-      expect(JSON.parse(String(call[1]?.body)).orderBy.direction).toBe("desc");
-    }
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toContain("/timeline/buckets?order=desc&");
+    expect(JSON.parse(String(fetchImpl.mock.calls[1]?.[1]?.body)).orderBy.direction).toBe("desc");
   });
 
   it("starts a Photos search in the structured shape and pages it by cursor", async () => {
@@ -675,7 +694,7 @@ describe("Immich client", () => {
       );
     const client = createImmichClient({ fetchImpl, settings });
 
-    await expect(client.getFavoriteAssetsPage("newest-first", null)).resolves.toMatchObject({
+    await expect(client.getVideoAssetsPage("newest-first", null)).resolves.toMatchObject({
       nextPageToken: null
     });
     await expect(client.getPersonAssetsPage("person", "newest-first", null)).resolves.toMatchObject(
@@ -929,7 +948,7 @@ describe("Immich client", () => {
         hasNextPage: true,
         hidden: 4,
         people: [
-          { id: "fav", isFavorite: true, isHidden: false, name: "Rory" },
+          { id: "fav", isFavorite: true, isHidden: false, name: "Robin Example" },
           { id: "named", name: "Alex" },
           { id: "unnamed", isFavorite: false, name: "  " }
         ],
@@ -942,7 +961,7 @@ describe("Immich client", () => {
       hasMore: true,
       page: 2,
       people: [
-        { id: "fav", isFavorite: true, name: "Rory" },
+        { id: "fav", isFavorite: true, name: "Robin Example" },
         { id: "named", isFavorite: false, name: "Alex" },
         { id: "unnamed", isFavorite: false, name: null }
       ],
@@ -1008,7 +1027,7 @@ describe("Immich client", () => {
             }
           ],
           data: {
-            personName: "Rory",
+            personName: "Robin Example",
             year: 2024
           },
           id: "memory-id",
@@ -1036,7 +1055,7 @@ describe("Immich client", () => {
         id: "memory-id",
         kind: "on-this-day",
         memoryAt: "2026-10-14T00:00:00.000Z",
-        personName: "Rory",
+        personName: "Robin Example",
         year: 2024
       }
     ]);

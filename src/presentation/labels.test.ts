@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { emptySearchCriteria } from "../domain/search";
 import { formatTimelineBucketLabel, formatTimelineBucketYear } from "./date-labels";
 import { formatDurationLabel } from "./duration-labels";
 import { formatMemoryContext, formatMemoryTitle } from "./memory-labels";
 import { formatPersonName } from "./person-labels";
-import { formatCalendarDate, formatSearchDate, formatSearchSummary } from "./search-labels";
+import {
+  formatCalendarDate,
+  formatSearchAlbumsSummary,
+  formatSearchDate,
+  formatSearchPlace,
+  formatSearchSummary
+} from "./search-labels";
 
 describe("timeline bucket labels", () => {
   it("formats a bucket's start date with its UTC weekday", () => {
@@ -27,7 +34,9 @@ describe("timeline bucket labels", () => {
 
 describe("Memory labels", () => {
   it("titles a Memory by person and year, or by year alone", () => {
-    expect(formatMemoryTitle({ personName: "Rory", year: 2024 })).toBe("Rory, 2024");
+    expect(formatMemoryTitle({ personName: "Robin Example", year: 2024 })).toBe(
+      "Robin Example, 2024"
+    );
     expect(formatMemoryTitle({ personName: null, year: 2020 })).toBe("Memory from 2020");
     expect(formatMemoryTitle({ personName: null, year: Number.NaN })).toBe("Memory");
   });
@@ -57,7 +66,7 @@ describe("duration labels", () => {
 
 describe("person labels", () => {
   it("shows an assigned name, or a neutral label for an unnamed person", () => {
-    expect(formatPersonName({ name: "Rory" })).toBe("Rory");
+    expect(formatPersonName({ name: "Robin Example" })).toBe("Robin Example");
     expect(formatPersonName({ name: null })).toBe("Unnamed person");
   });
 });
@@ -73,15 +82,18 @@ describe("search labels", () => {
   });
 
   it("summarises people and dates briefly", () => {
-    const empty = { people: [], takenFrom: null, takenTo: null };
+    const empty = emptySearchCriteria();
 
     expect(formatSearchSummary(empty)).toBe("Search");
-    expect(formatSearchSummary({ ...empty, people: [person("Rory")] })).toBe("Rory");
-    expect(formatSearchSummary({ ...empty, people: [person("Rory"), person(null)] })).toBe(
-      "Rory & Unnamed person"
+    expect(formatSearchSummary({ ...empty, people: [person("Robin Example")] })).toBe(
+      "Robin Example"
+    );
+    expect(formatSearchSummary({ ...empty, people: [person("Robin Example"), person(null)] })).toBe(
+      "Robin Example & Unnamed person"
     );
     expect(
       formatSearchSummary({
+        ...emptySearchCriteria(),
         people: [person("A"), person("B"), person("C")],
         takenFrom: date(2020, 1, 1),
         takenTo: date(2020, 12, 31)
@@ -89,5 +101,43 @@ describe("search labels", () => {
     ).toBe("3 people · 1 Jan 2020 – 31 Dec 2020");
     expect(formatSearchSummary({ ...empty, takenFrom: date(2020, 1, 1) })).toBe("From 1 Jan 2020");
     expect(formatSearchSummary({ ...empty, takenTo: date(2020, 1, 1) })).toBe("Until 1 Jan 2020");
+  });
+
+  it("summarises type, place and albums, falling back to counts when long", () => {
+    const empty = emptySearchCriteria();
+    const exampleton = { city: "Exampleton", country: "Exampleland", state: "Example County" };
+    const album = (name: string) => ({ id: name, name });
+
+    expect(formatSearchPlace(exampleton)).toBe("Exampleton, Example County, Exampleland");
+    expect(formatSearchPlace({ city: null, country: "Testonia", state: null })).toBe("Testonia");
+    expect(formatSearchAlbumsSummary([])).toBeNull();
+    expect(formatSearchAlbumsSummary([album("Summer Example")])).toBe("Summer Example");
+    expect(formatSearchAlbumsSummary([album("A"), album("B")])).toBe("2 albums");
+
+    expect(
+      formatSearchSummary({
+        ...empty,
+        mediaType: "videos",
+        people: [person("Sam Example")],
+        place: exampleton
+      })
+    ).toBe("Sam Example · Videos · Exampleton");
+    expect(
+      formatSearchSummary({
+        ...empty,
+        mediaType: "live-photos",
+        place: { city: null, country: "Testonia", state: null }
+      })
+    ).toBe("Live Photos · Testonia");
+    expect(
+      formatSearchSummary({
+        ...empty,
+        albums: [album("Summer Example"), album("Winter Example")],
+        mediaType: "photos",
+        people: [person("Robin Example"), person("Sam Example")],
+        takenFrom: date(2020, 1, 1),
+        takenTo: date(2020, 12, 31)
+      })
+    ).toBe("2 people · 2 albums · Photos · 1 Jan 2020 – 31 Dec 2020");
   });
 });

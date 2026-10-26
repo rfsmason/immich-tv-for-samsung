@@ -13,7 +13,9 @@ const person = (index: number): SearchPerson => ({
 let controller: SearchScreenController | null = null;
 
 function setup(options: { buckets?: TimelineBucket[] | Error } = {}) {
+  const onAddAlbums = vi.fn();
   const onAddPeople = vi.fn();
+  const onChoosePlace = vi.fn();
   const onReturnToShell = vi.fn();
   const onShowPhotos = vi.fn();
   const service = {
@@ -31,7 +33,9 @@ function setup(options: { buckets?: TimelineBucket[] | Error } = {}) {
   };
 
   controller = mountSearchScreen({
+    onAddAlbums,
     onAddPeople,
+    onChoosePlace,
     onReturnToShell,
     onShowPhotos,
     service,
@@ -54,7 +58,9 @@ function setup(options: { buckets?: TimelineBucket[] | Error } = {}) {
     control,
     focused,
     message,
+    onAddAlbums,
     onAddPeople,
+    onChoosePlace,
     onReturnToShell,
     onShowPhotos,
     open,
@@ -78,7 +84,7 @@ describe("Search criteria panel", () => {
     await f.open();
 
     expect(f.focused()).toBe("add-people");
-    expect(f.message()).toContain("Choose people, dates, or both");
+    expect(f.message()).toContain("Choose any filters, then Show photos");
     expect(f.control("show")?.getAttribute("aria-disabled")).toBe("true");
     expect(f.control("clear")).toBeNull();
     expect(byId("search-screen").querySelector("h1")).toBeNull();
@@ -96,9 +102,19 @@ describe("Search criteria panel", () => {
     pressKey(remoteKeys.right);
     expect(f.focused()).toBe("to");
     pressKey(remoteKeys.down);
-    expect(f.focused()).toBe("show");
+    expect(f.focused()).toBe("choose-place");
     pressKey(remoteKeys.up);
     expect(f.focused()).toBe("from");
+    pressKey(remoteKeys.down);
+    expect(f.focused()).toBe("choose-place");
+    pressKey(remoteKeys.down);
+    expect(f.focused()).toBe("add-albums");
+    pressKey(remoteKeys.down);
+    expect(f.focused()).toBe("show");
+    pressKey(remoteKeys.down);
+    expect(f.focused()).toBe("show");
+    pressKey(remoteKeys.up);
+    expect(f.focused()).toBe("add-albums");
     pressKey(remoteKeys.left);
     expect(f.onReturnToShell).toHaveBeenCalledTimes(1);
     pressKey(remoteKeys.back);
@@ -110,7 +126,8 @@ describe("Search criteria panel", () => {
     controller!.setPeople([person(1), person(2)]);
     await f.open();
 
-    expect(f.focused()).toBe("show");
+    // Returning from the picker lands on its row.
+    expect(f.focused()).toBe("add-people");
     expect(f.text("chip:person-1")).toContain("Person 1");
     expect(byId("search-panel").textContent).toContain("Photos with all of these people");
     await vi.waitFor(() =>
@@ -119,10 +136,6 @@ describe("Search criteria panel", () => {
       )
     );
 
-    pressKey(remoteKeys.up);
-    expect(f.focused()).toBe("from");
-    pressKey(remoteKeys.up);
-    expect(f.focused()).toBe("add-people");
     pressKey(remoteKeys.right);
     expect(f.focused()).toBe("chip:person-1");
     pressKey(remoteKeys.enter);
@@ -338,7 +351,8 @@ describe("Search criteria panel", () => {
 
     expect(f.message()).toBe("From must be on or before To.");
     expect(f.control("show")?.getAttribute("aria-disabled")).toBe("true");
-    pressKey(remoteKeys.down);
+    for (let row = 0; row < 3; row += 1) pressKey(remoteKeys.down);
+    pressKey(remoteKeys.right);
     expect(f.focused()).toBe("clear");
     pressKey(remoteKeys.left);
     pressKey(remoteKeys.enter);
@@ -351,10 +365,14 @@ describe("Search criteria panel", () => {
     controller!.setPeople([person(1)]);
     await f.open();
 
+    controller!.focusShowPhotos();
     pressKey(remoteKeys.enter);
 
     expect(f.onShowPhotos).toHaveBeenCalledWith({
+      albums: [],
+      mediaType: "all",
       people: [person(1)],
+      place: null,
       takenFrom: null,
       takenTo: null
     });
@@ -366,6 +384,7 @@ describe("Search criteria panel", () => {
     const f = setup();
     controller!.setPeople([person(1)]);
     await f.open();
+    controller!.focusShowPhotos();
     pressKey(remoteKeys.right);
     expect(f.focused()).toBe("clear");
     pressKey(remoteKeys.enter);
@@ -376,11 +395,11 @@ describe("Search criteria panel", () => {
     controller!.show();
     controller!.focusContent();
     // Set From as well, then Clear all.
-    pressKey(remoteKeys.up);
+    pressKey(remoteKeys.down);
     expect(f.focused()).toBe("from");
     pressKey(remoteKeys.enter);
     pressKey(remoteKeys.enter);
-    pressKey(remoteKeys.down);
+    for (let row = 0; row < 3; row += 1) pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);
     expect(f.focused()).toBe("clear");
     pressKey(remoteKeys.enter);
@@ -398,6 +417,126 @@ describe("Search criteria panel", () => {
     expect(f.text("from")).toContain("Any date");
   });
 
+  it("opens the Asset type list with OK, chooses with Up, Down and OK, and never traps focus", async () => {
+    const f = setup();
+    const list = () => byId("search-panel").querySelector(".dropdown-list");
+    await f.open();
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.right);
+    pressKey(remoteKeys.right);
+
+    // Arriving only focuses the field; OK opens the list on the current type.
+    expect(f.focused()).toBe("asset-type");
+    expect(f.text("asset-type")).toContain("All");
+    expect(list()).toBeNull();
+    pressKey(remoteKeys.enter);
+    expect(f.focused()).toBe("asset-type:all");
+    expect(f.control("asset-type")?.getAttribute("aria-expanded")).toBe("true");
+    expect(f.control("asset-type:all")?.getAttribute("aria-selected")).toBe("true");
+    expect(f.text("asset-type:all")).toBe("✓All");
+
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.down);
+    expect(f.focused()).toBe("asset-type:live-photos");
+    pressKey(remoteKeys.enter);
+    expect(list()).toBeNull();
+    expect(f.focused()).toBe("asset-type");
+    expect(f.text("asset-type")).toContain("Live Photos");
+    expect(controller!.criteria().mediaType).toBe("live-photos");
+    expect(f.control("show")?.hasAttribute("aria-disabled")).toBe(false);
+
+    // Closed, arrows move on and coming back does not open it.
+    pressKey(remoteKeys.left);
+    expect(f.focused()).toBe("to");
+    pressKey(remoteKeys.right);
+    expect(f.focused()).toBe("asset-type");
+    expect(list()).toBeNull();
+
+    // Back and Left close it unchanged.
+    pressKey(remoteKeys.enter);
+    expect(f.focused()).toBe("asset-type:live-photos");
+    pressKey(remoteKeys.back);
+    expect(f.focused()).toBe("asset-type");
+    expect(controller!.criteria().mediaType).toBe("live-photos");
+    pressKey(remoteKeys.enter);
+    pressKey(remoteKeys.left);
+    expect(list()).toBeNull();
+    expect(f.focused()).toBe("asset-type");
+
+    // Past either end closes the list unchanged.
+    pressKey(remoteKeys.enter);
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.down);
+    expect(list()).toBeNull();
+    expect(f.focused()).toBe("asset-type");
+    pressKey(remoteKeys.down);
+    expect(f.focused()).toBe("choose-place");
+
+    // All clears the criterion.
+    pressKey(remoteKeys.up);
+    pressKey(remoteKeys.right);
+    pressKey(remoteKeys.right);
+    pressKey(remoteKeys.enter);
+    for (let step = 0; step < 2; step += 1) pressKey(remoteKeys.up);
+    expect(f.focused()).toBe("asset-type:all");
+    pressKey(remoteKeys.enter);
+    expect(controller!.criteria().mediaType).toBe("all");
+    expect(f.control("clear")).toBeNull();
+  });
+
+  it("opens the place picker and shows a chosen place as a chip that OK removes", async () => {
+    const f = setup();
+    const place = { city: "Exampleton", country: "Exampleland", state: "Example County" };
+    await f.open();
+    for (let row = 0; row < 2; row += 1) pressKey(remoteKeys.down);
+    expect(f.focused()).toBe("choose-place");
+    pressKey(remoteKeys.enter);
+    expect(f.onChoosePlace).toHaveBeenCalledWith(null);
+
+    controller!.setPlace(place);
+    controller!.show();
+    controller!.focusContent();
+    expect(f.focused()).toBe("place-chip");
+    expect(f.text("place-chip")).toContain("Exampleton, Example County, Exampleland");
+
+    // Back from the picker keeps the place as it was.
+    controller!.setPlace(null);
+    controller!.show();
+    controller!.focusContent();
+    expect(controller!.criteria().place).toEqual(place);
+
+    pressKey(remoteKeys.enter);
+    expect(f.onChoosePlace).toHaveBeenCalledTimes(1);
+    expect(controller!.criteria().place).toBeNull();
+    expect(f.focused()).toBe("choose-place");
+  });
+
+  it("shows chosen albums as chips with the any-album rule, and +N more reopens the picker", async () => {
+    const f = setup();
+    const albums = [1, 2, 3, 4, 5, 6].map((index) => ({
+      id: `album-${index}`,
+      name: `Album ${index}`
+    }));
+    controller!.setAlbums(albums);
+    await f.open();
+
+    expect(f.focused()).toBe("add-albums");
+    expect(byId("search-panel").querySelectorAll(".search-chip-text")).toHaveLength(4);
+    expect(f.text("more-albums")).toBe("+2 more");
+    expect(byId("search-panel").textContent).toContain("Photos in any of these albums");
+
+    pressKey(remoteKeys.right);
+    expect(f.focused()).toBe("album:album-1");
+    pressKey(remoteKeys.enter);
+    expect(f.focused()).toBe("album:album-2");
+    expect(controller!.criteria().albums).toHaveLength(5);
+
+    for (let step = 0; step < 4; step += 1) pressKey(remoteKeys.right);
+    expect(f.focused()).toBe("more-albums");
+    pressKey(remoteKeys.enter);
+    expect(f.onAddAlbums).toHaveBeenCalledWith(albums.slice(1));
+  });
+
   it("keeps criteria across leaving and returning, and forgets them on reset", async () => {
     const f = setup();
     controller!.setPeople([person(1)]);
@@ -408,7 +547,7 @@ describe("Search criteria panel", () => {
     controller!.show();
     controller!.focusContent();
     expect(f.control("chip:person-1")).not.toBeNull();
-    expect(f.focused()).toBe("show");
+    expect(f.focused()).toBe("add-people");
 
     controller!.reset();
     controller!.show();

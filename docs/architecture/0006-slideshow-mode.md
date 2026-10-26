@@ -12,7 +12,7 @@ The album viewer can contain images, videos, and Live Photos. Automatically star
 
 Slideshow mode is implemented inside the full-screen viewer state and reuses the existing viewer still-image window. It does not add another media cache and does not request original assets.
 
-The default slideshow interval is eight seconds and is configurable from settings using a small remote-friendly option set.
+The default slideshow interval is eight seconds and is configurable from settings using a small remote-friendly option set. (Update, Milestone 16: the option set is now the app's shared drop-down rather than a native `<select>`; see ADR 0018.)
 
 Slideshow advances through the current logical album asset order. Videos and Live Photos are included as still poster/preview assets, but their motion playback remains explicit and manual. Starting slideshow stops any active viewer video or Live Photo playback.
 

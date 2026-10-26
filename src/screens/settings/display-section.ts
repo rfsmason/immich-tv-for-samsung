@@ -1,4 +1,10 @@
+import { mountSettingsDropdown } from "./settings-dropdown";
 import { requireElement, type SettingsSection } from "./settings-section";
+
+const slideshowIntervalOptions = [5, 8, 12, 20].map((seconds) => ({
+  label: `${seconds} seconds`,
+  value: String(seconds)
+}));
 
 // Settings > Display: viewer overlays, video autoplay and the slideshow
 // interval.
@@ -7,13 +13,15 @@ export function createDisplaySection(documentRef: Document): SettingsSection {
   const showViewerDateInput = requireElement<HTMLInputElement>(documentRef, "show-viewer-date");
   const showViewerExifInput = requireElement<HTMLInputElement>(documentRef, "show-viewer-exif");
   const showViewerTimeInput = requireElement<HTMLInputElement>(documentRef, "show-viewer-time");
-  const slideshowIntervalInput = requireElement<HTMLSelectElement>(
-    documentRef,
-    "slideshow-interval"
-  );
+  const slideshowInterval = mountSettingsDropdown({
+    control: requireElement<HTMLButtonElement>(documentRef, "slideshow-interval"),
+    name: "Slideshow interval",
+    options: slideshowIntervalOptions
+  });
 
   return {
     button: requireElement<HTMLButtonElement>(documentRef, "settings-section-display"),
+    dropdowns: [slideshowInterval],
     id: "display",
     panel: requireElement(documentRef, "settings-panel-display"),
     firstControl: () => autoplayVideosInput,
@@ -23,7 +31,7 @@ export function createDisplaySection(documentRef: Document): SettingsSection {
         showViewerDate: showViewerDateInput.checked,
         showViewerExif: showViewerExifInput.checked,
         showViewerTime: showViewerTimeInput.checked,
-        slideshowIntervalSeconds: Number(slideshowIntervalInput.value)
+        slideshowIntervalSeconds: Number(slideshowInterval.value())
       };
     },
     showAppSettings(settings) {
@@ -31,7 +39,7 @@ export function createDisplaySection(documentRef: Document): SettingsSection {
       showViewerDateInput.checked = settings.showViewerDate;
       showViewerExifInput.checked = settings.showViewerExif;
       showViewerTimeInput.checked = settings.showViewerTime;
-      slideshowIntervalInput.value = String(settings.slideshowIntervalSeconds);
+      slideshowInterval.setValue(String(settings.slideshowIntervalSeconds));
     },
     snapshot() {
       return {
@@ -39,7 +47,7 @@ export function createDisplaySection(documentRef: Document): SettingsSection {
         showViewerDate: showViewerDateInput.checked,
         showViewerExif: showViewerExifInput.checked,
         showViewerTime: showViewerTimeInput.checked,
-        slideshowIntervalSeconds: slideshowIntervalInput.value
+        slideshowIntervalSeconds: slideshowInterval.value()
       };
     }
   };

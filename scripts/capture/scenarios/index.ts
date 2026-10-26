@@ -11,6 +11,7 @@ import { videos } from "./videos";
 import { recentlyAdded } from "./recently-added";
 import { search } from "./search";
 import { searchAlbumPicker, searchPlacePicker, searchV2Panel } from "./search-v2";
+import { ambientClock, settingsAmbient } from "./ambient";
 import { settingsHome } from "./settings-home";
 import { viewerFaces } from "./viewer-faces";
 import { tour } from "./tour";
@@ -38,6 +39,8 @@ export const scenarios = [
   searchPlacePicker,
   searchAlbumPicker,
   settingsHome,
+  settingsAmbient,
+  ambientClock,
   viewerFaces,
   tour,
   peopleTour,

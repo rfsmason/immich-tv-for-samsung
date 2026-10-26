@@ -2,6 +2,7 @@ import type { Page } from "playwright";
 import { describe, expect, it, vi } from "vitest";
 import type { Remote } from "../remote";
 import { enterTimelineRail, photosTour } from "./photos-tour";
+import { ambientClock, settingsAmbient } from "./ambient";
 import { searchTour } from "./search-tour";
 import { searchAlbumPicker, searchPlacePicker, searchV2Panel } from "./search-v2";
 import { settingsTour } from "./settings-tour";
@@ -133,6 +134,31 @@ describe("Search v2 stills", () => {
       focus: '[data-search-control="show"]'
     });
     expect(context.capture.still).toHaveBeenCalledWith("search-v2-panel");
+  });
+});
+
+describe("ambient mode stills", () => {
+  it("reaches Settings → Ambient by remote and captures it with the fields masked", async () => {
+    const { context, actions, addStyleTag } = fixture();
+    await settingsAmbient.run(context);
+
+    expect(addStyleTag).toHaveBeenCalled();
+    expect(actions[actions.length - 1]).toEqual({ key: "right", focus: "#ambient-source" });
+    expect(context.capture.still).toHaveBeenCalledWith("settings-ambient");
+  });
+
+  it("turns photo details on, starts ambient mode, captures it and returns with a key", async () => {
+    const { context, actions } = fixture();
+    await ambientClock.run(context);
+    const index = (key: string, focus: string) =>
+      actions.findIndex((action) => action.key === key && action.focus === focus);
+
+    expect(index("ok", "#ambient-show-details:checked")).toBeGreaterThan(-1);
+    expect(index("ok", "#ambient-screen")).toBeGreaterThan(
+      index("ok", "#ambient-show-details:checked")
+    );
+    expect(context.capture.still).toHaveBeenCalledWith("ambient-clock");
+    expect(actions[actions.length - 1]).toEqual({ key: "back", focus: "#ambient-start" });
   });
 });
 

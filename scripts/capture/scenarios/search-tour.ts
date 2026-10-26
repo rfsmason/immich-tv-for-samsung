@@ -1,6 +1,11 @@
-import { asset, destination, nav, type Scenario } from "./shared";
-
-const control = (name: string): string => `[data-search-control="${name}"]`;
+import {
+  asset,
+  destination,
+  nav,
+  searchControl as control,
+  toShowPhotos,
+  type Scenario
+} from "./shared";
 
 export const searchTour: Scenario = {
   name: "search-tour",
@@ -10,8 +15,8 @@ export const searchTour: Scenario = {
     await remote.right(control("add-people"));
     await remote.ok('#search-people-grid [data-person-index="0"]');
     await remote.ok('#search-people-grid [aria-pressed="true"]');
-    await remote.back(control("show"));
-    await remote.up(control("from"));
+    await remote.back(control("add-people")); // Back from a picker lands on its row.
+    await remote.down(control("from"));
     await remote.ok(control("stepper:day"));
     await guide?.highlight(".search-stepper", "Set the start date with the remote");
     await remote.hold();
@@ -27,7 +32,7 @@ export const searchTour: Scenario = {
     await remote.left(control("stepper:day"));
     await remote.ok(control("to")); // To defaults to the pinned capture date.
     await remote.left(control("from"));
-    await remote.down(control("show"));
+    await toShowPhotos(remote, "from");
     await guide?.highlight(control("show"), "Find this person within the date range");
     await remote.hold();
     await remote.ok(asset);

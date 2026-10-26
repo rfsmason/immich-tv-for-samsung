@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Remote } from "../remote";
 import { enterTimelineRail, photosTour } from "./photos-tour";
 import { searchTour } from "./search-tour";
+import { searchAlbumPicker, searchPlacePicker, searchV2Panel } from "./search-v2";
 import { settingsTour } from "./settings-tour";
 import type { ScenarioContext } from "./shared";
 
@@ -100,6 +101,38 @@ describe("Search person and date range tour", () => {
     expect(results).toBeGreaterThan(to);
     expect(actions).toContainEqual({ key: "back", focus: '[data-search-control="show"]' });
     expect(actions[actions.length - 1]).toEqual({ key: "up", focus: '[data-destination="home"]' });
+  });
+});
+
+describe("Search v2 stills", () => {
+  it("reaches each picker by remote and captures it", async () => {
+    for (const [scenario, still] of [
+      [searchPlacePicker, "search-place-picker"],
+      [searchAlbumPicker, "search-album-picker"]
+    ] as const) {
+      const { context, actions } = fixture();
+      await scenario.run(context);
+      expect(actions[0]).toEqual({ key: "down", focus: '[data-destination="photos"]' });
+      expect(context.capture.still).toHaveBeenCalledWith(still);
+    }
+  });
+
+  it("chooses a person, a type, a place and an album, and ends on Show photos", async () => {
+    const { context, actions } = fixture();
+    await searchV2Panel.run(context);
+    const okOn = (focus: string) =>
+      actions.findIndex((action) => action.key === "ok" && action.focus === focus);
+
+    expect(okOn('[data-search-control="type:photos"]')).toBeGreaterThan(-1);
+    expect(okOn('[data-search-control="place-chip"]')).toBeGreaterThan(
+      okOn('[data-search-control="type:photos"]')
+    );
+    expect(actions).toContainEqual({ key: "back", focus: '[data-search-control="add-albums"]' });
+    expect(actions[actions.length - 1]).toEqual({
+      key: "down",
+      focus: '[data-search-control="show"]'
+    });
+    expect(context.capture.still).toHaveBeenCalledWith("search-v2-panel");
   });
 });
 

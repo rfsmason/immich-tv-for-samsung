@@ -208,6 +208,10 @@ export function isMemoryResponse(body: unknown): body is MemoryResponseDto {
   );
 }
 
+export function isAssetResponseList(body: unknown): body is AssetResponseDto[] {
+  return Array.isArray(body) && body.every(isAssetResponse);
+}
+
 export function isAssetResponse(body: unknown): body is AssetResponseDto {
   if (!body || typeof body !== "object") {
     return false;

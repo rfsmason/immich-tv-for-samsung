@@ -12,6 +12,7 @@ import type {
 import type { ConnectionSettings } from "../domain/connection";
 import type { AssetFace } from "../domain/face";
 import type { Memory, PeoplePage, Person } from "../domain/home";
+import type { AmbientRandomQuery } from "../domain/ambient";
 import type { SearchCriteria, SearchPlaceLevel, SearchPlaceParent } from "../domain/search";
 import { isAppError } from "../errors/app-error";
 import type { Logger } from "../logging/logger";
@@ -60,6 +61,9 @@ export type AlbumService = {
     page: AlbumAssetPageToken | null
   ): Promise<AlbumAssetPage>;
   loadPlaceSuggestions(level: SearchPlaceLevel, parent: SearchPlaceParent): Promise<string[]>;
+  loadRandomAssets(query: AmbientRandomQuery, size: number): Promise<AlbumAsset[]>;
+  loadFavoriteBuckets(): Promise<TimelineBucket[]>;
+  loadFavoriteBucketAssets(timeBucket: string): Promise<AlbumAsset[]>;
   loadRecentlyAddedAssets(limit: number): Promise<AlbumAssetPage>;
   loadRecentlyAddedAssetsPage(page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
   loadAlbumDetail(albumId: string): Promise<AlbumDetail>;
@@ -180,6 +184,15 @@ export function createAlbumService(options: AlbumServiceOptions): AlbumService {
     },
     loadPlaceSuggestions(level, parent) {
       return client().getPlaceSuggestions(level, parent);
+    },
+    loadRandomAssets(query, size) {
+      return client().getRandomAssets(query, size);
+    },
+    loadFavoriteBuckets() {
+      return client().getFavoriteBuckets();
+    },
+    loadFavoriteBucketAssets(timeBucket) {
+      return client().getFavoriteBucketAssets(timeBucket);
     },
     async loadPersonThumbnailUrl(person) {
       const settings = requireSettings(options.store.load());

@@ -30,6 +30,14 @@ export const ambientStopOptions = [0, 1, 2, 4];
 // Recent means taken in the last this many days.
 export const ambientRecentDays = 90;
 
+// One draw of random assets: within an album or not, photos alone or with
+// videos, and taken on or after a moment.
+export type AmbientRandomQuery = {
+  albumId: string | null;
+  includeVideos: boolean;
+  takenFrom: Date | null;
+};
+
 export const defaultAmbientSettings: AmbientSettings = {
   album: null,
   includeVideos: false,

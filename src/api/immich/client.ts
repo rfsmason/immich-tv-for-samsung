@@ -7,6 +7,7 @@ import type {
   SortOrder,
   TimelineBucket
 } from "../../domain/album";
+import type { AmbientRandomQuery } from "../../domain/ambient";
 import type { ConnectionSettings, CurrentUser, ServerVersion } from "../../domain/connection";
 import type { AssetFace } from "../../domain/face";
 import { localMemoryDate, type Memory, type PeoplePage } from "../../domain/home";
@@ -21,7 +22,11 @@ import {
   type ImmichHttp,
   type RequestTimeouts
 } from "./http";
-import { buildPlaceSuggestionQuery, buildSearchCriteriaFilter } from "./search-filter";
+import {
+  buildPlaceSuggestionQuery,
+  buildRandomAssetFilter,
+  buildSearchCriteriaFilter
+} from "./search-filter";
 import type {
   AlbumDetailResponseDto,
   AlbumResponseDto,
@@ -50,6 +55,7 @@ import {
   isAlbumResponseList,
   isAssetFaceResponseList,
   isAssetResponse,
+  isAssetResponseList,
   isCurrentUser,
   isMemoryResponseList,
   isPeopleResponse,
@@ -104,6 +110,11 @@ export type ImmichClient = {
   // bounded (`maxPlaceSuggestions`).
   getPlaceSuggestions(level: SearchPlaceLevel, parent: SearchPlaceParent): Promise<string[]>;
   getHistoryAsset(assetId: string): Promise<AlbumAsset | null>;
+  // Ambient mode's sources (ADR 0019): a random draw, and your own
+  // favourites one timeline bucket at a time.
+  getRandomAssets(query: AmbientRandomQuery, size: number): Promise<AlbumAsset[]>;
+  getFavoriteBuckets(): Promise<TimelineBucket[]>;
+  getFavoriteBucketAssets(timeBucket: string): Promise<AlbumAsset[]>;
   getRecentlyAddedAssets(limit: number): Promise<AlbumAssetPage>;
   // Recently added assets one upload-date bucket at a time, newest first.
   getRecentlyAddedAssetsPage(page: AlbumAssetPageToken | null): Promise<AlbumAssetPage>;
@@ -334,6 +345,39 @@ export function createImmichClient(options: CreateImmichClientOptions): ImmichCl
       });
 
       return mapPlaceSuggestions(values);
+    },
+    async getRandomAssets(query, size) {
+      const assets = await http.json<AssetResponseDto[]>({
+        auth: true,
+        body: { filter: buildRandomAssetFilter(query), size, withExif: true },
+        // An album the key may not read is refused before the draw.
+        feature: query.albumId ? "Albums" : "Ambient mode",
+        method: "POST",
+        path: "/search/random",
+        validate: isAssetResponseList
+      });
+
+      return assets.map(mapAsset);
+    },
+    async getFavoriteBuckets() {
+      const buckets = await http.json<TimelineBucketResponseDto[]>({
+        auth: true,
+        feature: "Favourites",
+        path: `/timeline/buckets?${favoritesQuery("newest-first")}`,
+        validate: isTimelineBucketResponseList
+      });
+
+      return buckets.map(mapTimelineBucket).filter((bucket) => bucket.assetCount > 0);
+    },
+    async getFavoriteBucketAssets(timeBucket) {
+      const response = await http.json<TimelineBucketAssetsResponseDto>({
+        auth: true,
+        feature: "Favourites",
+        path: `/timeline/bucket?timeBucket=${encodeURIComponent(timeBucket)}&${favoritesQuery("newest-first")}`,
+        validate: isTimelineBucketAssetsResponse
+      });
+
+      return mapTimelineBucketAssets(response);
     },
     searchAssetsPage(criteria, order, page) {
       return getPagedFilteredAssetPage({

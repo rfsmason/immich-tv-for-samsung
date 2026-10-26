@@ -3,6 +3,7 @@ import type { Memory, Person } from "../domain/home";
 import type { SearchAlbum, SearchCriteria, SearchPerson, SearchPlace } from "../domain/search";
 import type { Logger } from "../logging/logger";
 import type { AppLifecycle } from "../platform/tizen/lifecycle";
+import type { PassiveViewing } from "../platform/tizen/screensaver";
 import { mountAlbumDetailScreen, type CollectionFeed } from "../screens/album-detail-screen";
 import { isLibraryView, type LibraryView } from "../domain/library";
 import { formatLibraryViewTitle } from "../presentation/library-labels";
@@ -56,6 +57,8 @@ export type ApplicationDependencies = {
   documentRef?: Document;
   lifecycle: AppLifecycle;
   logger: Logger;
+  // The TV's own screensaver, held off during passive viewing (ADR 0019).
+  passiveViewing: PassiveViewing;
   settingsStore: AppSettingsStore;
   viewingHistory: ViewingHistoryService;
 };
@@ -247,6 +250,7 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     onViewerOpened() {
       shell.collapseRail();
     },
+    passiveViewing: dependencies.passiveViewing,
     service: albumService,
     settingsStore
   });

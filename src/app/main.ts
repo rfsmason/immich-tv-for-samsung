@@ -1,6 +1,7 @@
 import { consoleLogger } from "../logging/logger";
 import { registerOptionalRemoteKeys } from "../platform/tizen/keys";
 import { createAppLifecycle } from "../platform/tizen/lifecycle";
+import { createPassiveViewing } from "../platform/tizen/screensaver";
 import { createLocalAppSettingsStore } from "../storage/app-settings-store";
 import { createLocalConnectionSettingsStore } from "../storage/connection-settings-store";
 import { createLocalViewingHistoryStore } from "../storage/viewing-history-store";
@@ -27,6 +28,7 @@ afterNextPaint(() => {
     connectionService: createConnectionService({ fetchImpl, logger: consoleLogger, store }),
     lifecycle,
     logger: consoleLogger,
+    passiveViewing: createPassiveViewing({ logger: consoleLogger }),
     settingsStore: createLocalAppSettingsStore(window.localStorage),
     viewingHistory: createViewingHistoryService({
       connections: store,

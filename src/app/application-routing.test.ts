@@ -11,6 +11,7 @@ import type {
 import { defaultAppSettings } from "../domain/app-settings";
 import type { Memory, Person } from "../domain/home";
 import { remoteKeys } from "../platform/tizen/keys";
+import { createPassiveViewing } from "../platform/tizen/screensaver";
 import { byId, loadAppMarkup, pressKey } from "../test/app-markup";
 import { createFakeLifecycle, type FakeLifecycle } from "../test/fake-lifecycle";
 import type { AlbumService } from "./album-service";
@@ -58,6 +59,8 @@ const settings = { apiKey: "test-api-key", serverUrl: "https://immich.example" }
 
 let application: Application | null = null;
 let lifecycle: FakeLifecycle;
+// The TV screensaver states the app has sent: 0 off, 1 on.
+let setScreenSaver: ReturnType<typeof vi.fn<(state: number) => void>>;
 
 function createServices(
   options: {
@@ -151,9 +154,14 @@ async function start(
   };
 
   lifecycle = createFakeLifecycle();
+  setScreenSaver = vi.fn<(state: number) => void>();
   application = composeApplication({
     ...services,
     lifecycle,
+    passiveViewing: createPassiveViewing({
+      logger: services.logger,
+      windowRef: { webapis: { appcommon: { setScreenSaver } } }
+    }),
     settingsStore: { load: () => defaultAppSettings, save: (value) => value },
     viewingHistory
   });
@@ -1032,10 +1040,15 @@ describe("application routing", () => {
     pressKey(remoteKeys.mediaPlayPause);
     expect(byId("asset-viewer-slideshow").getAttribute("data-slideshow-state")).toBe("playing");
 
+    expect(setScreenSaver.mock.calls.map(([state]) => state)).toEqual([0]);
+
     lifecycle.setVisibility("hidden");
     expect(byId("asset-viewer-slideshow").getAttribute("data-slideshow-state")).toBe("paused");
+    // Nothing is passively playing, so the TV's screensaver may come back.
+    expect(setScreenSaver.mock.calls.map(([state]) => state)).toEqual([0, 1]);
     lifecycle.setVisibility("visible");
     expect(byId("asset-viewer-slideshow").getAttribute("data-slideshow-state")).toBe("paused");
+    expect(setScreenSaver.mock.calls.map(([state]) => state)).toEqual([0, 1]);
   });
 
   it("returns Home and refreshes after Settings are saved", async () => {

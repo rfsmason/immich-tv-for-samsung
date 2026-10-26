@@ -3,6 +3,7 @@ import type { AlbumAsset } from "../../domain/album";
 import type { AppSettings } from "../../domain/app-settings";
 import type { ViewingSource } from "../../domain/viewing-history";
 import { getKeyCode, isMediaPlayPauseKey, remoteKeys } from "../../platform/tizen/keys";
+import { noPassiveViewing, type PassiveViewing } from "../../platform/tizen/screensaver";
 import type { AppSettingsStore } from "../../storage/app-settings-store";
 import {
   createAssetViewerImageState,
@@ -48,6 +49,9 @@ type AssetViewerOptions = {
   collection: ViewerCollection;
   elements: ViewerElements;
   onAssetViewed?(asset: AlbumAsset, source: ViewingSource): void;
+  // Told while a slideshow runs or a video or Live Photo plays, so the TV's
+  // own screensaver stays away during passive viewing (ADR 0019).
+  passiveViewing?: PassiveViewing;
   service: ViewerService;
   settingsStore: AppSettingsStore;
 };
@@ -79,10 +83,13 @@ type ViewerContext = AssetViewerOptions & {
   faces: ViewerFaces;
   isOpen(): boolean;
   state: ViewerState;
+  // Re-reads whether anything is passively playing and tells the TV.
+  syncPassiveViewing(): void;
 };
 
 export function createAssetViewer(options: AssetViewerOptions): AssetViewerController {
   const { collection, elements } = options;
+  const passiveHold = (options.passiveViewing || noPassiveViewing).createHold();
   const context: ViewerContext = {
     ...options,
     faces: createViewerFaces({
@@ -111,6 +118,14 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       viewerPlayFocusPending: false,
       viewerPlayback: createAssetViewerPlaybackState(),
       viewerSlideshow: { playing: false, timerId: null }
+    },
+    syncPassiveViewing() {
+      const video = elements.assetViewerVideo;
+
+      passiveHold.set(
+        collection.isOpen() &&
+          (state.viewerSlideshow.playing || (!video.hidden && !video.paused && !video.ended))
+      );
     }
   };
   const { state } = context;
@@ -167,6 +182,7 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
   const handleViewerPlaybackEnded = () => {
     handleViewerPlaybackEndedEvent(context);
     context.faces.sync();
+    context.syncPassiveViewing();
   };
   const handleViewerPlaybackProgress = () => {
     updateViewerPlayerProgress(elements);
@@ -181,6 +197,10 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
 
     updateViewerPlayerProgress(elements);
     context.faces.sync();
+    context.syncPassiveViewing();
+  };
+  const handlePassiveViewingChange = () => {
+    context.syncPassiveViewing();
   };
   const handleViewerPlaybackWaiting = () => {
     setViewerPlayerStatus(elements, "Buffering");
@@ -205,6 +225,7 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
     [elements.assetViewerFaces, "pointerdown", stopViewerPlayPointer],
     [elements.assetViewerImage, "load", syncViewerFaces],
     [elements.assetViewerVideo, "durationchange", handleViewerPlaybackProgress],
+    [elements.assetViewerVideo, "emptied", handlePassiveViewingChange],
     [elements.assetViewerVideo, "ended", handleViewerPlaybackEnded],
     [elements.assetViewerVideo, "loadedmetadata", handleViewerPlaybackProgress],
     [elements.assetViewerVideo, "pause", handleViewerPlaybackStateChange],
@@ -230,8 +251,10 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       elements.assetPlaceholder.hidden = true;
       resetViewerPlayback(elements, state);
       resetViewerImages(context);
+      passiveHold.set(false);
     },
     destroy() {
+      passiveHold.set(false);
       listeners.forEach(([target, type, listener, capture]) =>
         target.removeEventListener(type, listener, capture)
       );
@@ -277,6 +300,7 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
     },
     suspend() {
       suspendViewerPlayback(context);
+      context.syncPassiveViewing();
     }
   };
 }
@@ -670,6 +694,7 @@ function startViewerSlideshow(context: ViewerContext): void {
   elements.assetViewerSlideshow.focus();
   renderViewerSlideshowControl(context);
   scheduleViewerSlideshow(context);
+  context.syncPassiveViewing();
 }
 
 function pauseViewerSlideshow(context: ViewerContext): void {
@@ -683,6 +708,7 @@ function pauseViewerSlideshow(context: ViewerContext): void {
   elements.assetViewerSlideshowStatus.textContent = "Slideshow paused";
   stopViewerSlideshowProgress(elements);
   context.faces.sync();
+  context.syncPassiveViewing();
 }
 
 function stopViewerSlideshow(context: ViewerContext): void {

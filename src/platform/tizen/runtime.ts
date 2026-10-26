@@ -25,8 +25,21 @@ export type TizenRuntime = {
   tvinputdevice?: TizenTvInputDevice;
 };
 
+// Samsung Product API AppCommon (since product API 2.3, TV; no privilege
+// listed), from $WEBAPIS/webapis/webapis.js:
+// webapis.appcommon.setScreenSaver(state, onsuccess?, onerror?)
+export type SamsungAppCommon = {
+  AppCommonScreenSaverState?: { SCREEN_SAVER_OFF: number; SCREEN_SAVER_ON: number };
+  setScreenSaver(state: number, onsuccess?: () => void, onerror?: (error: unknown) => void): void;
+};
+
+export type SamsungWebApis = {
+  appcommon?: SamsungAppCommon;
+};
+
 declare global {
   interface Window {
     tizen?: TizenRuntime;
+    webapis?: SamsungWebApis;
   }
 }

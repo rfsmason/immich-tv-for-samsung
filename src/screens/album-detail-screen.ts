@@ -20,6 +20,7 @@ import {
   invalidateAsyncGeneration,
   isCurrentGeneration
 } from "./async-generation";
+import type { PassiveViewing } from "../platform/tizen/screensaver";
 import { createAssetViewer } from "./collection/asset-viewer";
 import {
   createCollectionGrid,
@@ -74,6 +75,8 @@ type AlbumDetailScreenOptions = {
   loadFeedPage(feed: CollectionFeed, page: AlbumAssetPageToken): Promise<AlbumAssetPage>;
   // The date rail's clock and frame scheduling; tests replace them.
   now?: () => number;
+  // The TV screensaver control the viewer holds during passive viewing.
+  passiveViewing?: PassiveViewing;
   scheduleFrame?: ScheduleFrame;
   service: AlbumService;
   settingsStore: AppSettingsStore;
@@ -208,6 +211,7 @@ export function mountAlbumDetailScreen(
     },
     elements,
     onAssetViewed: options.onAssetViewed,
+    passiveViewing: options.passiveViewing,
     service: options.service,
     settingsStore: options.settingsStore
   });

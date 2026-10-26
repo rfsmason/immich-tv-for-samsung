@@ -83,7 +83,7 @@ Milestone 16, Search v2, is complete on `main` (PR #4, see [ADR 0018](architectu
 
 Milestone 17, Shared Content, is parked by the user's decision (26 October 2026): deferred, not cancelled. Its section below and its success criterion stay for later.
 
-Milestone 18, Ambient / Screensaver Mode, is the current implementation milestone. The roadmap continues after it with Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 19 and 20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
+Milestone 18, Ambient / Screensaver Mode, is implemented (see [ADR 0019](architecture/0019-ambient-mode.md)); physical Q950R acceptance, including an overnight soak test, is pending. Slideshows, playback and ambient mode now hold the TV's own screensaver off as Samsung requires, and an in-app ambient mode plays All photos, your own Favourites, Recent, an album or Memories, started from Settings → Ambient or after an idle time. The roadmap continues after it with Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 19 and 20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
 
 ## Post-MVP Product Roadmap
 
@@ -492,7 +492,7 @@ Investigate Samsung/Tizen lifecycle and screensaver restrictions before deciding
 
 Success criterion: the television can reliably display Immich content for an extended period without memory growth, crashes, or repeated manual intervention.
 
-**Status:** current implementation milestone.
+**Status:** implemented on 26 October 2026 ([ADR 0019](architecture/0019-ambient-mode.md)); physical Q950R acceptance pending, including an overnight soak test. The investigation found no public route for a third-party app to be the TV's screensaver or Ambient Mode app, so ambient mode is in-app.
 
 #### Concrete scope (26 October 2026)
 

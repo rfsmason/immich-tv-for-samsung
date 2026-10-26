@@ -27,7 +27,7 @@ The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It 
 - Milestone 15, Personalisation and Navigation: held Up/Down on the Photos date rail speed up from months to years, CH ▲/▼ jump a year, Settings can turn each Home rail on or off, collections can be reversed between newest and oldest first, the viewer can show face tags, and every screen sits on one standard background. See [ADR 0017](docs/architecture/0017-personalisation-and-navigation.md).
 - Milestone 16, Search v2: Search also finds photos by type (Photos, Live Photos or Videos), one place chosen from country down to city, and any of up to ten albums, each picked with the remote. See [ADR 0018](docs/architecture/0018-search-v2.md).
 - Milestone 17, Shared Content, is parked (deferred, not cancelled).
-- Milestone 18, Ambient / Screensaver Mode, is in progress: correct control of the TV's own screensaver, and an in-app ambient photo mode.
+- Milestone 18, Ambient / Screensaver Mode: slideshows and playback now keep the TV's own screensaver away, as Samsung requires, and Settings → Ambient starts a full-screen photo mode (All photos, your own Favourites, Recent, an album or Memories) now, or after an idle time. Any key returns to where you were. Physical-TV acceptance is pending. See [ADR 0019](docs/architecture/0019-ambient-mode.md).
 - Requires Immich v3.2.0 or later (see [Immich Configuration](#immich-configuration)).
 
 ## Project Layout
@@ -41,7 +41,8 @@ src/api/immich/             Immich REST client, HTTP transport (timeouts, status
                             response DTOs, validators, mappers and the minimum version
 src/domain/                 Application domain types
 src/presentation/           Household-facing date, duration, Memory, person and Search labels
-src/screens/                Screens, the shared card grid and grid presentation
+src/screens/                Screens, the shared card grid, grid presentation and media elements
+src/screens/ambient/        Ambient mode: crossfading player, overlays and bounded timers
 src/screens/collection/     Shared collection grid, Photos timeline, viewer and playback
 src/screens/home/           Home rails: model, loaders, rendering, navigation, thumbnails
 src/screens/people/         People grid and person card shared by the People browser and Search
@@ -131,7 +132,7 @@ The app only reads from Immich. An API key needs these permissions, taken from t
 
 | Permission | Used for | Endpoints |
 | --- | --- | --- |
-| `asset.read` | Photos timeline, Recently Added, album, Favourites, Videos, People and Search grids, Search places, and Recently Viewed | `GET /timeline/buckets`, `GET /timeline/bucket`, `POST /search/metadata`, `GET /search/suggestions`, `GET /assets/{id}` |
+| `asset.read` | Photos timeline, Recently Added, album, Favourites, Videos, People and Search grids, Search places, Recently Viewed, and ambient mode | `GET /timeline/buckets`, `GET /timeline/bucket`, `POST /search/metadata`, `POST /search/random`, `GET /search/suggestions`, `GET /assets/{id}` |
 | `asset.view` | Thumbnails, viewer previews and video playback | `GET /assets/{id}/thumbnail`, `GET /assets/{id}/video/playback` |
 | `album.read` | Albums, and the Search album picker and filter | `GET /albums`, `GET /albums/{id}` |
 | `person.read` | People and the Search people picker | `GET /people`, `GET /people/{id}/thumbnail` |

@@ -25,3 +25,11 @@ Slideshow has the same bounded memory behavior as manual full-screen viewing: pr
 The first slideshow version is intentionally still-image oriented. Future video-specific slideshow behavior can be designed separately after physical-TV playback behavior is better understood.
 
 If the viewer reaches the loaded asset edge while more assets are being fetched, slideshow waits for the existing pagination path. If there are no more loaded assets to advance to, slideshow pauses rather than wrapping or inventing a second pagination mechanism.
+
+## Update: the TV screensaver (Milestone 18, 26 October 2026)
+
+- **While a slideshow runs,** the viewer holds the TV's own screensaver off through the reference-counted passive-viewing control (`src/platform/tizen/screensaver.ts`). It does the same while a video or Live Photo plays, as Samsung requires of store apps.
+- **The hold is released** when the slideshow pauses, reaches its end, or stops, and when the viewer closes or the app is hidden.
+- **The slideshow's timer, control and media keys** moved to `src/screens/collection/viewer-slideshow.ts` (behaviour unchanged).
+
+See [ADR 0019](0019-ambient-mode.md).

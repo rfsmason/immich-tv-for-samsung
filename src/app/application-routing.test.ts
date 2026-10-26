@@ -317,10 +317,11 @@ describe("application routing", () => {
   it("continues a rail with more items in its summary from See more", async () => {
     await start({
       overrides: {
+        // The rail's total counts every favourite.
         loadFavoriteAssets: vi.fn(async () => ({
           assets: assets.slice(0, 2),
-          nextPageToken: { cursor: "more", kind: "cursor" as const },
-          total: null
+          nextPageToken: null,
+          total: 40
         }))
       }
     });
@@ -343,8 +344,8 @@ describe("application routing", () => {
     const moreThanShown = {
       loadFavoriteAssets: vi.fn(async () => ({
         assets: assets.slice(0, 2),
-        nextPageToken: { cursor: "more", kind: "cursor" as const },
-        total: null
+        nextPageToken: null,
+        total: 40
       })),
       loadRecentlyAddedAssets: vi.fn(async () => ({
         assets: assets.slice(0, 2),

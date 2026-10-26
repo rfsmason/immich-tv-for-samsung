@@ -80,3 +80,11 @@ Against Immich `main` at `f293f09` and release v3.3.3:
 - A Library hub, should Home become crowded.
 - More views (screenshots, panoramas, Live Photos only, "On this day" beyond Memories), each a feed plus a header.
 - Playing videos fully during a slideshow.
+
+## Update: Favourites shows only your own favourites (Milestone 16, 26 October 2026)
+
+**Finding.** Favourites (view, Home rail and See more) used structured search with `isFavorite: { eq: true }`. Structured search covers your own assets plus those of partners whose "Show in timeline" is on (`resolveSearchScopeV3` → `getUserIdsToSearch` in `server/src/services/search.service.ts`, Immich `main` `c6d1e15`). `isFavorite` is the asset owner's own flag (`asset.isFavorite` in `server/src/utils/database.ts`). So a partner's favourites could appear in your Favourites. Immich Web's Favourites uses timeline buckets with `isFavorite`, which Immich refuses to combine with partners, so it shows only your own.
+
+**Change.** Favourites now reads timeline buckets with `isFavorite=true`, `visibility=timeline`, `isTrashed=false` and no `withPartners`, so Immich scopes it to your own assets (`timeline.service.ts`). It follows Recently Added's paging: the shared bucket feed pages a month at a time with `time-bucket` tokens, and the rail takes the first 18 across months. The rail's See more comes from the bucket total, as Recently Added's does. Newest first / Oldest first still applies, through the bucket order.
+
+**Consequences.** A page is one month of favourites, however many that month holds, as for Recently Added. Videos, People and Search results still include timeline-enabled partners' photos (ADR 0018).

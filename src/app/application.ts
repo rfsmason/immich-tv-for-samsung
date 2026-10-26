@@ -1,6 +1,6 @@
 import type { Album, AlbumAsset, AlbumAssetPage, AlbumAssetPageToken } from "../domain/album";
 import type { Memory, Person } from "../domain/home";
-import type { SearchCriteria, SearchPerson } from "../domain/search";
+import type { SearchAlbum, SearchCriteria, SearchPerson, SearchPlace } from "../domain/search";
 import type { Logger } from "../logging/logger";
 import type { AppLifecycle } from "../platform/tizen/lifecycle";
 import { mountAlbumDetailScreen, type CollectionFeed } from "../screens/album-detail-screen";
@@ -14,7 +14,9 @@ import { mountExitConfirmation } from "../screens/exit-confirmation";
 import { mountHomeScreen } from "../screens/home-screen";
 import { mountMemoriesScreen } from "../screens/memories-screen";
 import { mountPeopleScreen } from "../screens/people-screen";
+import { mountAlbumPicker } from "../screens/search/album-picker-screen";
 import { mountPeoplePicker } from "../screens/search/people-picker-screen";
+import { mountPlacePicker } from "../screens/search/place-picker-screen";
 import { mountSearchScreen } from "../screens/search/search-screen";
 import type { AppSettingsStore } from "../storage/app-settings-store";
 import { readEnabledHomeRails } from "../domain/app-settings";
@@ -43,7 +45,9 @@ type AppRoute =
   | { kind: "library"; view: LibraryView; parent: "home"; entry: "item" | "see-more" }
   | { kind: "memory"; parent: "home" | "memories" }
   | { kind: "person"; parent: "home" | "people" }
+  | { kind: "search-albums"; parent: "search" }
   | { kind: "search-people"; parent: "search" }
+  | { kind: "search-place"; parent: "search" }
   | { kind: "search-results"; parent: "search" };
 
 export type ApplicationDependencies = {
@@ -142,8 +146,14 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
   });
   const searchScreen = mountSearchScreen({
     documentRef,
+    onAddAlbums(albums) {
+      showSearchAlbums(albums);
+    },
     onAddPeople(people) {
       showSearchPeople(people);
+    },
+    onChoosePlace(current) {
+      showSearchPlace(current);
     },
     onReturnToShell() {
       shell.focusActiveDestinationNav();
@@ -157,6 +167,32 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     documentRef,
     onDone(people) {
       searchScreen.setPeople(people);
+      showSearch();
+    },
+    onReturnToShell() {
+      shell.focusActiveDestinationNav();
+    },
+    service: albumService
+  });
+  const placePicker = mountPlacePicker({
+    documentRef,
+    onCancel() {
+      searchScreen.setPlace(null);
+      showSearch();
+    },
+    onDone(place) {
+      searchScreen.setPlace(place);
+      showSearch();
+    },
+    onReturnToShell() {
+      shell.focusActiveDestinationNav();
+    },
+    service: albumService
+  });
+  const albumPicker = mountAlbumPicker({
+    documentRef,
+    onDone(albums) {
+      searchScreen.setAlbums(albums);
       showSearch();
     },
     onReturnToShell() {
@@ -178,6 +214,8 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
       peopleScreen.reset();
       searchScreen.reset();
       peoplePicker.reset();
+      placePicker.reset();
+      albumPicker.reset();
       showHome({ bypassGuard: true });
       homeScreen.refresh();
     },
@@ -219,7 +257,9 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     memories: memoriesScreen,
     people: peopleScreen,
     search: searchScreen,
+    "search-albums": albumPicker,
     "search-people": peoplePicker,
+    "search-place": placePicker,
     settings: connectionScreen
   });
 
@@ -317,7 +357,8 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
   // Child screens collapse the rail and own content focus.
   function enterChild(
     nextRoute: Exclude<AppRoute, { kind: "destination" }>,
-    screen: "collection" | "memories" | "people" | "search-people",
+    screen:
+      "collection" | "memories" | "people" | "search-albums" | "search-people" | "search-place",
     contentFocus: { focusContent(): void }
   ): void {
     route = nextRoute;
@@ -409,6 +450,8 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     memoriesScreen.reset();
     peopleScreen.reset();
     peoplePicker.reset();
+    placePicker.reset();
+    albumPicker.reset();
     albumsScreen.refresh();
     collectionScreen.refreshPhotos();
   }
@@ -529,6 +572,16 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     peoplePicker.open(people);
   }
 
+  function showSearchPlace(current: SearchPlace | null): void {
+    enterChild({ kind: "search-place", parent: "search" }, "search-place", placePicker);
+    placePicker.open(current);
+  }
+
+  function showSearchAlbums(albums: SearchAlbum[]): void {
+    enterChild({ kind: "search-albums", parent: "search" }, "search-albums", albumPicker);
+    albumPicker.open(albums);
+  }
+
   function showSearchResults(criteria: SearchCriteria): void {
     enterChild({ kind: "search-results", parent: "search" }, "collection", collectionScreen);
     shell.hideSplash();
@@ -573,6 +626,8 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
       peopleScreen.destroy();
       searchScreen.destroy();
       peoplePicker.destroy();
+      placePicker.destroy();
+      albumPicker.destroy();
       connectionScreen.destroy();
       albumsScreen.destroy();
       collectionScreen.destroy();

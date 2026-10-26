@@ -814,8 +814,11 @@ describe("application routing", () => {
 
     expect(byId("search-people-screen").hidden).toBe(true);
     expect(byId("search-screen").hidden).toBe(false);
-    expect(searchControl()).toBe("show");
+    // Back from the picker lands on its own row; Show photos is five rows down.
+    expect(searchControl()).toBe("add-people");
     expect(byId("search-panel").textContent).toContain("Alex");
+    for (let row = 0; row < 5; row += 1) pressKey(remoteKeys.down);
+    expect(searchControl()).toBe("show");
     pressKey(remoteKeys.enter);
 
     await collectionGridReady();
@@ -851,6 +854,47 @@ describe("application routing", () => {
     expect(byId("search-panel").textContent).toContain("Alex");
   });
 
+  it("Search → place picker and album picker → each returns to its own row with the choice", async () => {
+    const { albumService } = await start();
+    await openSearch();
+    for (let row = 0; row < 3; row += 1) pressKey(remoteKeys.down);
+    expect(searchControl()).toBe("choose-place");
+    pressKey(remoteKeys.enter);
+
+    expect(byId("search-place-screen").hidden).toBe(false);
+    await vi.waitFor(() => expect(active()?.textContent).toBe("Exampleland"));
+    pressKey(remoteKeys.enter);
+    // Anywhere in Exampleland chooses the whole country.
+    await vi.waitFor(() => expect(active()?.textContent).toBe("Anywhere in Exampleland"));
+    pressKey(remoteKeys.enter);
+
+    expect(byId("search-place-screen").hidden).toBe(true);
+    expect(searchControl()).toBe("place-chip");
+    pressKey(remoteKeys.down);
+    expect(searchControl()).toBe("add-albums");
+    pressKey(remoteKeys.enter);
+
+    expect(byId("search-albums-screen").hidden).toBe(false);
+    await vi.waitFor(() => expect(active()?.hasAttribute("data-album-id")).toBe(true));
+    pressKey(remoteKeys.enter);
+    pressKey(remoteKeys.back);
+
+    expect(byId("search-albums-screen").hidden).toBe(true);
+    expect(searchControl()).toBe("add-albums");
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.enter);
+
+    await collectionGridReady();
+    expect(albumService.loadSearchAssetsPage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        albums: [expect.objectContaining({ id: expect.any(String) })],
+        place: { city: null, country: "Exampleland", state: null }
+      }),
+      "newest-first",
+      { kind: "page", page: 1 }
+    );
+  });
+
   it("explains empty search results, and Back returns to the unchanged criteria", async () => {
     await start({
       overrides: {
@@ -861,12 +905,13 @@ describe("application routing", () => {
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
     pressKey(remoteKeys.enter);
-    pressKey(remoteKeys.down);
+    // Taken → Type → Place → Albums → Show photos.
+    for (let row = 0; row < 4; row += 1) pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
 
     await vi.waitFor(() =>
       expect(byId("album-detail-summary").textContent).toBe(
-        "No photos match. Try fewer people or a wider date range."
+        "No photos match. Try fewer filters or a wider date range."
       )
     );
     expect(active()).toBe(byId("album-detail-screen"));
@@ -896,7 +941,8 @@ describe("application routing", () => {
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
     pressKey(remoteKeys.enter);
-    pressKey(remoteKeys.down);
+    // Taken → Type → Place → Albums → Show photos.
+    for (let row = 0; row < 4; row += 1) pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
     pressKey(remoteKeys.back);
     expect(searchControl()).toBe("show");

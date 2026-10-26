@@ -1,28 +1,36 @@
 import type { AlbumService } from "../../app/album-service";
 import {
   calendarDateFromLocal,
-  canSearch,
   emptySearchCriteria,
   hasValidDateRange,
   isEmptyCriteria,
+  setSearchAlbums,
   setSearchPeople,
+  setSearchPlace,
+  type SearchAlbum,
   type SearchCriteria,
-  type SearchPerson
+  type SearchPerson,
+  type SearchPlace
 } from "../../domain/search";
 import { getKeyCode, readArrowDirection, remoteKeys } from "../../platform/tizen/keys";
 import { focusWithoutPageScroll } from "../grid-presentation";
 import { createActionsRow } from "./actions-row";
+import { createAlbumsRow } from "./albums-row";
 import { createDatesRow } from "./dates-row";
 import { createPeopleRow } from "./people-row";
+import { createPlaceRow } from "./place-row";
 import type { SearchPanelContext, SearchRow } from "./search-row";
+import { createTypeRow } from "./type-row";
 
 export { visiblePersonChipCount } from "./people-row";
 
-// The Search destination (ADR 0014): a remote-first criteria panel. The panel
-// composes its rows (search-row.ts); people come from the picker child
-// screen, dates are edited with an inline stepper, and Show photos opens the
-// results in the shared collection. Criteria live in memory for the session
-// and reset when connection settings change.
+// The Search destination (ADR 0014, ADR 0018): a remote-first criteria panel.
+// The panel composes its rows (search-row.ts): people, places and albums come
+// from picker child screens, dates are edited with an inline stepper, the
+// type is chosen in place, and Show photos opens the results in the shared
+// collection. Returning from a picker lands on the control that opened it.
+// Criteria live in memory for the session and reset when connection
+// settings change.
 
 type SearchScreenState = {
   criteria: SearchCriteria;
@@ -32,7 +40,9 @@ type SearchScreenState = {
 
 type SearchScreenOptions = {
   documentRef?: Document;
+  onAddAlbums(albums: SearchAlbum[]): void;
   onAddPeople(people: SearchPerson[]): void;
+  onChoosePlace(current: SearchPlace | null): void;
   onReturnToShell(): void;
   onShowPhotos(criteria: SearchCriteria): void;
   service: Pick<
@@ -51,8 +61,10 @@ export type SearchScreenController = {
   hide(): void;
   // Forgets every criterion, for example after connection settings change.
   reset(): void;
-  // Applies the picker's selection.
+  // Apply a picker's selection; null keeps the place as it was.
+  setAlbums(albums: SearchAlbum[]): void;
   setPeople(people: SearchPerson[]): void;
+  setPlace(place: SearchPlace | null): void;
   show(): void;
 };
 
@@ -83,6 +95,9 @@ export function mountSearchScreen(options: SearchScreenOptions): SearchScreenCon
       service: options.service,
       today: () => calendarDateFromLocal(options.today ? options.today() : new Date())
     }),
+    createTypeRow(context),
+    createPlaceRow(context, { onChoosePlace: options.onChoosePlace }),
+    createAlbumsRow(context, { onAddAlbums: options.onAddAlbums }),
     createActionsRow(context, { onShowPhotos: options.onShowPhotos })
   ];
 
@@ -117,8 +132,7 @@ export function mountSearchScreen(options: SearchScreenOptions): SearchScreenCon
 
     if (isEmptyCriteria(state.criteria)) {
       return {
-        message:
-          "Choose people, dates, or both, then Show photos. To browse everything, use Photos.",
+        message: "Choose any filters, then Show photos. To browse everything, use Photos.",
         state: "idle"
       };
     }
@@ -298,9 +312,20 @@ export function mountSearchScreen(options: SearchScreenOptions): SearchScreenCon
       state.message = null;
       searchRows.forEach((row) => row.reset?.());
     },
+    setAlbums(albums) {
+      setCriteria(setSearchAlbums(state.criteria, albums));
+      state.focusKey = "add-albums";
+    },
     setPeople(people) {
       setCriteria(setSearchPeople(state.criteria, people));
-      state.focusKey = canSearch(state.criteria) ? "show" : "add-people";
+      state.focusKey = "add-people";
+    },
+    setPlace(place) {
+      if (place) {
+        setCriteria(setSearchPlace(state.criteria, place));
+      }
+
+      state.focusKey = state.criteria.place ? "place-chip" : "choose-place";
     },
     show() {
       root.hidden = false;

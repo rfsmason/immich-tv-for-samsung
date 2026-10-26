@@ -69,6 +69,13 @@ vi.mock("../screens/search/search-screen", () => ({
 vi.mock("../screens/search/people-picker-screen", () => ({
   mountPeoplePicker: () => ({ destroy() {}, hide() {}, reset() {} })
 }));
+vi.mock("../screens/search/place-picker-screen", () => ({
+  mountPlacePicker: () => ({ destroy() {}, hide() {}, reset() {} })
+}));
+vi.mock("../screens/search/album-picker-screen", () => ({
+  mountAlbumPicker: () => ({ destroy() {}, hide() {}, reset() {} })
+}));
+
 vi.mock("./app-shell", () => ({ mountApplicationShell: mocks.mountShell }));
 vi.mock("../screens/exit-confirmation", () => ({
   mountExitConfirmation: () => ({ open() {}, close() {}, destroy() {}, isOpen: () => false })

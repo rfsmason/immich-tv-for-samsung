@@ -2393,7 +2393,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
    flex gap on Chromium 63). */
 /* Inset like the grids' images, so Search lines up with the other screens. */
 .search-screen {
-  max-width: 1500px;
+  max-width: 1700px;
   padding: 24px 0 0 20px;
 }
 
@@ -2413,8 +2413,9 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   font-size: 20px;
 }
 
+/* Six rows, a date stepper and both rules fit within 1080 px. */
 .search-panel > * + * {
-  margin-top: 32px;
+  margin-top: 26px;
 }
 
 .search-row-label {
@@ -2472,10 +2473,11 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   object-fit: cover;
 }
 
+/* Four people chips and "+N more" fit on one line. */
 .search-chip-name {
   display: inline-block;
   vertical-align: middle;
-  max-width: 260px;
+  max-width: 170px;
   overflow: hidden;
   margin-left: 12px;
   text-overflow: ellipsis;
@@ -2486,6 +2488,37 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   display: inline-block;
   vertical-align: middle;
   margin-left: 12px;
+}
+
+/* A chip without a face: its name and the × mark. */
+.search-panel .focusable.search-chip.search-chip-text {
+  padding: 0 18px;
+}
+
+/* Four album chips and "+N more" fit on one line. */
+.search-chip-text .search-chip-name {
+  max-width: 170px;
+  margin-left: 0;
+}
+
+.search-place-chip .search-chip-name {
+  max-width: 900px;
+}
+
+/* Type: the chosen option has a check mark as well as its colour. */
+.search-panel .focusable.search-option[data-selected] {
+  border-color: var(--immich-primary);
+  background: rgba(66, 81, 176, 0.42);
+}
+
+.search-panel .focusable.search-option[data-selected]:focus {
+  border-color: #ffffff;
+  background: #ffffff;
+}
+
+.search-option-check {
+  margin-right: 10px;
+  font-weight: 800;
 }
 
 .search-rule {
@@ -2600,8 +2633,29 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   line-height: 1.3;
 }
 
-.search-people-grid {
+.search-people-grid,
+.search-albums-grid {
   max-height: calc(100vh - 330px);
+}
+
+/* The card grid counts a spacer as N rows and N - 1 gaps, as for people. */
+.album-pick-spacer {
+  grid-column: 1 / -1;
+  height: calc(
+    var(--album-spacer-rows) * (var(--album-tile-size) + var(--album-grid-gap)) -
+      var(--album-grid-gap)
+  );
+  min-height: 0;
+}
+
+.focusable.album-tile[data-selected] {
+  box-shadow: inset 0 0 0 8px var(--immich-green);
+}
+
+.focusable.album-tile[data-selected]:focus {
+  box-shadow:
+    inset 0 0 0 8px var(--immich-green),
+    0 0 0 8px rgba(66, 81, 176, 0.46);
 }
 
 .focusable.person-card[data-selected] .person-face {
@@ -2628,6 +2682,66 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   font-weight: 800;
   line-height: 42px;
   text-align: center;
+}
+
+/* Place picker: one name per row, only the rows near focus rendered; a
+   spacer stands for the rows above or below at one row pitch each. */
+.search-place-screen {
+  --place-row-height: 64px;
+  --place-row-gap: 12px;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  max-height: calc(100vh - 96px);
+  padding-top: 8px;
+}
+
+.search-place-screen > :not(.search-place-list) {
+  flex-shrink: 0;
+}
+
+.search-place-path {
+  margin: 0 32px 0 0;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.search-place-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-width: 900px;
+  margin-top: 12px;
+  padding: 16px 20px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.search-place-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.focusable.search-place-row {
+  display: block;
+  width: 100%;
+  height: var(--place-row-height);
+  min-height: 0;
+  margin-bottom: var(--place-row-gap);
+  padding: 0 24px;
+  overflow: hidden;
+  font-size: 24px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focusable.search-place-anywhere {
+  font-style: italic;
+}
+
+.search-place-spacer {
+  height: calc(var(--place-spacer-rows) * (var(--place-row-height) + var(--place-row-gap)));
 }
 
 /* Every grid's images start as far from the left rail as Home's rail tiles

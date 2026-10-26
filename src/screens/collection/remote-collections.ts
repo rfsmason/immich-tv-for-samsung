@@ -52,7 +52,7 @@ export function readRemoteCollectionInput(
       : collection.kind === "search"
         ? {
             assets: [],
-            emptyMessage: "No photos match. Try fewer people or a wider date range.",
+            emptyMessage: "No photos match. Try fewer filters or a wider date range.",
             focusedIndex: 0,
             feed: { feed: feed!, nextPage: null },
             id: "search",

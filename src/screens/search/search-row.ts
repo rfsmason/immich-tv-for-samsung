@@ -80,3 +80,31 @@ export function createSearchControl(
 
   return control;
 }
+
+// A chosen value as a chip that OK removes: its name and a × mark.
+export function createRemovableChip(
+  documentRef: Document,
+  key: string,
+  name: string,
+  className = ""
+): HTMLButtonElement {
+  const chip = createSearchControl(
+    documentRef,
+    key,
+    "",
+    `search-chip search-chip-text ${className}`.trim()
+  );
+  const label = documentRef.createElement("span");
+  const remove = documentRef.createElement("span");
+
+  label.className = "search-chip-name";
+  label.textContent = name;
+  remove.className = "search-chip-remove";
+  remove.setAttribute("aria-hidden", "true");
+  remove.textContent = "×";
+  chip.setAttribute("aria-label", `Remove ${name}`);
+  chip.appendChild(label);
+  chip.appendChild(remove);
+
+  return chip;
+}

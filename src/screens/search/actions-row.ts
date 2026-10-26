@@ -41,7 +41,7 @@ export function createActionsRow(
           options.onShowPhotos(criteria);
         } else {
           if (isEmptyCriteria(criteria)) {
-            context.setMessage("Choose at least one person or date first.");
+            context.setMessage("Choose at least one filter first.");
           }
           context.update("show");
         }

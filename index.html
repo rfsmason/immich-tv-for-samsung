@@ -324,6 +324,36 @@
           <div id="search-people-grid" class="people-grid search-people-grid" role="list" aria-label="People to choose"></div>
         </section>
 
+        <section id="search-place-screen" class="screen search-place-screen" aria-labelledby="search-place-title" hidden>
+          <h1 id="search-place-title" class="screen-heading-subtle">Choose a place</h1>
+          <div class="search-picker-actions">
+            <p id="search-place-path" class="search-place-path" hidden></p>
+            <button id="search-place-retry" class="focusable search-action" type="button" hidden>Retry</button>
+            <p class="key-hints">
+              <span class="key-hint"><span class="key-cap">OK</span> Choose</span>
+              <span class="key-hint"><span class="key-cap">Back</span> Up a level</span>
+              <span class="key-hint"><span class="key-cap">CH</span> Next letter</span>
+            </p>
+          </div>
+          <p id="search-place-status" class="screen-status" aria-live="polite" tabindex="-1"></p>
+          <div id="search-place-list" class="search-place-list" role="list" aria-label="Places"></div>
+        </section>
+
+        <section id="search-albums-screen" class="screen albums-screen search-albums-screen" aria-labelledby="search-albums-title" hidden>
+          <h1 id="search-albums-title" class="screen-heading-subtle">Choose albums</h1>
+          <div class="search-picker-actions">
+            <button id="search-albums-done" class="focusable search-action" type="button">Done</button>
+            <button id="search-albums-retry" class="focusable" type="button" hidden>Retry</button>
+            <p class="key-hints">
+              <span class="key-hint"><span class="key-cap">OK</span> Select</span>
+              <span class="key-hint"><span class="key-cap">Back</span> Done</span>
+            </p>
+          </div>
+          <p id="search-albums-message" class="screen-status search-message" data-state="error" aria-live="polite" hidden></p>
+          <p id="search-albums-status" class="screen-status" aria-live="polite" tabindex="-1"></p>
+          <div id="search-albums-grid" class="albums-grid search-albums-grid" role="list" aria-label="Albums to choose"></div>
+        </section>
+
         <section id="search-screen" class="screen search-screen" aria-label="Search" hidden>
           <div id="search-panel" class="search-panel"></div>
           <p id="search-message" class="screen-status search-message" aria-live="polite" data-state="idle"></p>

@@ -166,15 +166,19 @@ export function mountAmbientScreen(options: AmbientScreenOptions): AmbientScreen
     }
   };
 
-  documentRef.addEventListener("keydown", handleKeydown, true);
-  documentRef.addEventListener("keyup", handleKeyup, true);
+  // The window's capture phase comes before every document listener, the
+  // shell's root Back (which would ask to exit the app) included.
+  const keyTarget: EventTarget = documentRef.defaultView || documentRef;
+
+  keyTarget.addEventListener("keydown", handleKeydown as EventListener, true);
+  keyTarget.addEventListener("keyup", handleKeyup as EventListener, true);
   root.addEventListener("click", handleClick);
 
   return {
     destroy() {
       stop();
-      documentRef.removeEventListener("keydown", handleKeydown, true);
-      documentRef.removeEventListener("keyup", handleKeyup, true);
+      keyTarget.removeEventListener("keydown", handleKeydown as EventListener, true);
+      keyTarget.removeEventListener("keyup", handleKeyup as EventListener, true);
       root.removeEventListener("click", handleClick);
     },
     heldUrlCount: () => player?.heldUrlCount() ?? 0,

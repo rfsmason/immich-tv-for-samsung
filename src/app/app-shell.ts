@@ -63,6 +63,7 @@ export type ApplicationShellController = {
   expandRail(): void;
   focusActiveContent(): void;
   focusActiveDestinationNav(): void;
+  isSplashVisible(): boolean;
   hideSplash(): void;
   // Hides the splash and focuses the active destination in the rail.
   revealApp(): void;
@@ -281,6 +282,7 @@ export function mountApplicationShell(
       state.loadingBehindSplash = false;
       hideSplash(elements);
     },
+    isSplashVisible: () => !elements.splash.hidden,
     // Does nothing once the splash has gone, so it can't move focus later.
     revealApp() {
       if (elements.splash.hidden) {

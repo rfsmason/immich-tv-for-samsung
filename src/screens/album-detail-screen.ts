@@ -98,6 +98,8 @@ export type AlbumDetailScreenController = {
   // Forgets album order reversals, which last until the connection changes.
   forgetSessionSortOrders(): void;
   hide(): void;
+  // Whether the full-screen viewer is showing an asset.
+  isViewerOpen(): boolean;
   refreshPhotos(): void;
   show(album: Album, parent: "albums" | "home"): void;
   showPerson(person: Person, parent: "home" | "people"): void;
@@ -742,6 +744,7 @@ export function mountAlbumDetailScreen(
       grid.resetThumbnails();
       viewer.resetImages();
     },
+    isViewerOpen: () => !elements.root.hidden && isViewerOpen(model),
     forgetSessionSortOrders() {
       sessionAlbumOrders = {};
     },

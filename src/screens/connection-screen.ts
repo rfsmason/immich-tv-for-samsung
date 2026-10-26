@@ -5,6 +5,8 @@ import { getKeyCode, remoteKeys } from "../platform/tizen/keys";
 import type { ConnectionService } from "../app/connection-service";
 import type { AppSettingsStore } from "../storage/app-settings-store";
 import { createConnectionSection } from "./settings/connection-section";
+import type { AmbientSettings } from "../domain/ambient";
+import { createAmbientSection } from "./settings/ambient-section";
 import { createDisplaySection } from "./settings/display-section";
 import { createHomeSection } from "./settings/home-section";
 import type { SettingsDropdown } from "./settings/settings-dropdown";
@@ -36,7 +38,13 @@ type ConnectionScreenOptions = {
   documentRef?: Document;
   onBack?(options?: SettingsBackOptions): void;
   onReturnToShell?(): void;
+  // Every successful Save, after the app settings are stored.
+  onAppSettingsSaved?(): void;
+  // Choose an album for ambient mode, starting from the current one.
+  onChooseAmbientAlbum?(album: AmbientSettings["album"]): void;
   onSaved?(settings: ConnectionSettings): void;
+  // Start now, with the Ambient section's current choices.
+  onStartAmbient?(settings: AmbientSettings): void;
   settingsStore: AppSettingsStore;
   service: ConnectionService;
 };
@@ -48,6 +56,11 @@ export type ConnectionScreenController = {
   focusSection(id: SettingsSectionId): void;
   hide(): void;
   requestExit(): boolean;
+  // Focuses Settings → Ambient's album field.
+  focusAmbientAlbum(): void;
+  // Shows Settings again as it was left, unsaved changes included, after a
+  // child screen (the ambient album picker).
+  resumeAfterAlbumPicker(album: { id: string; name: string } | null): void;
   show(options?: { allowBack?: boolean }): void;
 };
 
@@ -59,10 +72,12 @@ export function mountConnectionScreen(
   const documentRef = options.documentRef || document;
   const elements = readElements(documentRef);
   const connection = createConnectionSection(documentRef, options.service);
+  const ambient = createAmbientSection(documentRef);
   const sections: SettingsSection[] = [
     connection,
     createDisplaySection(documentRef),
-    createHomeSection(documentRef)
+    createHomeSection(documentRef),
+    ambient
   ];
   const navigator = createFocusNavigator(
     () =>
@@ -149,6 +164,20 @@ export function mountConnectionScreen(
     requestExit() {
       return requestSettingsExit();
     },
+    resumeAfterAlbumPicker(album) {
+      if (album) {
+        ambient.setAlbum(album);
+      }
+
+      elements.root.hidden = false;
+      activeSection = ambient;
+      showSettingsSection(ambient);
+      updateDirtyStatus();
+      startDirtyStatusTimer();
+    },
+    focusAmbientAlbum() {
+      documentRef.getElementById("ambient-album")?.focus();
+    },
     show(showOptions = {}) {
       elements.root.hidden = false;
       elements.backButton.hidden = !showOptions.allowBack;
@@ -211,6 +240,7 @@ export function mountConnectionScreen(
       connection.showSavedConnection(settings);
       sections.forEach((section) => section.showAppSettings(appSettings));
       setSettingsStatus("Settings saved.", "success");
+      options.onAppSettingsSaved?.();
       if (exitAfterSave || elements.backButton.hidden) {
         options.onSaved?.(settings);
       }
@@ -224,6 +254,16 @@ export function mountConnectionScreen(
   }
 
   function handleAction(action: string | null): void {
+    if (action === "start-ambient") {
+      options.onStartAmbient?.(ambient.current());
+      return;
+    }
+
+    if (action === "choose-ambient-album") {
+      options.onChooseAmbientAlbum?.(ambient.current().album);
+      return;
+    }
+
     if (action === "test-connection") {
       void connection.testConnection();
       return;

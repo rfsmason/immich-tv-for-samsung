@@ -76,6 +76,18 @@ vi.mock("../screens/search/album-picker-screen", () => ({
   mountAlbumPicker: () => ({ destroy() {}, hide() {}, reset() {} })
 }));
 
+vi.mock("../screens/ambient/ambient-screen", () => ({
+  mountAmbientScreen: () => ({ destroy() {}, isActive: () => false, start() {}, stop() {} })
+}));
+vi.mock("./ambient-controller", () => ({
+  createAmbientController: () => ({
+    destroy() {},
+    exit() {},
+    isActive: () => false,
+    refresh() {},
+    startNow() {}
+  })
+}));
 vi.mock("./app-shell", () => ({ mountApplicationShell: mocks.mountShell }));
 vi.mock("../screens/exit-confirmation", () => ({
   mountExitConfirmation: () => ({ open() {}, close() {}, destroy() {}, isOpen: () => false })

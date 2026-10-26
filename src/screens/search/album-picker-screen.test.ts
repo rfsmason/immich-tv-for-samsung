@@ -159,6 +159,32 @@ describe("Search album picker", () => {
     expect(f.loadAlbums).toHaveBeenCalledTimes(2);
   });
 
+  it("chooses one album at once in single mode, and Back leaves the choice as it was", async () => {
+    const f = setup();
+    controller!.open([choice(3)], "single");
+    await f.settled();
+
+    expect(byId("search-albums-title").textContent).toBe("Choose an album");
+    expect(byId("search-albums-done").hidden).toBe(true);
+    expect(byId("search-albums-screen").querySelector(".key-hints")?.textContent).toContain(
+      "OK Choose"
+    );
+    expect(f.tile("album-3")?.getAttribute("data-selected")).toBe("true");
+
+    await f.press(remoteKeys.back);
+    expect(f.onDone).toHaveBeenLastCalledWith([choice(3)]);
+
+    controller!.open([choice(3)], "single");
+    await f.settled();
+    await f.press(remoteKeys.right);
+    await f.press(remoteKeys.enter);
+    expect(f.onDone).toHaveBeenLastCalledWith([choice(1)]);
+
+    controller!.open([], "multi");
+    expect(byId("search-albums-done").hidden).toBe(false);
+    expect(byId("search-albums-title").textContent).toBe("Choose albums");
+  });
+
   it("forgets the album list and the selection on reset", async () => {
     const f = setup();
     controller!.open([choice(0)]);

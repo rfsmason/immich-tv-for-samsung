@@ -55,6 +55,8 @@ export type SearchScreenController = {
   criteria(): SearchCriteria;
   destroy(): void;
   focusContent(): void;
+  // Whether a date is being edited, a list is open or Clear all is asking.
+  isEditing(): boolean;
   // Returning from results lands on the control that opened them.
   focusShowPhotos(): void;
   hide(): void;
@@ -299,6 +301,7 @@ export function mountSearchScreen(options: SearchScreenOptions): SearchScreenCon
     focusContent() {
       focusKey(state.focusKey || defaultFocusKey());
     },
+    isEditing: () => !root.hidden && modalRow() !== null,
     focusShowPhotos() {
       focusKey("show");
     },

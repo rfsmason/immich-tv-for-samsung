@@ -345,8 +345,8 @@
             <button id="search-albums-done" class="focusable search-action" type="button">Done</button>
             <button id="search-albums-retry" class="focusable" type="button" hidden>Retry</button>
             <p class="key-hints">
-              <span class="key-hint"><span class="key-cap">OK</span> Select</span>
-              <span class="key-hint"><span class="key-cap">Back</span> Done</span>
+              <span class="key-hint"><span class="key-cap">OK</span> <span id="search-albums-hint-ok">Select</span></span>
+              <span class="key-hint"><span class="key-cap">Back</span> <span id="search-albums-hint-back">Done</span></span>
             </p>
           </div>
           <p id="search-albums-message" class="screen-status search-message" data-state="error" aria-live="polite" hidden></p>
@@ -412,6 +412,21 @@
                   <span class="button-row-label">Home</span>
                 </span>
 
+              </button>
+              <button
+                id="settings-section-ambient"
+                class="focusable settings-section-button"
+                type="button"
+                data-settings-section="ambient"
+                aria-controls="settings-panel-ambient"
+                aria-selected="false"
+              >
+                <span class="button-row">
+                  <svg class="settings-section-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 5h18v12H3V5zm2 2v8h14V7H5zm2 6l3-4 2 3 2-2 3 3H7zM8 19h8v2H8v-2z"></path>
+                  </svg>
+                  <span class="button-row-label">Ambient</span>
+                </span>
               </button>
               <div class="settings-nav-actions" role="group" aria-label="Settings actions">
                 <button
@@ -546,6 +561,68 @@
                 aria-labelledby="settings-section-home"
                 hidden
               ></section>
+
+              <section
+                id="settings-panel-ambient"
+                class="settings-section-panel ambient-settings"
+                aria-labelledby="settings-section-ambient"
+                hidden
+              >
+                <div class="ambient-settings-grid">
+                  <div class="field dropdown-field">
+                    <span class="field-label">Source</span>
+                    <button id="ambient-source" class="focusable dropdown-control" type="button" data-value="all"></button>
+                  </div>
+                  <div id="ambient-album-field" class="field" hidden>
+                    <span class="field-label">Album</span>
+                    <button id="ambient-album" class="focusable ambient-album-button" type="button" data-action="choose-ambient-album">Choose an album</button>
+                  </div>
+                  <div id="ambient-order-field" class="field dropdown-field" hidden>
+                    <span class="field-label">Order</span>
+                    <button id="ambient-order" class="focusable dropdown-control" type="button" data-value="shuffle"></button>
+                  </div>
+                  <div class="field dropdown-field">
+                    <span class="field-label">Interval</span>
+                    <button id="ambient-interval" class="focusable dropdown-control" type="button" data-value="30"></button>
+                  </div>
+                  <div class="field dropdown-field">
+                    <span class="field-label">Start after idle</span>
+                    <button id="ambient-idle" class="focusable dropdown-control" type="button" data-value="0"></button>
+                  </div>
+                  <div class="field dropdown-field">
+                    <span class="field-label">Stop after</span>
+                    <button id="ambient-stop" class="focusable dropdown-control" type="button" data-value="0"></button>
+                  </div>
+                </div>
+
+                <label class="field choice-field">
+                  <input id="ambient-include-videos" class="focusable" name="ambientIncludeVideos" type="checkbox">
+                  <span>
+                    <span class="field-label">Include videos</span>
+                    <span class="field-hint">Videos play muted, for up to a minute each.</span>
+                  </span>
+                </label>
+
+                <label class="field choice-field">
+                  <input id="ambient-show-clock" class="focusable" name="ambientShowClock" type="checkbox">
+                  <span>
+                    <span class="field-label">Show clock</span>
+                  </span>
+                </label>
+
+                <label class="field choice-field">
+                  <input id="ambient-show-details" class="focusable" name="ambientShowDetails" type="checkbox">
+                  <span>
+                    <span class="field-label">Show photo details</span>
+                    <span class="field-hint">The date, and the place when the photo has one.</span>
+                  </span>
+                </label>
+
+                <div class="actions ambient-start-actions">
+                  <button id="ambient-start" class="focusable primary-action panel-action" type="button" data-action="start-ambient">Start now</button>
+                  <p class="field-hint">Any key returns to where you were.</p>
+                </div>
+              </section>
 
               <section
                 id="settings-panel-unsaved"

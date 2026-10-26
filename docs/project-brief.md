@@ -79,7 +79,7 @@ Fixes from TV testing (picker face flicker, a sharper launcher icon, an earlier 
 
 Milestone 15, Personalisation and Navigation, is complete on `main` (PR #3, see [ADR 0017](architecture/0017-personalisation-and-navigation.md)); physical Q950R acceptance passed on 26 October 2026 (user confirmation), including every item on PR #3's combined checklist. It adds date-rail hold acceleration and CH year jumps, Home rail visibility in Settings, a Newest first / Oldest first toggle on collections, viewer face tags, a standard background, and partners' photos in Photos and Recently Added.
 
-Milestone 16, Search v2, is the current implementation milestone. The roadmap continues after it with Shared Content, Ambient / Screensaver Mode, Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 17-20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
+Milestone 16, Search v2, is implemented (see [ADR 0018](architecture/0018-search-v2.md)); physical Q950R acceptance is pending. Search adds a Type row (All, Photos, Live Photos, Videos), a place picker (country, region, city) and an album picker, all chosen with the remote. The roadmap continues after it with Shared Content, Ambient / Screensaver Mode, Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 17-20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
 
 ## Post-MVP Product Roadmap
 
@@ -447,7 +447,7 @@ Extend Search v1 (ADR 0014) with three remote-friendly criteria. Each new criter
 - **Location:** one place, chosen by drilling down from a country to an optional region and then an optional city, using values from `GET /search/suggestions?type=country|state|city` (asset read). Nothing is typed. The filter uses `country`, `state` and `city`.
 - **Albums:** a multi-select picker reusing the people-picker pattern. It matches photos in *any* chosen album (`albumIds.any`), and the panel says so in plain words.
 
-**Status:** current implementation milestone.
+**Status:** implemented on 26 October 2026 ([ADR 0018](architecture/0018-search-v2.md)); physical Q950R acceptance pending.
 
 **Permissions.** Media type and location need only asset read. The album filter also needs album read on each chosen album (`resolveSearchScopeV3` checks `Permission.AlbumRead`), which the app already uses for Albums, so there is no new permission.
 

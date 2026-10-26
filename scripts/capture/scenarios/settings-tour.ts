@@ -23,10 +23,14 @@ export const settingsTour: Scenario = {
     await remote.down("#show-viewer-time");
     await remote.down("#show-viewer-exif");
     await remote.ok("#show-viewer-exif");
-    await remote.down("#slideshow-interval");
-    await remote.right("#slideshow-interval");
-    await guide?.highlight("#slideshow-interval", "Choose the slideshow interval");
+    // Arriving on the interval opens its list on the seeded interval.
+    await remote.down('#settings-panel-display .dropdown-option[aria-selected="true"]');
+    await guide?.highlight(
+      "#settings-panel-display .dropdown-list",
+      "Choose the slideshow interval"
+    );
     await remote.hold();
+    await remote.ok("#slideshow-interval"); // Keeps the seeded interval.
     await remote.up("#show-viewer-exif");
     await remote.left("#settings-section-display");
     await remote.down("#settings-save");

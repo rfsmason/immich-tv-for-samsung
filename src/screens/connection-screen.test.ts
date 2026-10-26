@@ -220,8 +220,12 @@ describe("Settings remote navigation and actions", () => {
     pressKey(remoteKeys.right);
     pressKey(remoteKeys.enter);
     for (let step = 0; step < 4; step += 1) pressKey(remoteKeys.down);
+    // Arriving on the interval opens its list on the current value.
+    expect(document.activeElement?.textContent).toBe("✓8 seconds");
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.enter);
     expect(document.activeElement).toBe(byId("slideshow-interval"));
-    pressKey(remoteKeys.right);
+    expect(byId("slideshow-interval").textContent).toContain("12 seconds");
 
     byId("settings-save").focus();
     pressKey(remoteKeys.enter);
@@ -232,6 +236,53 @@ describe("Settings remote navigation and actions", () => {
     );
     expect(byId("settings-summary").textContent).toBe("Settings saved.");
     expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it("opens the slideshow interval like Search's drop-downs, and never traps focus", () => {
+    const { settingsStore } = mount();
+    const interval = () => byId("slideshow-interval");
+    const list = () => byId("settings-panel-display").querySelector(".dropdown-list");
+    controller!.show({ allowBack: true });
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.right);
+    for (let step = 0; step < 4; step += 1) pressKey(remoteKeys.down);
+    expect(interval().getAttribute("aria-expanded")).toBe("true");
+    expect(list()?.querySelector('[aria-selected="true"]')?.textContent).toBe("✓8 seconds");
+
+    // Back closes the list unchanged and stays in Settings.
+    pressKey(remoteKeys.back);
+    expect(list()).toBeNull();
+    expect(document.activeElement).toBe(interval());
+    expect(interval().getAttribute("aria-expanded")).toBe("false");
+    expect(byId("settings-panel-display").hidden).toBe(false);
+
+    // OK reopens it; Left closes it unchanged.
+    pressKey(remoteKeys.enter);
+    expect(list()).not.toBeNull();
+    pressKey(remoteKeys.left);
+    expect(list()).toBeNull();
+    expect(document.activeElement).toBe(interval());
+
+    // Up past the top closes it, and a further Up moves on.
+    pressKey(remoteKeys.enter);
+    pressKey(remoteKeys.up);
+    pressKey(remoteKeys.up);
+    expect(list()).toBeNull();
+    expect(document.activeElement).toBe(interval());
+    pressKey(remoteKeys.up);
+    expect(document.activeElement).toBe(byId("show-viewer-exif"));
+
+    // Arriving from above opens it again; choose 20 seconds and save.
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.enter);
+    expect(interval().textContent).toContain("20 seconds");
+    byId("settings-save").focus();
+    pressKey(remoteKeys.enter);
+    expect(settingsStore.save).toHaveBeenCalledWith(
+      expect.objectContaining({ slideshowIntervalSeconds: 20 })
+    );
   });
 
   it("turns Home rails on and off in Home order, keeping settings saved elsewhere", () => {

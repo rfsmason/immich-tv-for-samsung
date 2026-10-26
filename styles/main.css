@@ -50,8 +50,7 @@ body {
 }
 
 button,
-input,
-select {
+input {
   font: inherit;
 }
 
@@ -475,7 +474,7 @@ button.settings-section-button[aria-selected="true"] {
 }
 
 .settings-layout input.focusable:focus,
-.settings-layout select.focusable:focus {
+.settings-layout .focusable.dropdown-control:focus {
   background: rgba(66, 165, 245, 0.42);
 }
 
@@ -586,7 +585,7 @@ button.settings-section-button[data-dirty] .button-row-label::after {
 }
 
 input.focusable,
-select.focusable {
+.settings-layout .focusable.dropdown-control {
   width: 100%;
   padding: 0 28px;
 }
@@ -1885,7 +1884,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   }
 
   input.focusable,
-  select.focusable {
+  .settings-layout .focusable.dropdown-control {
     padding: 0 22px;
   }
 
@@ -2505,61 +2504,6 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   max-width: 900px;
 }
 
-/* Asset type: a Settings-style field whose list drops down over the rows
-   beneath it, so opening it never moves the panel. The chosen type has a
-   check mark as well as its colour. */
-.search-select-field {
-  position: relative;
-}
-
-.search-panel .focusable.search-select {
-  display: block;
-  min-width: 240px;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.search-select-arrow {
-  display: inline-block;
-  margin-left: 16px;
-  float: right;
-}
-
-.search-panel .focusable.search-select[aria-expanded="true"] {
-  border-color: var(--immich-primary);
-}
-
-.search-dropdown {
-  position: absolute;
-  z-index: 5;
-  top: 100%;
-  left: 0;
-  min-width: 100%;
-  margin-top: 8px;
-  padding: 8px;
-  border: 4px solid var(--immich-primary);
-  border-radius: 12px;
-  background: #1b1f33;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
-}
-
-.search-panel .focusable.search-dropdown-option {
-  display: block;
-  width: 100%;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.search-dropdown > * + * {
-  margin-top: 8px;
-}
-
-.search-dropdown-check {
-  display: inline-block;
-  width: 32px;
-  font-weight: 800;
-}
-
 .search-rule {
   margin: 12px 0 0;
   color: var(--text-muted);
@@ -2721,6 +2665,66 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   font-weight: 800;
   line-height: 42px;
   text-align: center;
+}
+
+/* Drop-down fields (Search's Asset type, Settings' slideshow interval): the
+   list drops down over what lies beneath, so opening it never moves the
+   page. The chosen value has a check mark as well as its colour. */
+.dropdown-field {
+  position: relative;
+}
+
+.focusable.dropdown-control {
+  display: block;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.search-panel .focusable.dropdown-control {
+  width: auto;
+  min-width: 240px;
+}
+
+.dropdown-arrow {
+  float: right;
+  margin-left: 16px;
+}
+
+.focusable.dropdown-control[aria-expanded="true"] {
+  border-color: var(--immich-primary);
+}
+
+.dropdown-list {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  left: 0;
+  min-width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border: 4px solid var(--immich-primary);
+  border-radius: 12px;
+  background: #1b1f33;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+}
+
+.dropdown-list > * + * {
+  margin-top: 8px;
+}
+
+.dropdown-list .focusable.dropdown-option {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dropdown-check {
+  display: inline-block;
+  width: 32px;
+  font-weight: 800;
 }
 
 /* Place picker: one name per row, only the rows near focus rendered; a

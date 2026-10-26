@@ -13,6 +13,7 @@ import {
   formatSearchTakenSummary,
   searchMediaTypeLabels
 } from "../../presentation/search-labels";
+import { readDropdownKey } from "../dropdown";
 import { assetTypeKey, createAssetTypeField } from "./asset-type-field";
 import {
   moveDateStepperColumn,
@@ -219,13 +220,7 @@ export function createDatesRow(context: SearchPanelContext, options: DatesRowOpt
       event.preventDefault();
 
       if (assetType.isOpen()) {
-        const result = assetType.handleKey(
-          keyCode === remoteKeys.back
-            ? "back"
-            : keyCode === remoteKeys.enter
-              ? "enter"
-              : direction || "back"
-        );
+        const result = assetType.handleKey(readDropdownKey(keyCode));
 
         if ("focus" in result) {
           context.update(result.focus);

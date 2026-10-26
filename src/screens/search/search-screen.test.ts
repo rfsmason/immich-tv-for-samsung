@@ -419,7 +419,7 @@ describe("Search criteria panel", () => {
 
   it("opens the Asset type list on arrival, chooses with Up, Down and OK, and never traps focus", async () => {
     const f = setup();
-    const list = () => byId("search-panel").querySelector(".search-dropdown");
+    const list = () => byId("search-panel").querySelector(".dropdown-list");
     await f.open();
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);

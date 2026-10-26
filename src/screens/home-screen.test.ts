@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { homeRailOrder } from "../domain/home";
 import type { AlbumService } from "../app/album-service";
 import type { AlbumAsset, AlbumAssetPage } from "../domain/album";
 import type { Memory, PeoplePage, Person } from "../domain/home";
@@ -88,10 +89,12 @@ async function fixture(
     onOpenAssetCollection,
     onOpenAlbum,
     onOpenMemory,
+    loadEnabledRails: () => homeRailOrder.slice(),
     onBrowseAlbums: vi.fn(),
     onBrowseMemories,
     onBrowsePeople,
     onOpenPerson: vi.fn(),
+    onOpenSettings: vi.fn(),
     onReturnToShell: vi.fn()
   });
   controller.show();

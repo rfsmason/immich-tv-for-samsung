@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => {
       hide: vi.fn(),
       destroy: vi.fn(),
       focusContent: vi.fn(),
+      focusSection: vi.fn(),
+      forgetSessionSortOrders: vi.fn(),
       refresh: vi.fn(),
       reset: vi.fn(),
       showMemory: vi.fn(),

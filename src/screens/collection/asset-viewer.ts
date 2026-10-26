@@ -32,6 +32,7 @@ import {
   showViewerPlayer,
   updateViewerPlayerProgress
 } from "./viewer-playback";
+import { createViewerFaces, type ViewerFaces } from "./viewer-faces";
 import type { ViewerCollection, ViewerElements, ViewerState } from "./viewer-types";
 
 // The full-screen viewer over any ordered asset collection: bounded preview
@@ -40,7 +41,7 @@ import type { ViewerCollection, ViewerElements, ViewerState } from "./viewer-typ
 
 export type ViewerService = Pick<
   AlbumService,
-  "loadAssetPlaybackUrl" | "loadAssetViewerStillUrl" | "revokeImageUrl"
+  "loadAssetFaces" | "loadAssetPlaybackUrl" | "loadAssetViewerStillUrl" | "revokeImageUrl"
 >;
 
 type AssetViewerOptions = {
@@ -75,6 +76,7 @@ export type AssetViewerController = {
 };
 
 type ViewerContext = AssetViewerOptions & {
+  faces: ViewerFaces;
   isOpen(): boolean;
   state: ViewerState;
 };
@@ -83,6 +85,22 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
   const { collection, elements } = options;
   const context: ViewerContext = {
     ...options,
+    faces: createViewerFaces({
+      currentAsset: () => (collection.isOpen() ? state.selectedAsset?.asset || null : null),
+      elements: {
+        facesButton: elements.assetViewerFaces,
+        facesOverlay: elements.assetViewerFaceOverlay,
+        facesStatus: elements.assetViewerFacesStatus,
+        image: elements.assetViewerImage,
+        video: elements.assetViewerVideo
+      },
+      isSlideshowPlaying: () => state.viewerSlideshow.playing,
+      loadFaces: (assetId) => options.service.loadAssetFaces(assetId),
+      // Slideshow is always shown; a pending Play focus still moves on to
+      // Play once a video's control appears.
+      onFocusedButtonHidden: () => elements.assetViewerSlideshow.focus(),
+      settingsStore: options.settingsStore
+    }),
     isOpen: () => collection.isOpen(),
     state: {
       recordedAssetId: null,
@@ -128,6 +146,16 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
     stopEvent(event);
     toggleViewerSlideshow(context);
   };
+  const handleViewerFacesClick = (event: MouseEvent) => {
+    event.preventDefault();
+    stopEvent(event);
+    context.faces.toggle();
+  };
+  // Face tags wait for the photo to decode, and hide while Live Photo motion
+  // plays over it.
+  const syncViewerFaces = () => {
+    context.faces.sync();
+  };
   const armViewerBackPointer = (event: Event) => {
     if (collection.isOpen() && isEventInsideElement(event, elements.assetPlaceholderBack)) {
       state.viewerBackPointerArmed = true;
@@ -138,6 +166,7 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
   };
   const handleViewerPlaybackEnded = () => {
     handleViewerPlaybackEndedEvent(context);
+    context.faces.sync();
   };
   const handleViewerPlaybackProgress = () => {
     updateViewerPlayerProgress(elements);
@@ -151,6 +180,7 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
     }
 
     updateViewerPlayerProgress(elements);
+    context.faces.sync();
   };
   const handleViewerPlaybackWaiting = () => {
     setViewerPlayerStatus(elements, "Buffering");
@@ -170,6 +200,10 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
     [elements.assetViewerSlideshow, "click", handleViewerSlideshowClick as EventListener, true],
     [elements.assetViewerSlideshow, "mousedown", stopViewerPlayPointer],
     [elements.assetViewerSlideshow, "pointerdown", stopViewerPlayPointer],
+    [elements.assetViewerFaces, "click", handleViewerFacesClick as EventListener, true],
+    [elements.assetViewerFaces, "mousedown", stopViewerPlayPointer],
+    [elements.assetViewerFaces, "pointerdown", stopViewerPlayPointer],
+    [elements.assetViewerImage, "load", syncViewerFaces],
     [elements.assetViewerVideo, "durationchange", handleViewerPlaybackProgress],
     [elements.assetViewerVideo, "ended", handleViewerPlaybackEnded],
     [elements.assetViewerVideo, "loadedmetadata", handleViewerPlaybackProgress],
@@ -307,6 +341,11 @@ function handleAssetViewerKeydown(
       return;
     }
 
+    if (activeElementOf(elements) === elements.assetViewerFaces) {
+      context.faces.toggle();
+      return;
+    }
+
     if (activeElementOf(elements) === elements.assetPlaceholderBack) {
       collection.exit();
       return;
@@ -365,6 +404,7 @@ function getVisibleViewerControls(elements: ViewerElements): HTMLButtonElement[]
   return [
     elements.assetViewerPlay,
     elements.assetViewerSlideshow,
+    elements.assetViewerFaces,
     elements.assetPlaceholderBack
   ].filter((button) => !button.hidden);
 }
@@ -416,6 +456,7 @@ function renderAssetViewer(context: ViewerContext, index: number): void {
     collection.absoluteIndex(index)
   );
   renderViewerSlideshowControl(context);
+  context.faces.sync();
 
   if (asset.type !== "image") {
     elements.assetViewerImage.hidden = true;
@@ -641,6 +682,7 @@ function pauseViewerSlideshow(context: ViewerContext): void {
   elements.assetViewerSlideshow.title = "Start slideshow";
   elements.assetViewerSlideshowStatus.textContent = "Slideshow paused";
   stopViewerSlideshowProgress(elements);
+  context.faces.sync();
 }
 
 function stopViewerSlideshow(context: ViewerContext): void {
@@ -869,10 +911,12 @@ function renderViewerImage(
   }
   elements.assetViewerImage.src = url;
   elements.assetViewerImage.alt = asset.name;
+  elements.assetViewerImage.setAttribute("data-asset-id", asset.id);
   elements.assetViewerImage.hidden = false;
   elements.assetViewerPlaceholder.hidden = true;
   renderViewerPlayControl(elements, asset, true);
   autoplayViewerVideoIfEnabled(context, asset);
+  context.faces.sync();
 
   if (
     state.viewerPlayFocusPending &&
@@ -913,8 +957,10 @@ function resetViewerImages(context: ViewerContext): void {
   revokeAllAssetViewerImages(previousImages, context.service.revokeImageUrl);
   state.viewerImages = createAssetViewerImageState();
   state.viewerPlayFocusPending = false;
+  context.faces.reset();
   elements.assetViewerImage.hidden = true;
   elements.assetViewerImage.removeAttribute("src");
+  elements.assetViewerImage.removeAttribute("data-asset-id");
   resetViewerPlayback(elements, state);
   elements.assetViewerPlaceholder.hidden = false;
   elements.assetViewerSpinner.hidden = true;

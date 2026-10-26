@@ -6,6 +6,7 @@ import {
   getRailElement,
   getRailState,
   homeRailOrder,
+  isRailEnabled,
   type HomeAssetRailId,
   type HomeRailId,
   type HomeRailState,
@@ -36,6 +37,7 @@ export function renderHome(
   state: HomeScreenState,
   generation: number
 ): void {
+  showEnabledRails(elements, state);
   renderRecentlyAddedRail(elements, state);
   renderFavoritesRail(elements, state);
   renderVideosRail(elements, state);
@@ -51,6 +53,20 @@ export function renderHome(
   loadAlbumThumbnails(elements, options, state, generation);
   loadMemoryThumbnails(elements, options, state, generation);
   alignHomeRails(elements, state);
+}
+
+// Rails that are off in Settings are hidden; with none on, Home shows the
+// way to Settings instead.
+function showEnabledRails(elements: HomeScreenElements, state: HomeScreenState): void {
+  for (const railId of homeRailOrder) {
+    const section = getRailElement(elements, railId).closest<HTMLElement>(".home-rail-section");
+
+    if (section) {
+      section.hidden = !isRailEnabled(state, railId);
+    }
+  }
+
+  elements.empty.hidden = state.enabledRails.length > 0;
 }
 
 // Fixed-focus rails: each rail is translated so its selected tile sits where
@@ -73,7 +89,8 @@ export function alignHomeRails(elements: HomeScreenElements, state: HomeScreenSt
   }
 
   const stack = elements.root.querySelector<HTMLElement>(".home-rails");
-  const firstSection = getRailElement(elements, homeRailOrder[0]!).closest<HTMLElement>(
+  const firstRail = state.enabledRails[0] || homeRailOrder[0]!;
+  const firstSection = getRailElement(elements, firstRail).closest<HTMLElement>(
     ".home-rail-section"
   );
   const activeSection = getRailElement(elements, state.activeRail).closest<HTMLElement>(

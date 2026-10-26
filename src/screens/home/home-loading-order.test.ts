@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { homeRailOrder } from "../../domain/home";
 import type { AlbumService } from "../../app/album-service";
 import { TestDocument } from "../../test/document";
 import { mountHomeScreen } from "../home-screen";
@@ -53,6 +54,7 @@ describe("Home loading order", () => {
     const controller = mountHomeScreen({
       documentRef: documentRef as unknown as Document,
       history: { loadAssets: vi.fn(request("recently-viewed", emptyPage)) },
+      loadEnabledRails: () => homeRailOrder.slice(),
       onBrowseAlbums: vi.fn(),
       onBrowseMemories: vi.fn(),
       onBrowsePeople: vi.fn(),
@@ -60,6 +62,7 @@ describe("Home loading order", () => {
       onOpenAssetCollection: vi.fn(),
       onOpenMemory: vi.fn(),
       onOpenPerson: vi.fn(),
+      onOpenSettings: vi.fn(),
       onReturnToShell: vi.fn(),
       service: service as unknown as AlbumService
     });
@@ -128,6 +131,7 @@ describe("Home loading order", () => {
     const controller = mountHomeScreen({
       documentRef: documentRef as unknown as Document,
       history: { loadAssets: vi.fn(hold(emptyPage)) },
+      loadEnabledRails: () => homeRailOrder.slice(),
       onBrowseAlbums: vi.fn(),
       onBrowseMemories: vi.fn(),
       onBrowsePeople: vi.fn(),
@@ -135,6 +139,7 @@ describe("Home loading order", () => {
       onOpenAssetCollection: vi.fn(),
       onOpenMemory: vi.fn(),
       onOpenPerson: vi.fn(),
+      onOpenSettings: vi.fn(),
       onReturnToShell: vi.fn(),
       service: service as unknown as AlbumService
     });

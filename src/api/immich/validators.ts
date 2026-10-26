@@ -2,6 +2,7 @@ import type { CurrentUser, ServerVersion } from "../../domain/connection";
 import type {
   AlbumDetailResponseDto,
   AlbumResponseDto,
+  AssetFaceResponseDto,
   AssetResponseDto,
   MemoryResponseDto,
   PeopleResponseDto,
@@ -290,5 +291,30 @@ export function optionalNonNegativeNumber(value: unknown): boolean {
 export function optionalPageToken(value: unknown): boolean {
   return (
     value === undefined || value === null || typeof value === "string" || Number.isFinite(value)
+  );
+}
+
+export function isAssetFaceResponseList(body: unknown): body is AssetFaceResponseDto[] {
+  return Array.isArray(body) && body.every(isAssetFaceResponse);
+}
+
+function isAssetFaceResponse(body: unknown): body is AssetFaceResponseDto {
+  if (!body || typeof body !== "object") {
+    return false;
+  }
+
+  const face = body as AssetFaceResponseDto;
+
+  return (
+    requiredString(face.id) &&
+    [
+      face.boundingBoxX1,
+      face.boundingBoxX2,
+      face.boundingBoxY1,
+      face.boundingBoxY2,
+      face.imageHeight,
+      face.imageWidth
+    ].every((value) => typeof value === "number" && Number.isFinite(value)) &&
+    (face.person === null || isPersonResponse(face.person))
   );
 }

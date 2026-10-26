@@ -1,5 +1,32 @@
 import type { AlbumAsset } from "./album";
 
+// Home's rails, in screen order (ADR 0009).
+export type HomeRailId =
+  "recently-added" | "favorites" | "videos" | "people" | "recently-viewed" | "albums" | "memories";
+
+export const homeRailOrder: HomeRailId[] = [
+  "recently-added",
+  "favorites",
+  "videos",
+  "people",
+  "recently-viewed",
+  "albums",
+  "memories"
+];
+
+export const homeRailTitles: Record<HomeRailId, string> = {
+  albums: "Albums",
+  favorites: "Favourites",
+  memories: "Memories",
+  people: "People",
+  "recently-added": "Recently Added",
+  "recently-viewed": "Recently Viewed",
+  videos: "Videos"
+};
+
+// Whether each Home rail is shown. Every rail is on unless turned off.
+export type HomeRailVisibility = Record<HomeRailId, boolean>;
+
 export type Person = {
   id: string;
   isFavorite: boolean;

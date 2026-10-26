@@ -4,9 +4,14 @@ import {
   getKeyCode,
   isMediaPlayPauseKey,
   readArrowDirection,
-  registerMediaRemoteKeys,
+  readChannelDirection,
+  registerOptionalRemoteKeys,
   remoteKeys
 } from "./keys";
+
+function createLogger() {
+  return { error: vi.fn(), info: vi.fn(), warn: vi.fn() };
+}
 
 describe("Tizen remote keys", () => {
   it("maps real desktop Backspace and Escape codes to Back", () => {
@@ -73,6 +78,7 @@ describe("Tizen remote keys", () => {
   });
 
   it("registers supported optional media keys with the Samsung input device", () => {
+    const logger = createLogger();
     const registerKey = vi.fn();
     const windowRef = {
       tizen: {
@@ -80,6 +86,8 @@ describe("Tizen remote keys", () => {
           getSupportedKeys: vi.fn().mockReturnValue([
             { code: remoteKeys.mediaPlayPause, name: "MediaPlayPause" },
             { code: remoteKeys.mediaPause, name: "MediaPause" },
+            { code: remoteKeys.channelUp, name: "ChannelUp" },
+            { code: remoteKeys.channelDown, name: "ChannelDown" },
             { code: remoteKeys.back, name: "Back" }
           ]),
           registerKey,
@@ -88,14 +96,20 @@ describe("Tizen remote keys", () => {
       }
     } as unknown as Window;
 
-    registerMediaRemoteKeys(windowRef);
+    registerOptionalRemoteKeys(windowRef, logger);
 
     expect(registerKey).toHaveBeenCalledWith("MediaPlayPause");
     expect(registerKey).toHaveBeenCalledWith("MediaPause");
+    expect(registerKey).toHaveBeenCalledWith("ChannelUp");
+    expect(registerKey).toHaveBeenCalledWith("ChannelDown");
     expect(registerKey).not.toHaveBeenCalledWith("MediaPlay");
+    expect(logger.info).toHaveBeenCalledWith("Some optional remote keys are not supported.", {
+      unsupported: ["MediaPlay"]
+    });
   });
 
-  it("continues registering media keys when an optional key is rejected", () => {
+  it("logs and continues when an optional key is rejected", () => {
+    const logger = createLogger();
     const registerKey = vi.fn((keyName: string) => {
       if (keyName === "MediaPlay") {
         throw new Error("Unsupported key");
@@ -109,10 +123,51 @@ describe("Tizen remote keys", () => {
       }
     } as unknown as Window;
 
-    registerMediaRemoteKeys(windowRef);
+    registerOptionalRemoteKeys(windowRef, logger);
 
     expect(registerKey).toHaveBeenCalledWith("MediaPlayPause");
     expect(registerKey).toHaveBeenCalledWith("MediaPlay");
     expect(registerKey).toHaveBeenCalledWith("MediaPause");
+    expect(registerKey).toHaveBeenCalledWith("ChannelUp");
+    expect(registerKey).toHaveBeenCalledWith("ChannelDown");
+    expect(logger.warn).toHaveBeenCalledWith("Optional remote key registration failed.", {
+      error: expect.any(Error),
+      keyName: "MediaPlay"
+    });
+  });
+
+  it("logs and registers every optional key when the supported list cannot be read", () => {
+    const logger = createLogger();
+    const registerKey = vi.fn();
+    const windowRef = {
+      tizen: {
+        tvinputdevice: {
+          getSupportedKeys: () => {
+            throw new Error("Unavailable");
+          },
+          registerKey
+        }
+      }
+    } as unknown as Window;
+
+    registerOptionalRemoteKeys(windowRef, logger);
+
+    expect(registerKey).toHaveBeenCalledTimes(5);
+    expect(logger.warn).toHaveBeenCalled();
+  });
+
+  it("reads the direction a channel key moves in", () => {
+    expect(readChannelDirection(remoteKeys.channelUp)).toBe(-1);
+    expect(readChannelDirection(remoteKeys.channelDown)).toBe(1);
+    expect(readChannelDirection(remoteKeys.up)).toBeNull();
+  });
+
+  it("maps Page Up and Page Down to the channel keys in the desktop preview only", () => {
+    const pageUp = new KeyboardEvent("keydown", { key: "PageUp", keyCode: 33 });
+    const pageDown = new KeyboardEvent("keydown", { key: "PageDown", keyCode: 34 });
+
+    expect(getKeyCode(pageUp, {} as Window)).toBe(remoteKeys.channelUp);
+    expect(getKeyCode(pageDown, {} as Window)).toBe(remoteKeys.channelDown);
+    expect(getKeyCode(pageUp, { tizen: {} } as unknown as Window)).toBe(33);
   });
 });

@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AlbumAsset } from "../../domain/album";
+import type { AssetFace } from "../../domain/face";
+import { AppError } from "../../errors/app-error";
 import { defaultAppSettings, type AppSettings } from "../../domain/app-settings";
 import { remoteKeys } from "../../platform/tizen/keys";
-import { TestDocument } from "../../test/document";
+import { TestDocument, type TestElement } from "../../test/document";
 import { createAssetViewer, type AssetViewerController } from "./asset-viewer";
 import type { ViewerCollection, ViewerElements } from "./viewer-types";
 
@@ -27,6 +29,9 @@ const elementIds: Record<keyof ViewerElements, string> = {
   assetPlaceholderBack: "asset-placeholder-back",
   assetPlaceholderSummary: "asset-placeholder-summary",
   assetViewerExif: "asset-viewer-exif",
+  assetViewerFaceOverlay: "asset-viewer-face-overlay",
+  assetViewerFaces: "asset-viewer-faces",
+  assetViewerFacesStatus: "asset-viewer-faces-status",
   assetViewerImage: "asset-viewer-image",
   assetViewerPlaceholder: "asset-viewer-placeholder",
   assetViewerPlaceholderMessage: "asset-viewer-placeholder-message",
@@ -47,8 +52,13 @@ const elementIds: Record<keyof ViewerElements, string> = {
 
 let viewer: AssetViewerController | null = null;
 
-function fixture(assets: AlbumAsset[], settings: Partial<AppSettings> = {}) {
+function fixture(
+  assets: AlbumAsset[],
+  settings: Partial<AppSettings> = {},
+  loadAssetFaces: (assetId: string) => Promise<AssetFace[]> = async () => []
+) {
   const documentRef = new TestDocument();
+  let storedSettings: AppSettings = { ...defaultAppSettings, ...settings };
   const elements = Object.fromEntries(
     Object.entries(elementIds).map(([key, id]) => [key, documentRef.getElementById(id)])
   ) as unknown as ViewerElements;
@@ -89,6 +99,7 @@ function fixture(assets: AlbumAsset[], settings: Partial<AppSettings> = {}) {
     viewingSource: () => ({ id: "search", kind: "collection" as const, title: "Search results" })
   } satisfies ViewerCollection;
   const service = {
+    loadAssetFaces: vi.fn(loadAssetFaces),
     loadAssetPlaybackUrl: vi.fn(() => "https://immich.example/playback"),
     loadAssetViewerStillUrl: vi.fn(async (item: AlbumAsset) => `blob:${item.id}`),
     revokeImageUrl: vi.fn()
@@ -100,7 +111,13 @@ function fixture(assets: AlbumAsset[], settings: Partial<AppSettings> = {}) {
     elements,
     onAssetViewed,
     service,
-    settingsStore: { load: () => ({ ...defaultAppSettings, ...settings }), save: vi.fn() }
+    settingsStore: {
+      load: () => storedSettings,
+      save: vi.fn((next: AppSettings) => {
+        storedSettings = next;
+        return next;
+      })
+    }
   });
 
   const press = (keyCode: number) => {
@@ -110,7 +127,31 @@ function fixture(assets: AlbumAsset[], settings: Partial<AppSettings> = {}) {
     return event;
   };
 
-  return { collection, documentRef, elements, onAssetViewed, pause, play, press, service };
+  // The browser finishing decoding the shown still, 1600 by 900 on a 1920 by
+  // 1080 stage.
+  const decodeImage = () => {
+    Object.assign(elements.assetViewerImage, {
+      clientHeight: 1080,
+      clientWidth: 1920,
+      complete: true,
+      naturalHeight: 900,
+      naturalWidth: 1600
+    });
+    elements.assetViewerImage.dispatchEvent(new Event("load"));
+  };
+
+  return {
+    collection,
+    decodeImage,
+    documentRef,
+    elements,
+    onAssetViewed,
+    pause,
+    play,
+    press,
+    service,
+    settings: () => storedSettings
+  };
 }
 
 beforeEach(() => {
@@ -196,7 +237,10 @@ describe("asset viewer over any ordered collection", () => {
     viewer!.open(0);
     expect(f.documentRef.activeElement).toBe(f.elements.assetViewerSlideshow);
     f.press(remoteKeys.down);
+    expect(f.documentRef.activeElement).toBe(f.elements.assetViewerFaces);
+    f.press(remoteKeys.down);
     expect(f.documentRef.activeElement).toBe(f.elements.assetPlaceholderBack);
+    f.press(remoteKeys.up);
     f.press(remoteKeys.up);
     expect(f.documentRef.activeElement).toBe(f.elements.assetViewerSlideshow);
 
@@ -323,5 +367,183 @@ describe("asset viewer over any ordered collection", () => {
     expect(f.elements.assetPlaceholder.hidden).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
     expect(f.service.revokeImageUrl).toHaveBeenCalledWith("blob:a");
+  });
+});
+
+describe("viewer face tags", () => {
+  const named: AssetFace = {
+    box: { bottom: 0.5, left: 0.25, right: 0.5, top: 0.25 },
+    id: "face-named",
+    personName: "Sam Example"
+  };
+  const unnamed: AssetFace = {
+    box: { bottom: 0.9, left: 0.6, right: 0.7, top: 0.7 },
+    id: "face-unnamed",
+    personName: null
+  };
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  async function openOn(f: ReturnType<typeof fixture>, index = 0) {
+    viewer!.open(index);
+    await flush();
+  }
+
+  it("offers Faces for photos only, off by default, without requesting faces", async () => {
+    const f = fixture([asset("photo"), asset("clip", { type: "video" })]);
+    await openOn(f);
+    f.decodeImage();
+
+    expect(f.elements.assetViewerFaces.hidden).toBe(false);
+    expect(f.elements.assetViewerFaces.getAttribute("aria-pressed")).toBe("false");
+    expect(f.service.loadAssetFaces).not.toHaveBeenCalled();
+
+    f.press(remoteKeys.right);
+    expect(f.elements.assetViewerFaces.hidden).toBe(true);
+  });
+
+  it("draws named faces with labels and unnamed faces as outlines once the photo decodes", async () => {
+    const f = fixture([asset("photo")], {}, async () => [named, unnamed]);
+    await openOn(f);
+    f.elements.assetViewerFaces.focus();
+    f.press(remoteKeys.enter);
+
+    expect(f.settings().showFaceTags).toBe(true);
+    expect(f.elements.assetViewerFaces.getAttribute("aria-pressed")).toBe("true");
+    // Nothing is requested until the photo has decoded.
+    expect(f.service.loadAssetFaces).not.toHaveBeenCalled();
+
+    f.decodeImage();
+    await flush();
+
+    expect(f.service.loadAssetFaces).toHaveBeenCalledWith("photo");
+    const overlay = f.elements.assetViewerFaceOverlay as unknown as TestElement;
+    expect(overlay.hidden).toBe(false);
+    const boxes = overlay.children.filter((child) => child.className === "asset-viewer-face-box");
+    const labels = overlay.children.filter(
+      (child) => child.className === "asset-viewer-face-label"
+    );
+    expect(boxes).toHaveLength(2);
+    expect(labels.map((label) => label.textContent)).toEqual(["Sam Example"]);
+    // 1600 by 900 fills the 1920 by 1080 stage exactly: 1.2 times.
+    expect(boxes[0]!.style).toMatchObject({
+      height: "270px",
+      left: "480px",
+      top: "270px",
+      width: "480px"
+    });
+    expect(f.elements.assetViewerFacesStatus.hidden).toBe(true);
+  });
+
+  it("says when a photo has no tagged faces", async () => {
+    const f = fixture([asset("photo")], { showFaceTags: true });
+    await openOn(f);
+    f.decodeImage();
+    await flush();
+
+    expect(f.elements.assetViewerFacesStatus.hidden).toBe(false);
+    expect(f.elements.assetViewerFacesStatus.textContent).toBe("No faces tagged");
+  });
+
+  it("drops a late response for a photo no longer shown and caches recent photos", async () => {
+    const resolvers: Array<(faces: AssetFace[]) => void> = [];
+    const f = fixture(
+      [asset("a"), asset("b"), asset("c"), asset("d"), asset("e")],
+      { showFaceTags: true },
+      () => new Promise<AssetFace[]>((resolve) => resolvers.push(resolve))
+    );
+    await openOn(f);
+    f.decodeImage();
+    f.press(remoteKeys.right);
+    await flush();
+    resolvers[0]!([named]);
+    await flush();
+    const overlay = f.elements.assetViewerFaceOverlay as unknown as TestElement;
+    expect(overlay.children).toHaveLength(0);
+
+    f.decodeImage();
+    await flush();
+    resolvers[1]!([named]);
+    await flush();
+    expect(overlay.children).toHaveLength(2);
+
+    // Away from b and back again: b is cached, so it is drawn without a new
+    // request.
+    f.press(remoteKeys.left);
+    await flush();
+    expect(overlay.children).toHaveLength(0);
+    f.press(remoteKeys.right);
+    await flush();
+    f.decodeImage();
+    await flush();
+    expect(overlay.children).toHaveLength(2);
+    // a's late answer was dropped, so a was asked for again; b was not.
+    expect(f.service.loadAssetFaces.mock.calls.map(([id]) => id)).toEqual(["a", "b", "a"]);
+  });
+
+  it("hides face tags during a slideshow", async () => {
+    const f = fixture([asset("a"), asset("b")], { showFaceTags: true }, async () => [named]);
+    await openOn(f);
+    f.decodeImage();
+    await flush();
+    expect(f.elements.assetViewerFaceOverlay.hidden).toBe(false);
+
+    f.elements.assetViewerSlideshow.focus();
+    f.press(remoteKeys.enter);
+    expect(f.elements.assetViewerFaceOverlay.hidden).toBe(true);
+    expect(f.elements.assetViewerFaces.hidden).toBe(true);
+  });
+
+  it("explains a missing face.read permission and turns Faces off, keeping the button and its focus", async () => {
+    const f = fixture([asset("a"), asset("b")], {}, async () => {
+      throw new AppError("permission", "Refused", { feature: "Face tags", status: 403 });
+    });
+    const message = "Face tags need the face.read permission on your Immich API key.";
+    await openOn(f);
+    f.decodeImage();
+    // The usual case: Faces is pressed, and the refusal arrives while it has focus.
+    f.elements.assetViewerFaces.focus();
+    f.press(remoteKeys.enter);
+    await flush();
+
+    expect(f.elements.assetViewerFacesStatus.textContent).toBe(message);
+    expect(f.elements.assetViewerFaces.hidden).toBe(false);
+    expect(f.elements.assetViewerFaces.getAttribute("aria-pressed")).toBe("false");
+    expect(f.documentRef.activeElement).toBe(f.elements.assetViewerFaces);
+
+    // Off for the session: the next photo asks nothing and shows no message.
+    f.press(remoteKeys.right);
+    await flush();
+    f.decodeImage();
+    await flush();
+    expect(f.service.loadAssetFaces).toHaveBeenCalledTimes(1);
+    expect(f.elements.assetViewerFacesStatus.hidden).toBe(true);
+
+    // Pressing Faces again explains why, without asking Immich again.
+    f.elements.assetViewerFaces.focus();
+    f.press(remoteKeys.enter);
+    expect(f.elements.assetViewerFacesStatus.textContent).toBe(message);
+    expect(f.elements.assetViewerFacesStatus.hidden).toBe(false);
+    expect(f.service.loadAssetFaces).toHaveBeenCalledTimes(1);
+  });
+
+  it("moves focus off Faces when it hides for a video or a slideshow", async () => {
+    const f = fixture([asset("photo"), asset("clip", { type: "video" }), asset("next")]);
+    await openOn(f);
+
+    f.elements.assetViewerFaces.focus();
+    f.press(remoteKeys.right);
+    expect(f.elements.assetViewerFaces.hidden).toBe(true);
+    expect(f.documentRef.activeElement).not.toBe(f.elements.assetViewerFaces);
+    expect([f.elements.assetViewerSlideshow, f.elements.assetViewerPlay]).toContain(
+      f.documentRef.activeElement
+    );
+
+    f.press(remoteKeys.right);
+    await flush();
+    expect(f.elements.assetViewerFaces.hidden).toBe(false);
+    f.elements.assetViewerFaces.focus();
+    f.elements.assetViewerSlideshow.dispatchEvent(new Event("click"));
+    expect(f.elements.assetViewerFaces.hidden).toBe(true);
+    expect(f.documentRef.activeElement).toBe(f.elements.assetViewerSlideshow);
   });
 });

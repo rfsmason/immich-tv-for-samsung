@@ -10,6 +10,8 @@ import { favorites } from "./favorites";
 import { videos } from "./videos";
 import { recentlyAdded } from "./recently-added";
 import { search } from "./search";
+import { settingsHome } from "./settings-home";
+import { viewerFaces } from "./viewer-faces";
 import { tour } from "./tour";
 import { peopleTour } from "./people-tour";
 import { photosTour } from "./photos-tour";
@@ -31,6 +33,8 @@ export const scenarios = [
   videos,
   recentlyAdded,
   search,
+  settingsHome,
+  viewerFaces,
   tour,
   peopleTour,
   photosTour,

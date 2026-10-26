@@ -13,7 +13,7 @@ The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It 
   - Albums: an album grid and album detail.
   - Memories: today's Memories.
   - Viewer: images, video and Live Photos, slideshow, and a local viewing history.
-  - Settings: connection and display preferences, with an unsaved-changes guard.
+  - Settings: connection, display and Home preferences, with an unsaved-changes guard.
 - Milestone 11.5, Foundation Hardening and Structural Refactor, passed physical-TV acceptance on 16 October 2026. It covers:
   - Chromium 63 fixes, with compatibility enforced by lint and static checks;
   - request timeouts and permission-specific errors;
@@ -24,6 +24,7 @@ The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It 
 - Milestone 12, People, is complete on `main` and awaiting physical-TV acceptance. Home's People rail ends with See more, which opens a paged grid of every recognised person. Choosing a person opens their photos and videos in the shared grid, viewer and slideshow. See [ADR 0013](docs/architecture/0013-people.md) and [docs/project-brief.md](docs/project-brief.md).
 - Milestone 13, Search v1, is complete on `main` and awaiting physical-TV acceptance, together with Milestone 12. Search finds photos by one or more people, a From and To date, or both, with remote-only controls: a people picker, chips and an inline date stepper. Results open in the shared grid, viewer and slideshow. See [ADR 0014](docs/architecture/0014-search.md).
 - Milestone 14, Favorites and Library Views, is complete on `main` and awaiting physical-TV acceptance, together with Milestones 12 and 13. Favourites, a new Videos rail and Recently added open as library views from Home, using the shared grid, viewer and slideshow. See [ADR 0016](docs/architecture/0016-library-views.md).
+- Milestone 15, Personalisation and Navigation, is implemented on its branch and awaiting physical-TV acceptance. Held Up/Down on the Photos date rail speed up from months to years, CH ▲/▼ jump a year, Settings can turn each Home rail on or off, collections can be reversed between newest and oldest first, the viewer can show face tags, and every screen sits on one standard background. See [ADR 0017](docs/architecture/0017-personalisation-and-navigation.md).
 - Requires Immich v3.2.0 or later (see [Immich Configuration](#immich-configuration)).
 
 ## Project Layout
@@ -119,6 +120,23 @@ The TV app stores the Immich server URL and API key in browser `localStorage` on
 This is an intentional lightweight credential choice for the local TV app. The API key is not stored in source, not baked into the widget, not sent anywhere except the configured Immich server, and not logged by the app. Anyone with access to the TV runtime storage could potentially recover it, so use an Immich API key with only the access you are comfortable granting to the TV.
 
 `.env.example` remains only a development reference. Do not commit real API keys or private server details.
+
+### Required API key permissions
+
+The app only reads from Immich. An API key needs these permissions, taken from the `@Authenticated` decorators of the Immich endpoints the app calls (Immich `main` at `1cf5bb4`):
+
+| Permission | Used for | Endpoints |
+| --- | --- | --- |
+| `asset.read` | Photos timeline, Recently Added, album, Favourites, Videos, People and Search grids, and Recently Viewed | `GET /timeline/buckets`, `GET /timeline/bucket`, `POST /search/metadata`, `GET /assets/{id}` |
+| `asset.view` | Thumbnails, viewer previews and video playback | `GET /assets/{id}/thumbnail`, `GET /assets/{id}/video/playback` |
+| `album.read` | Albums | `GET /albums`, `GET /albums/{id}` |
+| `person.read` | People and the Search people picker | `GET /people`, `GET /people/{id}/thumbnail` |
+| `memory.read` | Memories | `GET /memories` |
+| `memory.statistics` | The Memories rail's View all | `GET /memories/statistics` |
+| `face.read` | The viewer's Faces button (optional) | `GET /faces?id={assetId}` |
+| `user.read` | `Test connection` | `GET /users/me` |
+
+`GET /server/version` needs no permission. A key without one of these permissions still works: the screen that needs it explains which feature the key cannot show, and without `face.read` the viewer turns Faces off for the session.
 
 ## Contributing, Security and Licence
 

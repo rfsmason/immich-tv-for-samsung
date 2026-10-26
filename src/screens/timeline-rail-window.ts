@@ -1,4 +1,5 @@
 import type { TimelineBucket } from "../domain/album";
+import type { HoldStep } from "../navigation/hold-accelerator";
 import { formatTimelineBucketYear } from "../presentation/date-labels";
 
 export function calculateTimelineRailMarkerIndices(input: {
@@ -45,6 +46,42 @@ export function isTimelineYearBoundary(buckets: TimelineBucket[], index: number)
   const year = bucket ? formatTimelineBucketYear(bucket) : "";
 
   return Boolean(year && year !== (previous ? formatTimelineBucketYear(previous) : ""));
+}
+
+// Moves the rail selection in display order: -1 is up the rail, 1 is down. A
+// single step moves one bucket; a boundary step moves to the next year
+// boundary in that direction, and a skip-boundary step to the one after.
+// Stops at the ends of the rail.
+export function stepTimelineRailSelection(
+  buckets: TimelineBucket[],
+  index: number,
+  direction: -1 | 1,
+  step: HoldStep
+): number {
+  if (buckets.length === 0) {
+    return 0;
+  }
+
+  const lastIndex = buckets.length - 1;
+  const start = clamp(index, 0, lastIndex);
+
+  if (step === "single") {
+    return clamp(start + direction, 0, lastIndex);
+  }
+
+  let boundariesLeft = step === "boundary" ? 1 : 2;
+
+  for (let next = start + direction; next >= 0 && next <= lastIndex; next += direction) {
+    if (isTimelineYearBoundary(buckets, next)) {
+      boundariesLeft -= 1;
+
+      if (boundariesLeft === 0) {
+        return next;
+      }
+    }
+  }
+
+  return direction < 0 ? 0 : lastIndex;
 }
 
 function addIndex(indices: Record<string, true>, index: number, bucketCount: number): void {

@@ -1,4 +1,4 @@
-import type { Album, AlbumAsset, AlbumAssetPageToken, AssetOrder } from "../../domain/album";
+import type { Album, AlbumAsset, AlbumAssetPageToken, SortOrder } from "../../domain/album";
 import type { Memory, Person } from "../../domain/home";
 import { isLibraryView } from "../../domain/library";
 import type { SearchCriteria } from "../../domain/search";
@@ -13,19 +13,20 @@ export const collectionColumnCount = 6;
 export type AlbumParent = "albums" | "home";
 export type CollectionParent = "home" | "memories" | "people" | "search";
 
-// Paged collections opened from Home: their first items come from the Home
-// rail and further pages load as the remote nears the loaded end.
+// Paged collections: Home's collections, whose first items come from the Home
+// rail, and People and Search results. Further pages load as the remote nears
+// the loaded end. Feeds with an order can be reversed (ADR 0017).
 export type CollectionFeed =
-  | { kind: "favorites" }
-  | { kind: "videos" }
-  | { kind: "person"; personId: string }
-  | { kind: "search"; criteria: SearchCriteria }
+  | { kind: "favorites"; order: SortOrder }
+  | { kind: "videos"; order: SortOrder }
+  | { kind: "person"; personId: string; order: SortOrder }
+  | { kind: "search"; criteria: SearchCriteria; order: SortOrder }
   | { kind: "recently-added" }
   | { kind: "recently-viewed" };
 
 export type CollectionSource =
-  | { kind: "album"; id: string; order: AssetOrder; parent: AlbumParent; title: string }
-  | { kind: "photos"; id: "photos"; title: string }
+  | { kind: "album"; id: string; order: SortOrder; parent: AlbumParent; title: string }
+  | { kind: "photos"; id: "photos"; order: SortOrder; title: string }
   | { kind: "feed"; feed: CollectionFeed; id: string; parent: CollectionParent; title: string }
   | {
       kind: "static";
@@ -39,10 +40,13 @@ export type CollectionSource =
       viewingKind?: "memory";
     };
 
+// Collections loaded from their start. A library view loads this way when it
+// opens oldest first or is reversed; otherwise it starts from its Home rail.
 export type RemoteCollection =
-  | { kind: "person"; person: Person; parent: "home" | "people" }
+  | { kind: "person"; person: Person; order: SortOrder; parent: "home" | "people" }
   | { kind: "memory"; memory: Memory; parent: CollectionParent }
-  | { kind: "search"; criteria: SearchCriteria; parent: "search" };
+  | { kind: "search"; criteria: SearchCriteria; order: SortOrder; parent: "search" }
+  | { kind: "library"; view: "favorites" | "videos"; order: SortOrder; parent: "home" };
 
 // What a collection load is for, kept so a failed load can be retried.
 export type CollectionRequest =
@@ -205,8 +209,9 @@ export function clampIndex(index: number, itemCount: number): number {
   return Math.max(0, Math.min(itemCount - 1, index));
 }
 
-// Timeline buckets are paged newest first, so newer assets live in the
-// previous bucket. Other page kinds have no previous page.
+// Timeline buckets are paged in display order, so the assets above the
+// loaded ones live in the previous bucket. Other page kinds have no previous
+// page.
 export function readPreviousPageToken(page: AlbumAssetPageToken): AlbumAssetPageToken | null {
   if (page.kind !== "bucket" || page.bucketIndex <= 0) {
     return null;

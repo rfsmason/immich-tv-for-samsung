@@ -1,6 +1,7 @@
+import { defaultAppSettings } from "../domain/app-settings";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AlbumService } from "../app/album-service";
-import type { AlbumAsset, AlbumAssetPageToken, TimelineBucket } from "../domain/album";
+import type { AlbumAsset, AlbumAssetPageToken, SortOrder, TimelineBucket } from "../domain/album";
 import { TestDocument } from "../test/document";
 import { mountAlbumDetailScreen } from "./album-detail-screen";
 
@@ -8,7 +9,16 @@ import { mountAlbumDetailScreen } from "./album-detail-screen";
 // Photos timeline and viewer navigation. They pin current remote behaviour
 // before the screen is decomposed (Milestone 11.5, D1).
 
-const keys = { back: 10009, down: 40, enter: 13, left: 37, right: 39, up: 38 };
+const keys = {
+  back: 10009,
+  channelDown: 428,
+  channelUp: 427,
+  down: 40,
+  enter: 13,
+  left: 37,
+  right: 39,
+  up: 38
+};
 
 function asset(id: string, capturedAt: string | null = null): AlbumAsset {
   return {
@@ -22,17 +32,20 @@ function asset(id: string, capturedAt: string | null = null): AlbumAsset {
   };
 }
 
-function bucket(index: number): TimelineBucket {
-  const month = String(10 - index).padStart(2, "0");
+// Bucket 0 is October 2026; each later bucket is a month older.
+function bucketMonth(index: number): string {
+  const months = 2026 * 12 + 9 - index;
 
-  return { assetCount: 8, timeBucket: `2026-${month}-01T00:00:00.000Z` };
+  return `${Math.floor(months / 12)}-${String((months % 12) + 1).padStart(2, "0")}`;
+}
+
+function bucket(index: number): TimelineBucket {
+  return { assetCount: 8, timeBucket: `${bucketMonth(index)}-01T00:00:00.000Z` };
 }
 
 function bucketAssets(index: number): AlbumAsset[] {
-  const month = String(10 - index).padStart(2, "0");
-
   return Array.from({ length: 8 }, (_, item) =>
-    asset(`b${index}-${item}`, `2026-${month}-15T10:00:00.000Z`)
+    asset(`b${index}-${item}`, `${bucketMonth(index)}-15T10:00:00.000Z`)
   );
 }
 
@@ -44,20 +57,26 @@ function fixture(
   const albumAssets = Array.from({ length: options.albumAssets ?? 14 }, (_, index) =>
     asset(`a${index}`)
   );
-  const loadTimelineAssetsPage = vi.fn(async (token: AlbumAssetPageToken | null) => {
-    const index = token?.kind === "bucket" ? token.bucketIndex : 0;
-    return {
-      assets: bucketAssets(index),
-      nextPageToken:
-        index + 1 < buckets.length ? { bucketIndex: index + 1, kind: "bucket" as const } : null,
-      total: options.pageTotal === undefined ? buckets.length * 8 : options.pageTotal
-    };
-  });
+  const loadTimelineAssetsPage = vi.fn(
+    async (_order: SortOrder, token: AlbumAssetPageToken | null) => {
+      const index = token?.kind === "bucket" ? token.bucketIndex : 0;
+      return {
+        assets: bucketAssets(index),
+        nextPageToken:
+          index + 1 < buckets.length ? { bucketIndex: index + 1, kind: "bucket" as const } : null,
+        total: options.pageTotal === undefined ? buckets.length * 8 : options.pageTotal
+      };
+    }
+  );
   const onBack = vi.fn();
   const onReturnToShell = vi.fn();
   const onViewerOpened = vi.fn();
   const onViewerClosed = vi.fn();
   const onAssetViewed = vi.fn();
+  // The date rail redraws on the next animation frame; tests run it by hand.
+  const frames: Array<() => void> = [];
+  const runFrames = () => frames.splice(0).forEach((frame) => frame());
+  let time = 0;
   const controller = mountAlbumDetailScreen({
     documentRef: documentRef as unknown as Document,
     loadFeedPage: vi.fn(),
@@ -66,6 +85,14 @@ function fixture(
     onReturnToShell,
     onViewerClosed,
     onViewerOpened,
+    now: () => time,
+    scheduleFrame(callback) {
+      frames.push(callback);
+      return () => {
+        const index = frames.indexOf(callback);
+        if (index >= 0) frames.splice(index, 1);
+      };
+    },
     service: {
       loadAlbumAssetsPage: vi.fn().mockResolvedValue({
         assets: albumAssets,
@@ -88,6 +115,7 @@ function fixture(
     } as unknown as AlbumService,
     settingsStore: {
       load: () => ({
+        ...defaultAppSettings,
         autoplayVideos: false,
         showViewerDate: false,
         showViewerExif: false,
@@ -97,8 +125,25 @@ function fixture(
       save: vi.fn()
     }
   });
-  const press = (keyCode: number) => {
+  // Presses a key a moment after the last, so presses are not a held key,
+  // and draws the frame that follows. A repeat comes 50 ms after the last
+  // press, as a held key auto-repeats.
+  const press = (keyCode: number, init: { drawFrame?: boolean; repeat?: boolean } = {}) => {
+    time += init.repeat ? 50 : 1000;
     const event = new Event("keydown", { cancelable: true });
+    Object.defineProperty(event, "keyCode", { value: keyCode });
+    Object.defineProperty(event, "repeat", { value: Boolean(init.repeat) });
+    documentRef.dispatchEvent(event);
+    if (init.drawFrame !== false) runFrames();
+    return event;
+  };
+  // Holds a key: one press, then auto-repeats until `heldMs` after it.
+  const hold = (keyCode: number, heldMs: number) => {
+    press(keyCode);
+    for (let elapsed = 50; elapsed <= heldMs; elapsed += 50) press(keyCode, { repeat: true });
+  };
+  const release = (keyCode: number) => {
+    const event = new Event("keyup");
     Object.defineProperty(event, "keyCode", { value: keyCode });
     documentRef.dispatchEvent(event);
   };
@@ -122,13 +167,17 @@ function fixture(
     documentRef,
     focused,
     focusedMarker,
+    hold,
     loadTimelineAssetsPage,
+    pendingFrames: () => frames.length,
+    runFrames,
     onAssetViewed,
     onBack,
     onReturnToShell,
     onViewerClosed,
     onViewerOpened,
     press,
+    release,
     settled
   };
 }
@@ -167,8 +216,14 @@ describe("album grid remote navigation", () => {
     f.press(keys.up);
     expect(f.focused()).toBe("1");
 
+    // Up from the first row reaches the header's sort button; Down returns to
+    // the first item.
     f.press(keys.up);
-    expect(f.focused()).toBe("1");
+    expect(f.documentRef.activeElement).toBe(f.byId("collection-sort-order"));
+    expect(f.byId("collection-sort-order").getAttribute("data-sort-order")).toBe("newest-first");
+    f.press(keys.down);
+    expect(f.focused()).toBe("0");
+    f.press(keys.right);
 
     f.press(keys.left);
     f.press(keys.left);
@@ -207,6 +262,8 @@ describe("album grid remote navigation", () => {
 
     f.press(keys.up);
     expect(f.documentRef.activeElement).toBe(f.byId("asset-viewer-slideshow"));
+    f.press(keys.down);
+    expect(f.documentRef.activeElement).toBe(f.byId("asset-viewer-faces"));
     f.press(keys.down);
     expect(f.documentRef.activeElement).toBe(f.byId("asset-placeholder-back"));
 
@@ -255,7 +312,7 @@ describe("Photos timeline remote navigation", () => {
     const f = await openPhotos();
 
     expect(f.byId("album-detail-title").textContent).toBe("Timeline");
-    expect(f.loadTimelineAssetsPage.mock.calls.map(([token]) => token)).toEqual([
+    expect(f.loadTimelineAssetsPage.mock.calls.map(([, token]) => token)).toEqual([
       { bucketIndex: 0, kind: "bucket" },
       { bucketIndex: 1, kind: "bucket" },
       { bucketIndex: 2, kind: "bucket" }
@@ -343,7 +400,7 @@ describe("Photos timeline remote navigation", () => {
     // Moving focus near the loaded end has already paged in bucket 3.
     const bucketsRequested = () =>
       f.loadTimelineAssetsPage.mock.calls.map(
-        ([token]) => (token as { bucketIndex: number }).bucketIndex
+        ([, token]) => (token as { bucketIndex: number }).bucketIndex
       );
     expect(bucketsRequested()).toEqual([0, 1, 2, 3]);
     f.press(keys.enter);
@@ -373,7 +430,7 @@ describe("Photos timeline remote navigation", () => {
     const f = await openPhotos(6);
     const bucketsRequested = () =>
       f.loadTimelineAssetsPage.mock.calls.map(
-        ([token]) => (token as { bucketIndex: number }).bucketIndex
+        ([, token]) => (token as { bucketIndex: number }).bucketIndex
       );
 
     // Three buckets fill the first screen; focusing it prefetches the next.
@@ -412,5 +469,147 @@ describe("Photos timeline remote navigation", () => {
     f.controller.refreshPhotos();
     await vi.waitFor(() => expect(f.loadTimelineAssetsPage).toHaveBeenCalledTimes(6));
     await vi.waitFor(() => expect(f.counts()).toEqual(["24", "24"]));
+  });
+});
+
+describe("Photos date rail acceleration", () => {
+  // 40 months: October 2026 back to July 2023. Year boundaries, where each
+  // year starts on the rail, are buckets 0, 10 (Dec 2025), 22 and 34.
+  async function openLongPhotos() {
+    const f = (active = fixture({ buckets: 40 }));
+    f.controller.showPhotos();
+    await f.settled();
+    f.controller.focusContent();
+    return f;
+  }
+
+  async function openRail() {
+    const f = await openLongPhotos();
+    for (let step = 0; step < 6; step += 1) f.press(keys.right);
+    expect(f.focusedMarker()).toBe("0");
+    return f;
+  }
+
+  it("moves a month per repeat for the first second, then a year, then two", async () => {
+    const f = await openRail();
+    const requests = f.loadTimelineAssetsPage.mock.calls.length;
+
+    // Held for 950 ms: the press and 19 repeats each move one month.
+    f.hold(keys.down, 950);
+    expect(f.focusedMarker()).toBe("20");
+    // From one second, each repeat moves to the next year boundary.
+    f.press(keys.down, { repeat: true });
+    expect(f.focusedMarker()).toBe("22");
+    f.press(keys.down, { repeat: true });
+    expect(f.focusedMarker()).toBe("34");
+    // Holding never loads photos; only OK does.
+    expect(f.loadTimelineAssetsPage.mock.calls.length).toBe(requests);
+  });
+
+  it("skips a year boundary per repeat after three seconds and stops at the end", async () => {
+    const f = await openRail();
+
+    f.hold(keys.down, 450);
+    expect(f.focusedMarker()).toBe("10");
+    for (let elapsed = 500; elapsed < 3000; elapsed += 50) f.press(keys.down, { repeat: true });
+    f.press(keys.down, { repeat: true });
+    expect(f.focusedMarker()).toBe("39");
+    f.release(keys.down);
+
+    for (let step = 0; step < 3; step += 1) f.press(keys.up);
+    expect(f.focusedMarker()).toBe("36");
+    f.hold(keys.up, 950);
+    expect(f.focusedMarker()).toBe("16");
+    for (let elapsed = 1000; elapsed < 3000; elapsed += 50) f.press(keys.up, { repeat: true });
+    expect(f.focusedMarker()).toBe("0");
+  });
+
+  it("starts each new hold with a single month", async () => {
+    const f = await openRail();
+
+    // Keyup ends a hold.
+    f.hold(keys.down, 1000);
+    expect(f.focusedMarker()).toBe("22");
+    f.release(keys.down);
+    f.press(keys.down, { repeat: true });
+    expect(f.focusedMarker()).toBe("23");
+
+    // So does a change of direction.
+    f.hold(keys.up, 1000);
+    expect(f.focusedMarker()).toBe("0");
+    f.press(keys.down, { repeat: true });
+    expect(f.focusedMarker()).toBe("1");
+
+    // And the app being hidden.
+    f.hold(keys.down, 1000);
+    expect(f.focusedMarker()).toBe("22");
+    f.controller.suspendPlayback();
+    f.press(keys.down, { repeat: true });
+    expect(f.focusedMarker()).toBe("23");
+  });
+
+  it("redraws the rail at most once per frame and cancels the frame when hidden", async () => {
+    const f = await openRail();
+
+    for (let step = 0; step < 4; step += 1) {
+      f.press(keys.down, { drawFrame: false, repeat: step > 0 });
+    }
+    // Keys only move the selection; one frame redraws the rail.
+    expect(f.focusedMarker()).toBe("0");
+    expect(f.pendingFrames()).toBe(1);
+    f.runFrames();
+    expect(f.focusedMarker()).toBe("4");
+
+    f.press(keys.down, { drawFrame: false });
+    expect(f.pendingFrames()).toBe(1);
+    f.controller.hide();
+    expect(f.pendingFrames()).toBe(0);
+  });
+
+  it("jumps a year with CH on the rail, without accelerating while held", async () => {
+    const f = await openRail();
+
+    expect(f.press(keys.channelDown).defaultPrevented).toBe(true);
+    expect(f.focusedMarker()).toBe("10");
+    f.press(keys.down);
+    f.press(keys.channelUp);
+    expect(f.focusedMarker()).toBe("10");
+    f.press(keys.channelUp);
+    expect(f.focusedMarker()).toBe("0");
+
+    f.press(keys.channelDown);
+    for (let step = 0; step < 70; step += 1) f.press(keys.channelDown, { repeat: true });
+    expect(f.focusedMarker()).toBe("39");
+    f.press(keys.down);
+    expect(f.focusedMarker()).toBe("39");
+    f.press(keys.enter);
+    await vi.waitFor(() =>
+      expect(f.documentRef.activeElement?.getAttribute("data-asset-id")).toBe("b39-0")
+    );
+  });
+
+  it("enters the rail from the grid with CH at the focused asset's month", async () => {
+    const f = await openLongPhotos();
+
+    f.press(keys.down);
+    expect(f.press(keys.channelDown).defaultPrevented).toBe(true);
+    expect(f.focusedMarker()).toBe("10");
+    f.press(keys.left);
+    expect(f.focused()).toBe("6");
+    f.press(keys.channelUp);
+    expect(f.focusedMarker()).toBe("0");
+  });
+
+  it("leaves CH alone outside the Photos grid and rail", async () => {
+    const f = (active = fixture());
+    f.controller.show(
+      { assetCount: 14, id: "album", name: "Holiday", thumbnailAssetId: null },
+      "albums"
+    );
+    await f.settled();
+    f.controller.focusContent();
+
+    expect(f.press(keys.channelDown).defaultPrevented).toBe(false);
+    expect(f.focused()).toBe("0");
   });
 });

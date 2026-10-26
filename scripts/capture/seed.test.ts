@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { defaultAppSettings } from "../../src/domain/app-settings";
 import { createLocalAppSettingsStore } from "../../src/storage/app-settings-store";
 import { createLocalConnectionSettingsStore } from "../../src/storage/connection-settings-store";
 import { createSeed } from "./seed";
@@ -20,10 +21,7 @@ describe("capture settings seed", () => {
       apiKey: "demo-key"
     });
     expect(createLocalAppSettingsStore(storage).load()).toEqual({
-      autoplayVideos: false,
-      showViewerDate: true,
-      showViewerTime: true,
-      showViewerExif: true,
+      ...defaultAppSettings,
       slideshowIntervalSeconds: 12
     });
     // A clean context receives only the two explicit settings stores.

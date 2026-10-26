@@ -286,4 +286,28 @@ describe("People browser", () => {
     await f.settled();
     expect(f.loadPeoplePage).toHaveBeenCalledTimes(2);
   });
+
+  it("undoes Chromium 63's own scroll when focusing a card", async () => {
+    const f = setup(60);
+    const grid = byId("people-grid");
+    const focus = HTMLElement.prototype.focus;
+    // Chromium 63 ignores preventScroll and scrolls the focused card into view.
+    HTMLElement.prototype.focus = function (this: HTMLElement, options?: FocusOptions) {
+      focus.call(this, options);
+      if (this.classList.contains("person-card")) grid.scrollTop = 999;
+    };
+
+    try {
+      controller!.show();
+      await f.settled();
+      grid.scrollTop = 0;
+      await f.press(remoteKeys.down);
+      expect(f.focusedId()).toBe("person-6");
+      // The grid scrolls on from where it was before focus (0), not from
+      // where the browser's own scroll left it (999).
+      expect(grid.scrollTop).toBeLessThanOrEqual(0);
+    } finally {
+      HTMLElement.prototype.focus = focus;
+    }
+  });
 });

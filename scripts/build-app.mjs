@@ -11,6 +11,7 @@ const distDir = resolve(root, "dist");
 const debugBuild = process.argv.includes("--debug") || process.env.IMMICH_TV_DEBUG_BUILD === "1";
 const copiedRuntimeFiles = [
   "config.xml",
+  "assets/app-background.jpg",
   "assets/immich-tv-logo.png",
   "index.html",
   "icon.png",

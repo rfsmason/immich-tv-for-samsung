@@ -1,7 +1,7 @@
 import type { AlbumService } from "../../app/album-service";
 import type { ViewingHistoryService } from "../../app/viewing-history-service";
 import type { Album, AlbumAsset } from "../../domain/album";
-import type { Memory, Person } from "../../domain/home";
+import { homeRailOrder, type HomeRailId, type Memory, type Person } from "../../domain/home";
 import type { AssetThumbnailState } from "../asset-thumbnail-window";
 import type { PriorityScheduler } from "../priority-scheduler";
 
@@ -25,25 +25,17 @@ export const personLimit = 18;
 export const homeRailDataConcurrency = 2;
 export const homeThumbnailRequestLimit = 6;
 
-export type HomeRailId =
-  "recently-added" | "favorites" | "videos" | "people" | "recently-viewed" | "albums" | "memories";
+export { homeRailOrder, type HomeRailId };
 
 export type HomeAssetRailId = Extract<
   HomeRailId,
   "recently-added" | "favorites" | "videos" | "recently-viewed"
 >;
 
-export const homeRailOrder: HomeRailId[] = [
-  "recently-added",
-  "favorites",
-  "videos",
-  "people",
-  "recently-viewed",
-  "albums",
-  "memories"
-];
-
 export type HomeScreenElements = {
+  // Shown instead of the rails when every rail is turned off in Settings.
+  empty: HTMLElement;
+  openSettingsButton: HTMLButtonElement;
   albumsRail: HTMLElement;
   albumsStatus: HTMLElement;
   favoritesRail: HTMLElement;
@@ -63,6 +55,8 @@ export type HomeScreenElements = {
 
 export type HomeScreenOptions = {
   documentRef?: Document;
+  // The rails Settings turns on, in screen order. Read at each load.
+  loadEnabledRails(): HomeRailId[];
   onOpenAlbum(album: Album): void;
   // Opens the rail's full collection, starting from its loaded items.
   onOpenAssetCollection(input: {
@@ -80,6 +74,7 @@ export type HomeScreenOptions = {
   onBrowsePeople(): void;
   // See more on the Albums rail.
   onBrowseAlbums(): void;
+  onOpenSettings(): void;
   onReturnToShell(): void;
   service: AlbumService;
   history: Pick<ViewingHistoryService, "loadAssets">;
@@ -107,6 +102,9 @@ export type AlbumThumbnailState = {
 
 export type HomeScreenState = {
   activeRail: HomeRailId;
+  // The rails shown, in screen order, as Settings had them at the last load.
+  // Rails that are off are not loaded, rendered or reachable.
+  enabledRails: HomeRailId[];
   // Settles once every rail of the latest load has loaded or failed.
   homeLoad: Promise<void> | null;
   // One queue for every rail's thumbnails; see homeThumbnailPriority.
@@ -162,6 +160,11 @@ export function resetHomeRails(state: HomeScreenState): void {
   state.videos = createRailState();
 }
 
+// Empties one rail, as at launch.
+export function clearRail(state: HomeScreenState, railId: HomeRailId): void {
+  Object.assign(getRailState(state, railId), createRailState());
+}
+
 export function createAlbumThumbnailState(): AlbumThumbnailState {
   return {
     retainedAlbumIds: {},
@@ -200,6 +203,32 @@ export function hasLoadedAnyHomeRail(state: HomeScreenState): boolean {
     state.recentlyViewed.hasLoaded ||
     state.memories.hasLoaded
   );
+}
+
+export function isRailEnabled(state: HomeScreenState, railId: HomeRailId): boolean {
+  return state.enabledRails.indexOf(railId) >= 0;
+}
+
+// The enabled rail closest to `railId` in screen order, preferring the one
+// above on a tie; `railId` itself when it is enabled.
+export function findNearestEnabledRail(
+  enabledRails: HomeRailId[],
+  railId: HomeRailId
+): HomeRailId | null {
+  const position = homeRailOrder.indexOf(railId);
+  let nearest: HomeRailId | null = null;
+  let nearestDistance = Infinity;
+
+  enabledRails.forEach((candidate) => {
+    const distance = Math.abs(homeRailOrder.indexOf(candidate) - position);
+
+    if (distance < nearestDistance) {
+      nearest = candidate;
+      nearestDistance = distance;
+    }
+  });
+
+  return nearest;
 }
 
 // The focus id of a rail's current selection, including its See more tile.

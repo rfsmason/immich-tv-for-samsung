@@ -581,6 +581,17 @@
       </div>
     </section>
 
+    <section id="ambient-screen" class="ambient-screen" aria-label="Ambient mode. Press any key to return." tabindex="-1" hidden>
+      <img id="ambient-layer-a" class="ambient-layer" alt="" hidden>
+      <img id="ambient-layer-b" class="ambient-layer" alt="" hidden>
+      <video id="ambient-video" class="ambient-video" muted playsinline hidden></video>
+      <div id="ambient-overlay" class="ambient-overlay" data-position="0" aria-hidden="true">
+        <p id="ambient-clock" class="ambient-clock" hidden></p>
+        <p id="ambient-details" class="ambient-details" hidden></p>
+      </div>
+      <p id="ambient-message" class="ambient-message" role="status" hidden></p>
+    </section>
+
     <!-- Samsung Product APIs (AppCommon screensaver control), as Samsung documents it. The TV
          resolves $WEBAPIS; the desktop preview server removes this tag (ADR 0019). -->
     <script src="$WEBAPIS/webapis/webapis.js"></script>

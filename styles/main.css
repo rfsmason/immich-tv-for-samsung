@@ -1133,6 +1133,9 @@ h1.screen-heading-subtle {
   line-height: 1.2;
 }
 
+/* The markers' labels and ticks end on the same vertical line as the sort
+   order button above them: the rail sits 4px further right than the header's
+   buttons, less its 4px right padding. */
 .photos-timeline-rail {
   position: fixed;
   top: 172px;
@@ -1144,7 +1147,7 @@ h1.screen-heading-subtle {
   justify-content: stretch;
   box-sizing: border-box;
   width: 118px;
-  padding: 8px 28px 8px 18px;
+  padding: 8px 4px 8px 18px;
   border-left: 2px solid rgba(255, 255, 255, 0.14);
   overflow: visible;
 }
@@ -1159,6 +1162,7 @@ button.focusable.timeline-marker {
   display: block;
   flex: 1 1 0;
   min-height: 7px;
+  align-self: flex-end;
   width: 100%;
   max-width: 78px;
   min-width: 0;
@@ -1187,7 +1191,7 @@ button.focusable.timeline-marker:focus {
 .timeline-marker-tick {
   position: absolute;
   top: 50%;
-  right: 2px;
+  right: 0;
   display: block;
   box-sizing: border-box;
   width: 12px;
@@ -1896,6 +1900,11 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   .header-actions {
     top: 56px;
     right: 38px;
+  }
+
+  /* Keeps the date rail's markers ending under the header buttons. */
+  .photos-timeline-rail {
+    right: 34px;
   }
 
   .header-actions > :not([hidden]) ~ :not([hidden]) {

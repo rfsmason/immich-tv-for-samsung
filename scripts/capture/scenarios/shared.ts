@@ -27,8 +27,8 @@ export const slideshow = "#asset-viewer-slideshow";
 export const searchControl = (name: string): string => `[data-search-control="${name}"]`;
 
 // Search's rows from People down, as their first control is with nothing
-// chosen below People (Taken, Type, Place, Albums, then Show photos).
-const searchColumnZero = ["add-people", "from", "type:all", "choose-place", "add-albums", "show"];
+// chosen below People (Taken, Place, Albums, then Show photos).
+const searchColumnZero = ["add-people", "from", "choose-place", "add-albums", "show"];
 
 // Moves Down the Search panel's first column to Show photos, from a row
 // whose first control is `from` and with no place or albums chosen.

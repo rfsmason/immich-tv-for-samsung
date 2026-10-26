@@ -814,10 +814,10 @@ describe("application routing", () => {
 
     expect(byId("search-people-screen").hidden).toBe(true);
     expect(byId("search-screen").hidden).toBe(false);
-    // Back from the picker lands on its own row; Show photos is five rows down.
+    // Back from the picker lands on its own row; Show photos is four rows down.
     expect(searchControl()).toBe("add-people");
     expect(byId("search-panel").textContent).toContain("Alex");
-    for (let row = 0; row < 5; row += 1) pressKey(remoteKeys.down);
+    for (let row = 0; row < 4; row += 1) pressKey(remoteKeys.down);
     expect(searchControl()).toBe("show");
     pressKey(remoteKeys.enter);
 
@@ -857,7 +857,7 @@ describe("application routing", () => {
   it("Search → place picker and album picker → each returns to its own row with the choice", async () => {
     const { albumService } = await start();
     await openSearch();
-    for (let row = 0; row < 3; row += 1) pressKey(remoteKeys.down);
+    for (let row = 0; row < 2; row += 1) pressKey(remoteKeys.down);
     expect(searchControl()).toBe("choose-place");
     pressKey(remoteKeys.enter);
 
@@ -905,8 +905,8 @@ describe("application routing", () => {
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
     pressKey(remoteKeys.enter);
-    // Taken → Type → Place → Albums → Show photos.
-    for (let row = 0; row < 4; row += 1) pressKey(remoteKeys.down);
+    // Taken → Place → Albums → Show photos.
+    for (let row = 0; row < 3; row += 1) pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
 
     await vi.waitFor(() =>
@@ -941,8 +941,8 @@ describe("application routing", () => {
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
     pressKey(remoteKeys.enter);
-    // Taken → Type → Place → Albums → Show photos.
-    for (let row = 0; row < 4; row += 1) pressKey(remoteKeys.down);
+    // Taken → Place → Albums → Show photos.
+    for (let row = 0; row < 3; row += 1) pressKey(remoteKeys.down);
     pressKey(remoteKeys.enter);
     pressKey(remoteKeys.back);
     expect(searchControl()).toBe("show");

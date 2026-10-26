@@ -79,7 +79,7 @@ Fixes from TV testing (picker face flicker, a sharper launcher icon, an earlier 
 
 Milestone 15, Personalisation and Navigation, is complete on `main` (PR #3, see [ADR 0017](architecture/0017-personalisation-and-navigation.md)); physical Q950R acceptance passed on 26 October 2026 (user confirmation), including every item on PR #3's combined checklist. It adds date-rail hold acceleration and CH year jumps, Home rail visibility in Settings, a Newest first / Oldest first toggle on collections, viewer face tags, a standard background, and partners' photos in Photos and Recently Added.
 
-Milestone 16, Search v2, is implemented (see [ADR 0018](architecture/0018-search-v2.md)); physical Q950R acceptance is pending. Search adds a Type row (All, Photos, Live Photos, Videos), a place picker (country, region, city) and an album picker, all chosen with the remote. The roadmap continues after it with Shared Content, Ambient / Screensaver Mode, Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 17-20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
+Milestone 16, Search v2, is implemented (see [ADR 0018](architecture/0018-search-v2.md)); physical Q950R acceptance is pending. Search adds an Asset type drop-down beside the dates (All, Photos, Live Photos, Videos), a place picker (country, region, city) and an album picker, all chosen with the remote. The roadmap continues after it with Shared Content, Ambient / Screensaver Mode, Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 17-20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
 
 ## Post-MVP Product Roadmap
 
@@ -443,7 +443,7 @@ Success criterion: everyday browsing is faster and more personal on the TV, with
 
 Extend Search v1 (ADR 0014) with three remote-friendly criteria. Each new criterion is one criteria field plus its helpers, one mapper line and one panel row; no query builder.
 
-- **Media type:** one row choosing All, Photos, Live Photos or Videos. "Photos" means all still images, including Live Photos (`type` IMAGE). "Live Photos" means `type` IMAGE with `isMotion: { eq: true }` (Immich matches assets whose `livePhotoVideoId` is set). "Videos" means `type` VIDEO.
+- **Media type:** an Asset type drop-down beside the dates, choosing All, Photos, Live Photos or Videos. "Photos" means all still images, including Live Photos (`type` IMAGE). "Live Photos" means `type` IMAGE with `isMotion: { eq: true }` (Immich matches assets whose `livePhotoVideoId` is set). "Videos" means `type` VIDEO.
 - **Location:** one place, chosen by drilling down from a country to an optional region and then an optional city, using values from `GET /search/suggestions?type=country|state|city` (asset read). Nothing is typed. The filter uses `country`, `state` and `city`.
 - **Albums:** a multi-select picker reusing the people-picker pattern. It matches photos in *any* chosen album (`albumIds.any`), and the panel says so in plain words.
 

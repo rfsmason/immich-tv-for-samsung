@@ -102,10 +102,9 @@ describe("Search criteria panel", () => {
     pressKey(remoteKeys.right);
     expect(f.focused()).toBe("to");
     pressKey(remoteKeys.down);
-    expect(f.focused()).toBe("type:photos");
+    expect(f.focused()).toBe("choose-place");
     pressKey(remoteKeys.up);
-    expect(f.focused()).toBe("to");
-    pressKey(remoteKeys.down);
+    expect(f.focused()).toBe("from");
     pressKey(remoteKeys.down);
     expect(f.focused()).toBe("choose-place");
     pressKey(remoteKeys.down);
@@ -352,7 +351,7 @@ describe("Search criteria panel", () => {
 
     expect(f.message()).toBe("From must be on or before To.");
     expect(f.control("show")?.getAttribute("aria-disabled")).toBe("true");
-    for (let row = 0; row < 4; row += 1) pressKey(remoteKeys.down);
+    for (let row = 0; row < 3; row += 1) pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);
     expect(f.focused()).toBe("clear");
     pressKey(remoteKeys.left);
@@ -400,7 +399,7 @@ describe("Search criteria panel", () => {
     expect(f.focused()).toBe("from");
     pressKey(remoteKeys.enter);
     pressKey(remoteKeys.enter);
-    for (let row = 0; row < 4; row += 1) pressKey(remoteKeys.down);
+    for (let row = 0; row < 3; row += 1) pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);
     expect(f.focused()).toBe("clear");
     pressKey(remoteKeys.enter);
@@ -418,26 +417,62 @@ describe("Search criteria panel", () => {
     expect(f.text("from")).toContain("Any date");
   });
 
-  it("chooses a type with Left, Right and OK, marked by more than colour", async () => {
+  it("opens the Asset type list on arrival, chooses with Up, Down and OK, and never traps focus", async () => {
     const f = setup();
+    const list = () => byId("search-panel").querySelector(".search-dropdown");
     await f.open();
-    for (let row = 0; row < 2; row += 1) pressKey(remoteKeys.down);
-    expect(f.focused()).toBe("type:all");
-    expect(f.control("type:all")?.getAttribute("aria-pressed")).toBe("true");
-    expect(f.text("type:all")).toBe("✓All");
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.right);
+    expect(f.text("asset-type")).toContain("All");
+    expect(list()).toBeNull();
 
+    // Arriving opens the list on the current type.
     pressKey(remoteKeys.right);
-    pressKey(remoteKeys.right);
+    expect(f.focused()).toBe("asset-type:all");
+    expect(f.control("asset-type")?.getAttribute("aria-expanded")).toBe("true");
+    expect(f.control("asset-type:all")?.getAttribute("aria-selected")).toBe("true");
+    expect(f.text("asset-type:all")).toBe("✓All");
+
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.down);
+    expect(f.focused()).toBe("asset-type:live-photos");
     pressKey(remoteKeys.enter);
-    expect(f.focused()).toBe("type:live-photos");
-    expect(f.control("type:live-photos")?.getAttribute("aria-pressed")).toBe("true");
-    expect(f.control("type:live-photos")?.querySelector(".search-option-check")).not.toBeNull();
-    expect(f.control("type:all")?.getAttribute("aria-pressed")).toBe("false");
-    expect(f.control("show")?.hasAttribute("aria-disabled")).toBe(false);
+    expect(list()).toBeNull();
+    expect(f.focused()).toBe("asset-type");
+    expect(f.text("asset-type")).toContain("Live Photos");
     expect(controller!.criteria().mediaType).toBe("live-photos");
+    expect(f.control("show")?.hasAttribute("aria-disabled")).toBe(false);
 
+    // Closed, arrows move on; OK opens it again on the chosen type.
     pressKey(remoteKeys.left);
+    expect(f.focused()).toBe("to");
+    pressKey(remoteKeys.right);
+    expect(f.focused()).toBe("asset-type:live-photos");
+    pressKey(remoteKeys.back);
+    expect(f.focused()).toBe("asset-type");
+    expect(controller!.criteria().mediaType).toBe("live-photos");
+    pressKey(remoteKeys.enter);
+    expect(f.focused()).toBe("asset-type:live-photos");
     pressKey(remoteKeys.left);
+    expect(list()).toBeNull();
+    expect(f.focused()).toBe("asset-type");
+
+    // Past either end closes the list unchanged.
+    pressKey(remoteKeys.enter);
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.down);
+    expect(list()).toBeNull();
+    expect(f.focused()).toBe("asset-type");
+    pressKey(remoteKeys.down);
+    expect(f.focused()).toBe("choose-place");
+
+    // All clears the criterion.
+    pressKey(remoteKeys.up);
+    expect(f.focused()).toBe("from");
+    pressKey(remoteKeys.right);
+    pressKey(remoteKeys.right);
+    for (let step = 0; step < 2; step += 1) pressKey(remoteKeys.up);
+    expect(f.focused()).toBe("asset-type:all");
     pressKey(remoteKeys.enter);
     expect(controller!.criteria().mediaType).toBe("all");
     expect(f.control("clear")).toBeNull();
@@ -447,7 +482,7 @@ describe("Search criteria panel", () => {
     const f = setup();
     const place = { city: "Exampleton", country: "Exampleland", state: "Example County" };
     await f.open();
-    for (let row = 0; row < 3; row += 1) pressKey(remoteKeys.down);
+    for (let row = 0; row < 2; row += 1) pressKey(remoteKeys.down);
     expect(f.focused()).toBe("choose-place");
     pressKey(remoteKeys.enter);
     expect(f.onChoosePlace).toHaveBeenCalledWith(null);

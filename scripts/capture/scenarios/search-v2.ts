@@ -1,7 +1,7 @@
 import { destination, searchControl as control, type Scenario } from "./shared";
 
-// Search v2 stills (Milestone 16): the panel with a person, a type, a place
-// and an album; the place picker one level in; and the album picker. The
+// Search v2 stills (Milestone 16): the panel with a person, an asset type, a
+// place and an album; the place picker one level in; and the album picker. The
 // demo library's first country needs a region or city, so the picker shows
 // "Anywhere in <country>" (docs/capture.md).
 
@@ -16,7 +16,6 @@ export const searchPlacePicker: Scenario = {
     await destination(remote, "search");
     await remote.right(control("add-people"));
     await remote.down(control("from"));
-    await remote.down(control("type:all"));
     await remote.down(control("choose-place"));
     await remote.ok(placeRow);
     await remote.ok(anywhere);
@@ -30,7 +29,6 @@ export const searchAlbumPicker: Scenario = {
     await destination(remote, "search");
     await remote.right(control("add-people"));
     await remote.down(control("from"));
-    await remote.down(control("type:all"));
     await remote.down(control("choose-place"));
     await remote.down(control("add-albums"));
     await remote.ok(firstAlbum);
@@ -48,9 +46,10 @@ export const searchV2Panel: Scenario = {
     await remote.ok('#search-people-grid [aria-pressed="true"]');
     await remote.back(control("add-people"));
     await remote.down(control("from"));
-    await remote.down(control("type:all"));
-    await remote.right(control("type:photos"));
-    await remote.ok(control("type:photos"));
+    await remote.right(control("to"));
+    await remote.right(control("asset-type:all")); // Arriving opens the list.
+    await remote.down(control("asset-type:photos"));
+    await remote.ok(control("asset-type"));
     await remote.down(control("choose-place"));
     await remote.ok(placeRow);
     await remote.ok(anywhere);

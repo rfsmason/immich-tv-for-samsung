@@ -117,15 +117,15 @@ describe("Search v2 stills", () => {
     }
   });
 
-  it("chooses a person, a type, a place and an album, and ends on Show photos", async () => {
+  it("chooses a person, an asset type, a place and an album, and ends on Show photos", async () => {
     const { context, actions } = fixture();
     await searchV2Panel.run(context);
     const okOn = (focus: string) =>
       actions.findIndex((action) => action.key === "ok" && action.focus === focus);
 
-    expect(okOn('[data-search-control="type:photos"]')).toBeGreaterThan(-1);
+    expect(okOn('[data-search-control="asset-type"]')).toBeGreaterThan(-1);
     expect(okOn('[data-search-control="place-chip"]')).toBeGreaterThan(
-      okOn('[data-search-control="type:photos"]')
+      okOn('[data-search-control="asset-type"]')
     );
     expect(actions).toContainEqual({ key: "back", focus: '[data-search-control="add-albums"]' });
     expect(actions[actions.length - 1]).toEqual({

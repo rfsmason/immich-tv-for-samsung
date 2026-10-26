@@ -109,7 +109,7 @@ Against Immich `main` at `e5094d5` and release v3.3.3:
 
 ADR 0018 extends this design without changing its shape:
 
-- Type, Place and Albums rows now sit between Taken and the actions.
+- An Asset type drop-down sits beside the dates, and Place and Albums rows sit between Taken and the actions.
 - Returning from a picker lands on that picker's own row rather than on Show photos.
 - `people/people-grid.ts` is now a configuration of the generic card grid (`src/screens/card-grid.ts`), which the album picker also uses.
 - Empty results read "No photos match. Try fewer filters or a wider date range."

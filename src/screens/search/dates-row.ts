@@ -1,9 +1,19 @@
 import type { AlbumService } from "../../app/album-service";
 import type { TimelineBucket } from "../../domain/album";
-import { setTakenFrom, setTakenTo, type CalendarDate } from "../../domain/search";
+import {
+  setSearchMediaType,
+  setTakenFrom,
+  setTakenTo,
+  type CalendarDate
+} from "../../domain/search";
 import { readArrowDirection, remoteKeys } from "../../platform/tizen/keys";
 import { shortMonthNames } from "../../presentation/date-labels";
-import { formatSearchDate, formatSearchTakenSummary } from "../../presentation/search-labels";
+import {
+  formatSearchDate,
+  formatSearchTakenSummary,
+  searchMediaTypeLabels
+} from "../../presentation/search-labels";
+import { assetTypeKey, createAssetTypeField } from "./asset-type-field";
 import {
   moveDateStepperColumn,
   openDateStepper,
@@ -19,7 +29,8 @@ import {
 } from "./search-row";
 
 // Search's Taken row: From and To dates, each edited with an inline stepper
-// that takes over the remote until OK sets it or Back cancels.
+// that takes over the remote until OK sets it or Back cancels, then the
+// Asset type field, whose list drops down beneath it (asset-type-field.ts).
 
 // Year bounds when the library's timeline span is not known.
 const fallbackYearSpan = 100;
@@ -41,6 +52,11 @@ export function createDatesRow(context: SearchPanelContext, options: DatesRowOpt
   // session data, so leaving Search does not discard it.
   let connectionEpoch = 0;
   let editing: { field: DateField; stepper: DateStepperState } | null = null;
+  const assetType = createAssetTypeField();
+
+  function openAssetType(): void {
+    context.update(assetType.open(context.criteria().mediaType));
+  }
 
   // The library's oldest photo bounds the year column and seeds From. One
   // request per session; without it, the last hundred years are offered.
@@ -182,13 +198,48 @@ export function createDatesRow(context: SearchPanelContext, options: DatesRowOpt
         return true;
       }
 
+      if (key === assetTypeKey) {
+        openAssetType();
+        return true;
+      }
+
       return false;
     },
+    arrive(key) {
+      if (key !== assetTypeKey) {
+        return false;
+      }
+
+      openAssetType();
+      return true;
+    },
     handleModalKey(event, keyCode) {
-      const open = editing!;
       const direction = readArrowDirection(keyCode);
 
       event.preventDefault();
+
+      if (assetType.isOpen()) {
+        const result = assetType.handleKey(
+          keyCode === remoteKeys.back
+            ? "back"
+            : keyCode === remoteKeys.enter
+              ? "enter"
+              : direction || "back"
+        );
+
+        if ("focus" in result) {
+          context.update(result.focus);
+        } else {
+          if (result.chosen) {
+            context.setCriteria(setSearchMediaType(context.criteria(), result.chosen));
+          }
+          context.update(assetTypeKey);
+        }
+
+        return true;
+      }
+
+      const open = editing!;
 
       if (keyCode === remoteKeys.back) {
         closeStepper(false);
@@ -213,12 +264,17 @@ export function createDatesRow(context: SearchPanelContext, options: DatesRowOpt
     },
     hide() {
       editing = null;
+      assetType.close();
     },
-    isModal: () => editing !== null,
+    isModal: () => editing !== null || assetType.isOpen(),
     lines() {
+      if (assetType.isOpen()) {
+        return assetType.optionKeys().map((key) => [key]);
+      }
+
       return editing
         ? [["day", "month", "year", "clear"].map((column) => `stepper:${column}`)]
-        : [["from", "to"]];
+        : [["from", "to", assetTypeKey]];
     },
     render() {
       const { controls, row } = createSearchRow(documentRef, null);
@@ -226,6 +282,7 @@ export function createDatesRow(context: SearchPanelContext, options: DatesRowOpt
 
       controls.appendChild(createDateControl("from", "Taken from", criteria.takenFrom));
       controls.appendChild(createDateControl("to", "Taken to", criteria.takenTo));
+      controls.appendChild(assetType.render(documentRef, criteria.mediaType));
 
       return editing ? [row, renderStepper(editing)] : [row];
     },
@@ -236,12 +293,17 @@ export function createDatesRow(context: SearchPanelContext, options: DatesRowOpt
     },
     show() {
       editing = null;
+      assetType.close();
       loadBounds();
     },
     summary() {
       const criteria = context.criteria();
+      const parts = [
+        formatSearchTakenSummary(criteria.takenFrom, criteria.takenTo),
+        criteria.mediaType === "all" ? null : searchMediaTypeLabels[criteria.mediaType]
+      ].filter((part): part is string => part !== null);
 
-      return formatSearchTakenSummary(criteria.takenFrom, criteria.takenTo);
+      return parts.join(" · ") || null;
     }
   };
 }

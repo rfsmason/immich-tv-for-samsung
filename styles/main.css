@@ -2505,19 +2505,58 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   max-width: 900px;
 }
 
-/* Type: the chosen option has a check mark as well as its colour. */
-.search-panel .focusable.search-option[data-selected] {
+/* Asset type: a Settings-style field whose list drops down over the rows
+   beneath it, so opening it never moves the panel. The chosen type has a
+   check mark as well as its colour. */
+.search-select-field {
+  position: relative;
+}
+
+.search-panel .focusable.search-select {
+  display: block;
+  min-width: 240px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.search-select-arrow {
+  display: inline-block;
+  margin-left: 16px;
+  float: right;
+}
+
+.search-panel .focusable.search-select[aria-expanded="true"] {
   border-color: var(--immich-primary);
-  background: rgba(66, 81, 176, 0.42);
 }
 
-.search-panel .focusable.search-option[data-selected]:focus {
-  border-color: #ffffff;
-  background: #ffffff;
+.search-dropdown {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  left: 0;
+  min-width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border: 4px solid var(--immich-primary);
+  border-radius: 12px;
+  background: #1b1f33;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
 }
 
-.search-option-check {
-  margin-right: 10px;
+.search-panel .focusable.search-dropdown-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.search-dropdown > * + * {
+  margin-top: 8px;
+}
+
+.search-dropdown-check {
+  display: inline-block;
+  width: 32px;
   font-weight: 800;
 }
 

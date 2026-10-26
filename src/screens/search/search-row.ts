@@ -23,6 +23,9 @@ export type SearchPanelContext = {
 export type SearchRow = {
   // OK on a control; false when the key is not this row's.
   activate(key: string): boolean;
+  // Focus arriving on a control by an arrow key; true when the row handled
+  // it itself (Asset type opens its list).
+  arrive?(key: string): boolean;
   // Back while modal: ends the modal state and returns the key to focus.
   cancelModal?(): string;
   // Every key while modal and owning its keys (the date stepper); true when

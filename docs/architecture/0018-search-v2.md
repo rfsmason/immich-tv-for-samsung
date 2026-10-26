@@ -44,18 +44,27 @@ Each counts as one criterion for emptiness, Clear all's confirmation and the gui
 
 ### Panel
 
-- **Rows, top to bottom:** People, Taken, Type, Place, Albums, Actions.
-- **Type** is four options in one row. Left/Right move between them and OK selects one. The chosen option has `aria-pressed="true"`, a check mark and a filled style, so the state never relies on colour alone.
+- **Rows, top to bottom:** People, Taken (From, To and Asset type), Place, Albums, Actions.
+- **Asset type** is a drop-down field beside the dates, styled like Settings' slideshow interval (`asset-type-field.ts`):
+  - arriving on it with an arrow key opens its list on the current type;
+  - Up and Down move through All, Photos, Live Photos and Videos;
+  - OK chooses and closes the list, leaving focus on the field;
+  - Back closes it unchanged;
+  - closed, any arrow moves on and OK opens it again;
+  - Left, Right, or Up/Down past either end also close it unchanged, so it never traps focus.
+
+  The list drops down over the rows beneath it, so opening it never moves the panel. The chosen type has a check mark as well as its colour, and the list is a `listbox` with `aria-selected` options. It was first a row of four option buttons; on 26 October 2026 the user asked for a drop-down beside the dates instead, which also saves a row.
 - **Place** is "+ Choose a place" or one chip, for example "Exampleton, Example County, Exampleland". OK on the chip removes the place. To change it, remove it and choose again.
 - **Albums** works like People: "+ Add albums", the first four chips, then "+N more", which reopens the picker. OK on a chip removes it.
-- **Returning from any picker lands on its own row:** Add people, the place chip (or Choose a place) and Add albums. This replaces ADR 0014's "returning from the picker lands on Show photos". With six rows, landing on Show photos skipped the rows below the picker that the user might want next.
+- **Returning from any picker lands on its own row:** Add people, the place chip (or Choose a place) and Add albums. This replaces ADR 0014's "returning from the picker lands on Show photos". With five rows, landing on Show photos skipped the rows below the picker that the user might want next.
+- The panel has one optional hook for this field: `SearchRow.arrive(key)`, called when an arrow key moves focus onto a control, lets a row handle the arrival itself.
 - **Fit.** The panel fits 1920×1080 without scrolling in its worst case. Desktop measurement with an invented mock found this case reaches 1080 px exactly:
   - four long-named people chips and "+N more", with the rule line;
   - the date stepper open;
   - a long place;
   - four long-named album chips and "+N more", with the rule line.
 
-  To get there, rows are 26 px apart (was 32), the panel may be 1700 px wide (was 1500) and chip names are capped at 170 px, ellipsised. The full name stays in each chip's spoken label.
+  To get there, rows are 26 px apart (was 32), the panel may be 1700 px wide (was 1500) and chip names are capped at 170 px, ellipsised. The full name stays in each chip's spoken label. Moving Asset type beside the dates later removed a row, leaving about 130 px spare.
 - The results header joins criteria with " · ", for example "Sam Example · Videos · Exampleton". Past 48 characters, people and albums become counts ("2 people · 3 albums · Videos · Exampleton").
 - Empty results now read "No photos match. Try fewer filters or a wider date range."
 

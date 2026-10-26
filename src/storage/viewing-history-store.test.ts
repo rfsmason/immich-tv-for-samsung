@@ -56,7 +56,7 @@ describe("local viewing history", () => {
     );
     const person = {
       ...entry("person-asset"),
-      source: { kind: "person" as const, id: "person-p1", title: "Rory" }
+      source: { kind: "person" as const, id: "person-p1", title: "Robin Example" }
     };
 
     store.record("user", person);
@@ -72,7 +72,7 @@ describe("local viewing history", () => {
     );
     const search = {
       ...entry("search-asset", 2),
-      source: { kind: "search" as const, id: "search", title: "Rory · From 1 Jan 2020" }
+      source: { kind: "search" as const, id: "search", title: "Robin Example · From 1 Jan 2020" }
     };
 
     store.record("user", search);

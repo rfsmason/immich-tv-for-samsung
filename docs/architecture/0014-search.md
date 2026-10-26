@@ -68,7 +68,7 @@ Search has been a top-level destination with a placeholder since Milestone 8. Mi
 ### Results
 
 - Show photos opens a typed `search` feed (carrying the criteria) in the shared collection, with route `{ kind: "search-results"; parent: "search" }`. There is no search-specific grid or viewer; images, video, Live Photos, slideshow and lifecycle pause use the existing paths.
-- The header is a short summary, for example "Rory & Sam · From 1 Jul 2012" or "3 people · 1 Jan 2020 – 31 Dec 2020".
+- The header is a short summary, for example "Robin Example & Sam Example · From 1 Jul 2012" or "3 people · 1 Jan 2020 – 31 Dec 2020".
 - Empty results read "No photos match. Try fewer people or a wider date range.", and the Back control reads "Back to Search".
 - Viewer Back returns to the last viewed asset; grid Back returns to Search on Show photos with the criteria unchanged. A new search starts a new collection generation, so a slower earlier result is dropped.
 - Viewing history records a `search` source kind (title only, not the criteria), a backward-compatible extension of the version 1 store. Older entries still load.

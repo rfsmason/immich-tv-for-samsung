@@ -113,7 +113,7 @@ describe("Immich client", () => {
       jsonResponse({
         email: "me@example.com",
         id: "user-id",
-        name: "Rory"
+        name: "Robin Example"
       })
     );
     const client = createImmichClient({ fetchImpl, settings });
@@ -121,7 +121,7 @@ describe("Immich client", () => {
     await expect(client.getCurrentUser()).resolves.toEqual({
       email: "me@example.com",
       id: "user-id",
-      name: "Rory"
+      name: "Robin Example"
     });
 
     expect(fetchImpl).toHaveBeenCalledWith("http://immich.local:2283/api/users/me", {
@@ -929,7 +929,7 @@ describe("Immich client", () => {
         hasNextPage: true,
         hidden: 4,
         people: [
-          { id: "fav", isFavorite: true, isHidden: false, name: "Rory" },
+          { id: "fav", isFavorite: true, isHidden: false, name: "Robin Example" },
           { id: "named", name: "Alex" },
           { id: "unnamed", isFavorite: false, name: "  " }
         ],
@@ -942,7 +942,7 @@ describe("Immich client", () => {
       hasMore: true,
       page: 2,
       people: [
-        { id: "fav", isFavorite: true, name: "Rory" },
+        { id: "fav", isFavorite: true, name: "Robin Example" },
         { id: "named", isFavorite: false, name: "Alex" },
         { id: "unnamed", isFavorite: false, name: null }
       ],
@@ -1008,7 +1008,7 @@ describe("Immich client", () => {
             }
           ],
           data: {
-            personName: "Rory",
+            personName: "Robin Example",
             year: 2024
           },
           id: "memory-id",
@@ -1036,7 +1036,7 @@ describe("Immich client", () => {
         id: "memory-id",
         kind: "on-this-day",
         memoryAt: "2026-10-14T00:00:00.000Z",
-        personName: "Rory",
+        personName: "Robin Example",
         year: 2024
       }
     ]);

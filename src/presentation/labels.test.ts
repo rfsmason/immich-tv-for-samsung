@@ -27,7 +27,9 @@ describe("timeline bucket labels", () => {
 
 describe("Memory labels", () => {
   it("titles a Memory by person and year, or by year alone", () => {
-    expect(formatMemoryTitle({ personName: "Rory", year: 2024 })).toBe("Rory, 2024");
+    expect(formatMemoryTitle({ personName: "Robin Example", year: 2024 })).toBe(
+      "Robin Example, 2024"
+    );
     expect(formatMemoryTitle({ personName: null, year: 2020 })).toBe("Memory from 2020");
     expect(formatMemoryTitle({ personName: null, year: Number.NaN })).toBe("Memory");
   });
@@ -57,7 +59,7 @@ describe("duration labels", () => {
 
 describe("person labels", () => {
   it("shows an assigned name, or a neutral label for an unnamed person", () => {
-    expect(formatPersonName({ name: "Rory" })).toBe("Rory");
+    expect(formatPersonName({ name: "Robin Example" })).toBe("Robin Example");
     expect(formatPersonName({ name: null })).toBe("Unnamed person");
   });
 });
@@ -76,9 +78,11 @@ describe("search labels", () => {
     const empty = { people: [], takenFrom: null, takenTo: null };
 
     expect(formatSearchSummary(empty)).toBe("Search");
-    expect(formatSearchSummary({ ...empty, people: [person("Rory")] })).toBe("Rory");
-    expect(formatSearchSummary({ ...empty, people: [person("Rory"), person(null)] })).toBe(
-      "Rory & Unnamed person"
+    expect(formatSearchSummary({ ...empty, people: [person("Robin Example")] })).toBe(
+      "Robin Example"
+    );
+    expect(formatSearchSummary({ ...empty, people: [person("Robin Example"), person(null)] })).toBe(
+      "Robin Example & Unnamed person"
     );
     expect(
       formatSearchSummary({

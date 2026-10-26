@@ -15,7 +15,7 @@ export function formatSearchDate(date: CalendarDate | null): string {
   return date ? formatCalendarDate(date) : "Any date";
 }
 
-// "Rory & Sam · 1 Jan 2020 – 31 Dec 2020", or "3 people · From 1 Jan 2020".
+// "Robin Example & Sam Example · 1 Jan 2020 – 31 Dec 2020", or "3 people · From 1 Jan 2020".
 export function formatSearchSummary(criteria: SearchCriteria): string {
   const parts: string[] = [];
   const people = criteria.people;

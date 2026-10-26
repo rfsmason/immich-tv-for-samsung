@@ -1,4 +1,5 @@
 import type { AlbumAsset } from "../../domain/album";
+import { clearStill, releaseVideo } from "../media-elements";
 import { isLivePhotoAsset, isViewerPlayableAsset } from "./asset-presentation";
 import type { ViewerElements, ViewerState } from "./viewer-types";
 
@@ -25,12 +26,7 @@ export function createAssetViewerPlaybackState(): ViewerState["viewerPlayback"] 
 export function resetViewerPlayback(elements: ViewerElements, state: ViewerState): void {
   state.viewerPlayback.requestId += 1;
   state.viewerPlayback.livePhotoRestarting = false;
-  elements.assetViewerVideo.pause();
-  elements.assetViewerVideo.hidden = true;
-  elements.assetViewerVideo.style.opacity = "";
-  elements.assetViewerVideo.loop = false;
-  elements.assetViewerVideo.removeAttribute("src");
-  elements.assetViewerVideo.load();
+  releaseVideo(elements.assetViewerVideo);
   hideViewerPlayer(elements);
 
   state.viewerPlayback.assetId = null;
@@ -252,8 +248,7 @@ export async function playViewerVideoElement(
 
   if (asset.type === "video") {
     showViewerPlayer(elements, "Loading");
-    elements.assetViewerImage.hidden = true;
-    elements.assetViewerImage.removeAttribute("src");
+    clearStill(elements.assetViewerImage);
   } else {
     hideViewerPlayer(elements);
   }

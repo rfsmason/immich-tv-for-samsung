@@ -9,12 +9,12 @@ import {
   createAssetViewerImageState,
   formatViewerMetadata,
   formatViewerPositionLabel,
-  getNextSlideshowIndex,
   getViewerNavigationIndex,
   reconcileAssetViewerImages,
   revokeAllAssetViewerImages,
   shouldAutoplayViewerVideo
 } from "../asset-viewer-window";
+import { clearStill, showStill } from "../media-elements";
 import { isLivePhotoAsset, isViewerPlayableAsset, readAssetTypeLabel } from "./asset-presentation";
 import {
   createAssetViewerPlaybackState,
@@ -34,7 +34,15 @@ import {
   updateViewerPlayerProgress
 } from "./viewer-playback";
 import { createViewerFaces, type ViewerFaces } from "./viewer-faces";
-import type { ViewerCollection, ViewerElements, ViewerState } from "./viewer-types";
+import {
+  handleViewerSlideshowMediaKey,
+  pauseViewerSlideshow,
+  renderViewerSlideshowControl,
+  stopViewerSlideshow,
+  toggleViewerSlideshow,
+  type SlideshowContext
+} from "./viewer-slideshow";
+import type { ViewerCollection, ViewerElements } from "./viewer-types";
 
 // The full-screen viewer over any ordered asset collection: bounded preview
 // window (previous/current/next, ADR 0005), metadata, controls, slideshow
@@ -79,13 +87,13 @@ export type AssetViewerController = {
   suspend(): void;
 };
 
-type ViewerContext = AssetViewerOptions & {
-  faces: ViewerFaces;
-  isOpen(): boolean;
-  state: ViewerState;
-  // Re-reads whether anything is passively playing and tells the TV.
-  syncPassiveViewing(): void;
-};
+type ViewerContext = AssetViewerOptions &
+  SlideshowContext & {
+    faces: ViewerFaces;
+    isOpen(): boolean;
+    // Re-reads whether anything is passively playing and tells the TV.
+    syncPassiveViewing(): void;
+  };
 
 export function createAssetViewer(options: AssetViewerOptions): AssetViewerController {
   const { collection, elements } = options;
@@ -109,6 +117,15 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       settingsStore: options.settingsStore
     }),
     isOpen: () => collection.isOpen(),
+    renderCurrent: () => renderAssetViewer(context, collection.index()),
+    showSlide(index) {
+      collection.select(index);
+      resetViewerPlayback(elements, state);
+      renderAssetViewer(context, index);
+      loadViewerImagesNearFocus(context);
+      collection.loadMore();
+      focusViewerDefaultControl(context);
+    },
     state: {
       recordedAssetId: null,
       selectedAsset: null,
@@ -483,8 +500,7 @@ function renderAssetViewer(context: ViewerContext, index: number): void {
   context.faces.sync();
 
   if (asset.type !== "image") {
-    elements.assetViewerImage.hidden = true;
-    elements.assetViewerImage.removeAttribute("src");
+    clearStill(elements.assetViewerImage);
     if (asset.type === "video") {
       const videoPosterUrl = state.viewerImages.imageUrls[asset.id];
 
@@ -516,8 +532,7 @@ function renderAssetViewer(context: ViewerContext, index: number): void {
     return;
   }
 
-  elements.assetViewerImage.hidden = true;
-  elements.assetViewerImage.removeAttribute("src");
+  clearStill(elements.assetViewerImage);
   elements.assetViewerVideo.hidden = true;
   elements.assetViewerVideo.removeAttribute("src");
   hideViewerPlayer(elements);
@@ -626,150 +641,6 @@ function focusViewerDefaultControl(context: ViewerContext): void {
 
   state.viewerPlayFocusPending = false;
   elements.assetViewerSlideshow.focus();
-}
-
-function renderViewerSlideshowControl(context: ViewerContext): void {
-  const { elements, state } = context;
-  const stateLabel = state.viewerSlideshow.playing ? "Pause slideshow" : "Start slideshow";
-  const status = state.viewerSlideshow.playing ? "Slideshow playing" : "Slideshow paused";
-
-  elements.assetViewerSlideshow.setAttribute(
-    "data-slideshow-state",
-    state.viewerSlideshow.playing ? "playing" : "paused"
-  );
-  elements.assetViewerSlideshow.setAttribute("aria-label", stateLabel);
-  elements.assetViewerSlideshow.title = stateLabel;
-  elements.assetViewerSlideshowStatus.textContent = status;
-  elements.assetViewerSlideshowStatus.hidden = true;
-}
-
-function startViewerSlideshowProgress(elements: ViewerElements, intervalSeconds: number): void {
-  elements.assetViewerSlideshow.style.setProperty(
-    "--asset-viewer-slideshow-duration",
-    `${intervalSeconds * 1000}ms`
-  );
-  elements.assetViewerSlideshow.removeAttribute("data-slideshow-progress");
-  void elements.assetViewerSlideshow.offsetWidth;
-  elements.assetViewerSlideshow.setAttribute("data-slideshow-progress", "running");
-}
-
-function stopViewerSlideshowProgress(elements: ViewerElements): void {
-  elements.assetViewerSlideshow.removeAttribute("data-slideshow-progress");
-  elements.assetViewerSlideshow.style.removeProperty("--asset-viewer-slideshow-duration");
-}
-
-function toggleViewerSlideshow(context: ViewerContext): void {
-  if (context.state.viewerSlideshow.playing) {
-    pauseViewerSlideshow(context);
-    return;
-  }
-
-  startViewerSlideshow(context);
-}
-
-function handleViewerSlideshowMediaKey(keyCode: number, context: ViewerContext): void {
-  if (keyCode === remoteKeys.mediaPause) {
-    pauseViewerSlideshow(context);
-    return;
-  }
-
-  if (keyCode === remoteKeys.mediaPlay) {
-    startViewerSlideshow(context);
-    return;
-  }
-
-  toggleViewerSlideshow(context);
-}
-
-function startViewerSlideshow(context: ViewerContext): void {
-  const { collection, elements, state } = context;
-
-  if (!collection.isOpen() || collection.assets().length <= 1) {
-    return;
-  }
-
-  resetViewerPlayback(elements, state);
-  state.viewerSlideshow.playing = true;
-  renderAssetViewer(context, collection.index());
-  elements.assetViewerSlideshow.focus();
-  renderViewerSlideshowControl(context);
-  scheduleViewerSlideshow(context);
-  context.syncPassiveViewing();
-}
-
-function pauseViewerSlideshow(context: ViewerContext): void {
-  const { elements, state } = context;
-
-  state.viewerSlideshow.playing = false;
-  clearViewerSlideshowTimer(state);
-  elements.assetViewerSlideshow.setAttribute("data-slideshow-state", "paused");
-  elements.assetViewerSlideshow.setAttribute("aria-label", "Start slideshow");
-  elements.assetViewerSlideshow.title = "Start slideshow";
-  elements.assetViewerSlideshowStatus.textContent = "Slideshow paused";
-  stopViewerSlideshowProgress(elements);
-  context.faces.sync();
-  context.syncPassiveViewing();
-}
-
-function stopViewerSlideshow(context: ViewerContext): void {
-  pauseViewerSlideshow(context);
-  context.elements.assetViewerSlideshowStatus.hidden = true;
-}
-
-function scheduleViewerSlideshow(context: ViewerContext): void {
-  const { collection, elements, state } = context;
-
-  clearViewerSlideshowTimer(state);
-
-  if (!state.viewerSlideshow.playing || !collection.isOpen() || collection.isHidden()) {
-    return;
-  }
-
-  const interval = context.settingsStore.load().slideshowIntervalSeconds;
-  startViewerSlideshowProgress(elements, interval);
-
-  state.viewerSlideshow.timerId = window.setTimeout(() => {
-    advanceViewerSlideshow(context);
-  }, interval * 1000);
-}
-
-function advanceViewerSlideshow(context: ViewerContext): void {
-  const { collection, elements, state } = context;
-
-  state.viewerSlideshow.timerId = null;
-
-  if (!state.viewerSlideshow.playing || !collection.isOpen() || collection.isHidden()) {
-    return;
-  }
-
-  const nextIndex = getNextSlideshowIndex(collection.index(), collection.assets().length);
-
-  if (nextIndex === null) {
-    collection.loadMore();
-
-    if (collection.isLoadingMore()) {
-      scheduleViewerSlideshow(context);
-      return;
-    }
-
-    pauseViewerSlideshow(context);
-    return;
-  }
-
-  collection.select(nextIndex);
-  resetViewerPlayback(elements, state);
-  renderAssetViewer(context, nextIndex);
-  loadViewerImagesNearFocus(context);
-  collection.loadMore();
-  focusViewerDefaultControl(context);
-  scheduleViewerSlideshow(context);
-}
-
-function clearViewerSlideshowTimer(state: ViewerState): void {
-  if (state.viewerSlideshow.timerId !== null) {
-    window.clearTimeout(state.viewerSlideshow.timerId);
-    state.viewerSlideshow.timerId = null;
-  }
 }
 
 async function toggleViewerPlayback(context: ViewerContext): Promise<void> {
@@ -935,10 +806,7 @@ function renderViewerImage(
   if (asset.type === "video") {
     showIdleVideoPlayer(elements);
   }
-  elements.assetViewerImage.src = url;
-  elements.assetViewerImage.alt = asset.name;
-  elements.assetViewerImage.setAttribute("data-asset-id", asset.id);
-  elements.assetViewerImage.hidden = false;
+  showStill(elements.assetViewerImage, asset, url);
   elements.assetViewerPlaceholder.hidden = true;
   renderViewerPlayControl(elements, asset, true);
   autoplayViewerVideoIfEnabled(context, asset);
@@ -965,8 +833,7 @@ function renderViewerImageFailure(context: ViewerContext, asset: AlbumAsset, ind
     return;
   }
 
-  elements.assetViewerImage.hidden = true;
-  elements.assetViewerImage.removeAttribute("src");
+  clearStill(elements.assetViewerImage);
   renderViewerPlayControl(elements, asset, false);
   showViewerMessage(
     elements,
@@ -984,8 +851,7 @@ function resetViewerImages(context: ViewerContext): void {
   state.viewerImages = createAssetViewerImageState();
   state.viewerPlayFocusPending = false;
   context.faces.reset();
-  elements.assetViewerImage.hidden = true;
-  elements.assetViewerImage.removeAttribute("src");
+  clearStill(elements.assetViewerImage);
   elements.assetViewerImage.removeAttribute("data-asset-id");
   resetViewerPlayback(elements, state);
   elements.assetViewerPlaceholder.hidden = false;

@@ -145,7 +145,7 @@ Every source has one interface, `next(): Promise<AlbumAsset | null>`, and holds 
   - **Ambient mode's own waits** (interval, video cap, overlay moves, backoff) do the same through `createAmbientTimers` (`ambientTimerStepMs`).
   - No timer longer than 30 seconds is ever set, and a late check still acts as soon as the time has passed.
 - **Logging.** The controller logs when an idle start begins, is skipped (not a browsing screen) or finds nothing to show.
-- **Confirmation on the TV is pending.**
+- **Confirmed on the TV** on 27 October 2026 (user confirmation): Start after idle, a 5-minute interval and Stop after all work.
 
 ## Consequences
 
@@ -153,7 +153,7 @@ Every source has one interface, `next(): Promise<AlbumAsset | null>`, and holds 
 - **Single source of truth for media.** Ambient mode adds a presentation, not an engine: preview loading, retention and release are the viewer's.
 - **The viewer split.** It was needed to reuse this code. `asset-viewer.ts` went from 972 lines (998 after Phase 1) to 864 (ADR 0005 update).
 - **No framework, router, event bus, animation library or dependency.** The CSS uses opacity transitions only, and both compatibility checks pass.
-- **Physical Q950R acceptance is pending**, including an overnight soak test.
+- **Physical Q950R acceptance passed** on 27 October 2026 (user confirmation), covering every item on PR #5's checklist, including the overnight soak test.
 
 ## Later
 

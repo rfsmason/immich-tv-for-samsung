@@ -1,13 +1,18 @@
 import type { AmbientSettings } from "../domain/ambient";
+import type { Logger } from "../logging/logger";
 import type { AppLifecycle } from "../platform/tizen/lifecycle";
 import type { AmbientScreenController } from "../screens/ambient/ambient-screen";
 import type { AmbientAssetSource } from "./ambient-sources";
 
 // When ambient mode starts and stops (ADR 0019):
 // - Start now, from Settings → Ambient.
-// - Start after idle: one timer, reset by any key, that starts ambient mode
+// - Start after idle: counted from the last key, that starts ambient mode
 //   only over a browsing screen (the app decides which). A quiet start shows
 //   nothing unless there is a picture to show.
+// Idle and Stop after are measured against the wall clock and checked at
+// least every 30 seconds, never with one long timer: on the TV a single
+// timer of 10 minutes or more was seen not to fire, and Samsung documents
+// nothing about long timers on Tizen.
 // - Any key, or Stop after, ends it and returns exactly where you were: the
 //   same screen and the same focused control. Ending releases the TV's
 //   screensaver, so its own power saving can take over overnight.
@@ -16,12 +21,16 @@ import type { AmbientAssetSource } from "./ambient-sources";
 
 export type AmbientOrigin = "idle" | "manual";
 
+// The longest single timer the controller sets.
+export const ambientCheckMs = 30000;
+
 type AmbientControllerOptions = {
   // Whether ambient mode may start by itself over the screen now showing.
   canStartFromIdle(): boolean;
   createSource(settings: AmbientSettings): AmbientAssetSource;
   documentRef?: Document;
   lifecycle: Pick<AppLifecycle, "onVisibilityChange">;
+  logger?: Pick<Logger, "info">;
   // After ambient mode ends; focus is already back where it was if that
   // control still exists, so this is the fallback.
   onEnded(focusRestored: boolean): void;
@@ -57,6 +66,8 @@ export function createAmbientController(options: AmbientControllerOptions): Ambi
   let hiddenSession: Session | null = null;
   let idleTimer: number | null = null;
   let stopTimer: number | null = null;
+  // When the idle countdown started: the last key, or the last refused start.
+  let lastActivity = Date.now();
   let visible = true;
   let startId = 0;
 
@@ -74,23 +85,35 @@ export function createAmbientController(options: AmbientControllerOptions): Ambi
     }
   }
 
-  // One idle timer, restarted from the last key.
+  // Restarts the idle countdown from now.
   function armIdle(): void {
+    lastActivity = Date.now();
+    checkIdle();
+  }
+
+  function checkIdle(): void {
     clearIdle();
 
     const minutes = options.settings().startAfterIdleMinutes;
 
-    if (minutes > 0 && visible && !session) {
-      idleTimer = windowRef.setTimeout(handleIdle, minutes * 60 * 1000);
+    if (minutes === 0 || !visible || session) {
+      return;
     }
-  }
 
-  function handleIdle(): void {
-    idleTimer = null;
+    const remaining = lastActivity + minutes * 60 * 1000 - Date.now();
+
+    if (remaining > 0) {
+      idleTimer = windowRef.setTimeout(checkIdle, Math.min(remaining, ambientCheckMs));
+      return;
+    }
 
     if (options.canStartFromIdle()) {
+      options.logger?.info("Ambient mode starting after idle.", { minutes });
       start("idle", options.settings(), documentRef.activeElement, null);
     } else {
+      options.logger?.info("Ambient mode idle start skipped: not a browsing screen.", {
+        minutes
+      });
       armIdle();
     }
   }
@@ -98,9 +121,24 @@ export function createAmbientController(options: AmbientControllerOptions): Ambi
   function scheduleStop(current: Session): void {
     clearStop();
 
-    if (current.deadline !== null) {
-      stopTimer = windowRef.setTimeout(end, Math.max(0, current.deadline - Date.now()));
+    if (current.deadline === null) {
+      return;
     }
+
+    const remaining = current.deadline - Date.now();
+
+    if (remaining <= 0) {
+      end();
+      return;
+    }
+
+    stopTimer = windowRef.setTimeout(
+      () => {
+        stopTimer = null;
+        scheduleStop(current);
+      },
+      Math.min(remaining, ambientCheckMs)
+    );
   }
 
   function start(
@@ -138,6 +176,7 @@ export function createAmbientController(options: AmbientControllerOptions): Ambi
       .then((outcome) => {
         // A quiet start with nothing to show never showed: carry on as before.
         if (outcome === "unavailable" && id === startId && session === current) {
+          options.logger?.info("Ambient mode idle start found nothing to show.");
           finish(current);
         }
       });

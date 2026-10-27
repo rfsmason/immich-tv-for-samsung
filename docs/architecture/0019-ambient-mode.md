@@ -136,6 +136,17 @@ Every source has one interface, `next(): Promise<AlbumAsset | null>`, and holds 
 - **Storage.** Everything is stored in `AppSettings.ambient`, and the settings schema moves to version 2. Version 1 files load with ambient defaults, and unknown values fall back safely.
 - **Home and the rail are unchanged.** Ambient mode is not a Home rail, and there is no new rail destination.
 
+### Long timers (TV finding, 27 October 2026)
+
+- **What was seen.** On the Q950R, Start after idle (10 minutes or more, on Home) never started ambient mode, though the same settings worked in the desktop preview and Start now worked on the TV. Nothing else in the idle path differs between the two, so the likely cause is the single long `setTimeout` the countdown used, which the TV's runtime appears not to fire.
+- **Not confirmed by Samsung.** Samsung documents nothing about long timers on Tizen TV. Tizen developer-forum reports describe long `setTimeout` delays not firing reliably on other Tizen devices.
+- **The fix doesn't depend on the cause.**
+  - **Idle and Stop after** are measured against the wall clock (`Date.now()`) from the last key or the start, and checked at least every 30 seconds (`ambientCheckMs`).
+  - **Ambient mode's own waits** (interval, video cap, overlay moves, backoff) do the same through `createAmbientTimers` (`ambientTimerStepMs`).
+  - No timer longer than 30 seconds is ever set, and a late check still acts as soon as the time has passed.
+- **Logging.** The controller logs when an idle start begins, is skipped (not a browsing screen) or finds nothing to show.
+- **Confirmation on the TV is pending.**
+
 ## Consequences
 
 - **Store readiness.** Slideshows and video playback now hold the TV's screensaver off and let it back when they pause or stop, as Samsung requires. Testing this on the TV needs "Auto Protection Time" on.

@@ -381,6 +381,7 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     createSource: (settings) => createAmbientSource(settings, albumService),
     documentRef,
     lifecycle,
+    logger,
     onEnded(focusRestored) {
       route = route?.kind === "ambient" ? route.returnTo : route;
 

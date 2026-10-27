@@ -2,7 +2,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultAmbientSettings, type AmbientSettings } from "../domain/ambient";
 import { createFakeLifecycle } from "../test/fake-lifecycle";
-import { createAmbientController, type AmbientController } from "./ambient-controller";
+import {
+  ambientCheckMs,
+  createAmbientController,
+  type AmbientController
+} from "./ambient-controller";
 
 let controller: AmbientController | null = null;
 
@@ -180,6 +184,37 @@ describe("ambient controller", () => {
     expect(controller!.isActive()).toBe(false);
     expect(f.onEnded).toHaveBeenCalledWith(true);
     expect(document.activeElement).toBe(f.tile);
+  });
+
+  it("never sets one long timer for idle or Stop after, and keeps to the wall clock", async () => {
+    const delays: number[] = [];
+    const realSetTimeout = window.setTimeout.bind(window);
+    vi.spyOn(window, "setTimeout").mockImplementation(((handler: () => void, delay?: number) => {
+      delays.push(delay ?? 0);
+      return realSetTimeout(handler, delay);
+    }) as typeof window.setTimeout);
+    const f = setup({ settings: { startAfterIdleMinutes: 30 } });
+
+    await vi.advanceTimersByTimeAsync(30 * 60000 - 1);
+    expect(f.screen.start).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f.screen.start).toHaveBeenCalledTimes(1);
+    controller!.exit();
+
+    controller!.startNow({ ...defaultAmbientSettings, stopAfterHours: 4 });
+    await vi.advanceTimersByTimeAsync(4 * 60 * 60000);
+    expect(controller!.isActive()).toBe(false);
+    expect(Math.max(...delays)).toBeLessThanOrEqual(ambientCheckMs);
+  });
+
+  it("starts on time even when a check runs late", async () => {
+    const f = setup({ settings: { startAfterIdleMinutes: 10 } });
+
+    // The clock jumps on without the checks in between (a slow or stalled
+    // timer): the next check still sees that 10 minutes have passed.
+    vi.setSystemTime(Date.now() + 10 * 60000);
+    await vi.advanceTimersByTimeAsync(ambientCheckMs);
+    expect(f.screen.start).toHaveBeenCalledTimes(1);
   });
 
   it("clears the idle timer while hidden", async () => {

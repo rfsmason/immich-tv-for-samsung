@@ -64,7 +64,7 @@ export type ConnectionScreenController = {
   show(options?: { allowBack?: boolean }): void;
 };
 
-const settingsSummary = "Manage connection, display and Home preferences.";
+const settingsSummary = "Settings";
 
 export function mountConnectionScreen(
   options: ConnectionScreenOptions

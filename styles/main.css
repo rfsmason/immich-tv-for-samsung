@@ -263,12 +263,6 @@ button.top-nav-item {
   white-space: nowrap;
 }
 
-button.top-nav-item[aria-current="page"] {
-  border-color: rgba(120, 196, 255, 0.68);
-  background: rgba(66, 81, 176, 0.34);
-  color: var(--immich-primary-on-dark);
-}
-
 .top-nav-icon {
   width: 32px;
   height: 32px;
@@ -467,12 +461,17 @@ button.settings-section-button {
   text-align: left;
 }
 
+/* The navigation rail and the Settings rail share one scheme: the current
+   destination or section is a soft blue, and focus is the primary colour
+   with a yellow ring. */
+button.top-nav-item[aria-current="page"],
 button.settings-section-button[aria-selected="true"] {
   border-color: rgba(120, 196, 255, 0.82);
   background: rgba(66, 165, 245, 0.28);
   color: var(--immich-primary-on-dark);
 }
 
+.top-nav button.focusable:focus,
 .settings-layout .focusable:focus {
   border-color: #ffffff;
   background: var(--immich-primary);

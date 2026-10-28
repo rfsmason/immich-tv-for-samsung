@@ -47,6 +47,8 @@ function fixture(types = ["video", "live", "photo"]) {
       locator: () => ({
         evaluateAll: (read: (tiles: Element[]) => unknown) =>
           read(Array.from(document.querySelectorAll("button")) as unknown as Element[]),
+        // The viewer's state is already as wanted, so one OK pauses.
+        count: async () => 1,
         getAttribute: async () => "recently-added"
       }),
       waitForFunction

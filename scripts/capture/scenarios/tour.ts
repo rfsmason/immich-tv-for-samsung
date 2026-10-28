@@ -2,6 +2,7 @@ import {
   asset,
   homeAlbum,
   homeTile,
+  okToPause,
   reverseOrder,
   showFaces,
   slideshow,
@@ -42,7 +43,8 @@ export const tour: Scenario = {
         await advance.dispose();
         // Pause on the final advance before waiting for image decoding or
         // adding a viewing hold, so those waits cannot add another slide.
-        if (index === changes - 1) await remote.ok(slideshow);
+        if (index === changes - 1)
+          await okToPause(context, slideshow, `${slideshow}[data-slideshow-state="paused"]`);
         await remote.visible("#asset-viewer-image");
         await remote.ready();
       }

@@ -23,7 +23,8 @@ vi.mock("./shared", async (original) => ({
   })
 }));
 
-function fixture(changes: 1 | 2 | 3) {
+// `pausedAfterOk`: whether the first OK pauses, or only shows the buttons.
+function fixture(changes: 1 | 2 | 3, pausedAfterOk = true) {
   events.length = 0;
   const ok = vi.fn(async () => {
     events.push("ok");
@@ -42,10 +43,20 @@ function fixture(changes: 1 | 2 | 3) {
   const clear = vi.fn();
   const context: ScenarioContext = {
     page: {
-      locator: () => ({ textContent: async () => "Photo 1 of 4" }),
+      locator: () => ({
+        count: async () => (pausedAfterOk ? 1 : 0),
+        textContent: async () => "Photo 1 of 4"
+      }),
       waitForFunction
     } as unknown as Page,
-    remote: { ok, visible: vi.fn(), ready, back, down: vi.fn() } as unknown as Remote,
+    remote: {
+      ok,
+      visible: vi.fn(),
+      ready,
+      back,
+      down: vi.fn(),
+      hold: vi.fn()
+    } as unknown as Remote,
     guide: { highlight, clear } as unknown as TourGuide,
     capture: { still: vi.fn() },
     interval: 8,
@@ -83,7 +94,7 @@ describe("general tour", () => {
       expect(waitForFunction).toHaveBeenCalledTimes(changes);
       expect(ok.mock.calls).toEqual([
         ["#asset-viewer-slideshow", { pauseAfter: false }],
-        ["#asset-viewer-slideshow"]
+        ["#asset-viewer-slideshow", { pauseAfter: false }]
       ]);
       const finalAdvance = events.lastIndexOf("advance");
       expect(events.slice(finalAdvance, finalAdvance + 3)).toEqual(["advance", "ok", "ready"]);
@@ -95,6 +106,12 @@ describe("general tour", () => {
       expect(clear).toHaveBeenCalledOnce();
     }
   );
+
+  it("presses OK again when the first press only shows the hidden buttons", async () => {
+    const { context, ok } = fixture(3, false);
+    await tour.run(context);
+    expect(ok).toHaveBeenCalledTimes(3);
+  });
 
   it("removes the annotation if waiting for an advance fails", async () => {
     const { context, waitForFunction, clear } = fixture(2);

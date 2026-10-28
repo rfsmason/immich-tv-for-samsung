@@ -269,6 +269,9 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     onReturnToShell() {
       shell.focusActiveDestinationNav();
     },
+    onViewerControlsHiddenChange(hidden) {
+      shell.setRailHidden(hidden);
+    },
     onViewerOpened() {
       shell.collapseRail();
     },

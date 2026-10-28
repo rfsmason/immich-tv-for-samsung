@@ -68,6 +68,9 @@ export type ApplicationShellController = {
   // Hides the splash and focuses the active destination in the rail.
   revealApp(): void;
   routeBackFromSettings(options?: DestinationActivationOptions): void;
+  // Hides the rail while the viewer's own buttons are hidden, so nothing
+  // but the picture shows during a slideshow or video.
+  setRailHidden(hidden: boolean): void;
   setContentFocusController(controller: ShellContentFocusController | null): void;
   setSplashStatus(message: string): void;
   showSplashError(message: string): void;
@@ -297,6 +300,13 @@ export function mountApplicationShell(
       const destination = getSettingsBackDestination(state.previousTopLevelDestination);
 
       activateDestination(destination, elements, options, state, activationOptions);
+    },
+    setRailHidden(hidden) {
+      if (hidden) {
+        elements.root.setAttribute("data-rail-hidden", "true");
+      } else {
+        elements.root.removeAttribute("data-rail-hidden");
+      }
     },
     setContentFocusController(controller) {
       state.contentFocusController = controller;

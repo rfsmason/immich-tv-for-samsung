@@ -159,7 +159,8 @@ input {
   padding-top: 0;
   transition:
     width 160ms ease,
-    min-width 160ms ease;
+    min-width 160ms ease,
+    opacity 400ms ease;
 }
 
 /* The logo fills a box the size of a collapsed rail button (72 x 64). */
@@ -1609,6 +1610,15 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   grid-gap: 12px;
   gap: 12px;
   pointer-events: auto;
+  transition: opacity 400ms ease;
+}
+
+/* During a slideshow or video the buttons and the rail fade out a few
+   seconds after the last key, and the next key brings them back
+   (viewer-autohide.ts, ADR 0006). */
+.asset-viewer[data-controls="hidden"] .asset-viewer-controls,
+.app-shell[data-rail-hidden] .top-nav {
+  opacity: 0;
 }
 
 button.asset-viewer-control {

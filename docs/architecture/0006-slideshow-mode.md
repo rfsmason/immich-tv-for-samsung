@@ -33,3 +33,11 @@ If the viewer reaches the loaded asset edge while more assets are being fetched,
 - **The slideshow's timer, control and media keys** moved to `src/screens/collection/viewer-slideshow.ts` (behaviour unchanged).
 
 See [ADR 0019](0019-ambient-mode.md).
+
+## Update: buttons step aside during passive viewing (28 October 2026)
+
+- **While a slideshow runs or a video or Live Photo plays,** the viewer's buttons (Play, Slideshow, Faces, Back) and the navigation rail fade out four seconds after the last remote key (`viewerControlsHideMs`), so only the picture shows.
+- **The next key shows them again** and restarts the countdown. That key does nothing else, so a press never acts on a button the viewer couldn't see; Back and the Play/Pause media keys still act straight away.
+- **They stay** whenever nothing plays: paused, at the end of a slideshow, after a video ends, and when the viewer closes or the app is hidden.
+- **The same passive-viewing state drives both** the TV screensaver hold and the countdown, in `src/screens/collection/viewer-autohide.ts`. The viewer marks itself `data-controls="hidden"`, and the shell hides its rail through `setRailHidden`, so the viewer never reaches into the shell.
+- **Opacity only,** with no layout change, so focus and the remote's moves are unaffected.

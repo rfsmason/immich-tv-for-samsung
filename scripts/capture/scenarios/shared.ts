@@ -151,6 +151,20 @@ export async function showFaces({ remote, guide }: ScenarioContext): Promise<voi
   await remote.hold();
 }
 
+// During a slideshow or video the viewer's buttons hide after a few seconds,
+// and the key that shows them does nothing else (viewer-autohide.ts). OK
+// pauses, pressed once more if the first press only showed the buttons.
+export async function okToPause(
+  { page, remote }: Pick<ScenarioContext, "page" | "remote">,
+  control: string,
+  paused: string
+): Promise<void> {
+  await remote.ok(control, { pauseAfter: false });
+  if ((await page.locator(paused).count()) === 0) await remote.ok(control, { pauseAfter: false });
+  await remote.visible(paused);
+  await remote.hold();
+}
+
 export async function viewer({ remote, page }: ScenarioContext): Promise<void> {
   // The first asset must be a still photo; fail rather than silently capturing a video poster.
   await remote.ok(slideshow);

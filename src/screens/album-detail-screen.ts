@@ -70,6 +70,8 @@ type AlbumDetailScreenOptions = {
   onReturnToShell?(): void;
   onViewerClosed?(): void;
   onViewerOpened?(): void;
+  // The viewer's buttons hid during passive viewing, or showed again.
+  onViewerControlsHiddenChange?(hidden: boolean): void;
   onAssetViewed?(asset: AlbumAsset, source: ViewingSource): void;
   // Loads one page of a paged Home collection.
   loadFeedPage(feed: CollectionFeed, page: AlbumAssetPageToken): Promise<AlbumAssetPage>;
@@ -213,6 +215,7 @@ export function mountAlbumDetailScreen(
     },
     elements,
     onAssetViewed: options.onAssetViewed,
+    onControlsHiddenChange: options.onViewerControlsHiddenChange,
     passiveViewing: options.passiveViewing,
     service: options.service,
     settingsStore: options.settingsStore

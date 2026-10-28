@@ -33,6 +33,7 @@ import {
   showViewerPlayer,
   updateViewerPlayerProgress
 } from "./viewer-playback";
+import { createViewerControlsAutoHide } from "./viewer-autohide";
 import { createViewerFaces, type ViewerFaces } from "./viewer-faces";
 import {
   handleViewerSlideshowMediaKey,
@@ -57,6 +58,9 @@ type AssetViewerOptions = {
   collection: ViewerCollection;
   elements: ViewerElements;
   onAssetViewed?(asset: AlbumAsset, source: ViewingSource): void;
+  // Told when the viewer's buttons hide during passive viewing and show
+  // again, so the screen around the viewer can step aside too.
+  onControlsHiddenChange?(hidden: boolean): void;
   // Told while a slideshow runs or a video or Live Photo plays, so the TV's
   // own screensaver stays away during passive viewing (ADR 0019).
   passiveViewing?: PassiveViewing;
@@ -98,6 +102,17 @@ type ViewerContext = AssetViewerOptions &
 export function createAssetViewer(options: AssetViewerOptions): AssetViewerController {
   const { collection, elements } = options;
   const passiveHold = (options.passiveViewing || noPassiveViewing).createHold();
+  const controlsAutoHide = createViewerControlsAutoHide({
+    onHiddenChange(hidden) {
+      if (hidden) {
+        elements.assetPlaceholder.setAttribute("data-controls", "hidden");
+      } else {
+        elements.assetPlaceholder.removeAttribute("data-controls");
+      }
+
+      options.onControlsHiddenChange?.(hidden);
+    }
+  });
   const context: ViewerContext = {
     ...options,
     faces: createViewerFaces({
@@ -138,11 +153,12 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
     },
     syncPassiveViewing() {
       const video = elements.assetViewerVideo;
-
-      passiveHold.set(
+      const passive =
         collection.isOpen() &&
-          (state.viewerSlideshow.playing || (!video.hidden && !video.paused && !video.ended))
-      );
+        (state.viewerSlideshow.playing || (!video.hidden && !video.paused && !video.ended));
+
+      passiveHold.set(passive);
+      controlsAutoHide.setPassive(passive);
     }
   };
   const { state } = context;
@@ -269,9 +285,11 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       resetViewerPlayback(elements, state);
       resetViewerImages(context);
       passiveHold.set(false);
+      controlsAutoHide.setPassive(false);
     },
     destroy() {
       passiveHold.set(false);
+      controlsAutoHide.destroy();
       listeners.forEach(([target, type, listener, capture]) =>
         target.removeEventListener(type, listener, capture)
       );
@@ -284,6 +302,19 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       }
     },
     handleKeydown(event, keyCode) {
+      // While the buttons are hidden, a key only shows them, except Back and
+      // the media keys, which act as well.
+      if (
+        collection.isOpen() &&
+        controlsAutoHide.wake() &&
+        keyCode !== remoteKeys.back &&
+        !isMediaPlayPauseKey(keyCode)
+      ) {
+        event.preventDefault();
+        stopEvent(event);
+        return;
+      }
+
       handleAssetViewerKeydown(event, keyCode, context);
     },
     handleKeyup(event) {

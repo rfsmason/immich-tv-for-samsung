@@ -39,6 +39,8 @@ function fixture(types = ["photo", "live", "video"]) {
       locator: () => ({
         evaluateAll: (read: (elements: Element[]) => unknown) =>
           read(Array.from(document.querySelectorAll("button")) as unknown as Element[]),
+        // The viewer's state is already as wanted, so one OK pauses.
+        count: async () => 1,
         getAttribute: async () => "memories"
       }),
       waitForFunction

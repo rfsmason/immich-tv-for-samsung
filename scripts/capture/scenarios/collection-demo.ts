@@ -1,4 +1,4 @@
-import { slideshow, type ScenarioContext } from "./shared";
+import { okToPause, slideshow, type ScenarioContext } from "./shared";
 
 const tile = (index: number): string => `[data-asset-index="${index}"]`;
 const play = "#asset-viewer-play";
@@ -83,6 +83,6 @@ export async function playDemoVideo({
     undefined,
     { timeout: 30_000 }
   );
-  await remote.ok(play); // Pause before returning to the collection.
-  await remote.visible('#asset-viewer-status[data-player-state="paused"]');
+  // Pause before returning to the collection.
+  await okToPause({ page, remote }, play, '#asset-viewer-status[data-player-state="paused"]');
 }

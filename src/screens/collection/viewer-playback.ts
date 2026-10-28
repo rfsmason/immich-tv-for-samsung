@@ -1,7 +1,8 @@
+import type { AlbumService } from "../../app/album-service";
 import type { AlbumAsset } from "../../domain/album";
 import { clearStill, releaseVideo } from "../media-elements";
 import { isLivePhotoAsset, isViewerPlayableAsset } from "./asset-presentation";
-import type { ViewerElements, ViewerState } from "./viewer-types";
+import type { ViewerCollection, ViewerElements, ViewerState } from "./viewer-types";
 
 // Video and Live Photo playback for the shared viewer: the single <video>
 // element, the play control and the player bar. Videos stream from Immich's
@@ -11,6 +12,14 @@ type PlaybackContext = {
   elements: ViewerElements;
   isOpen(): boolean;
   state: ViewerState;
+};
+
+// What the Play button and suspension need beyond playback itself; the
+// slideshow is reached through pauseSlideshow, so the two modules stay apart.
+export type ViewerMediaContext = PlaybackContext & {
+  collection: Pick<ViewerCollection, "isHidden" | "isOpen">;
+  pauseSlideshow(): void;
+  service: Pick<AlbumService, "loadAssetPlaybackUrl">;
 };
 
 export function createAssetViewerPlaybackState(): ViewerState["viewerPlayback"] {
@@ -395,5 +404,124 @@ function showLivePhotoStill(elements: ViewerElements): void {
 
   if (elements.assetViewerImage.src) {
     elements.assetViewerImage.hidden = false;
+  }
+}
+
+// Play or pause the selected video or Live Photo (the Play button). Playing
+// pauses any slideshow first.
+export async function toggleViewerPlayback(context: ViewerMediaContext): Promise<void> {
+  const { collection, elements, state } = context;
+  const asset = state.selectedAsset?.asset;
+
+  if (!asset || !isViewerPlayableAsset(asset)) {
+    return;
+  }
+
+  context.pauseSlideshow();
+
+  if (
+    state.viewerPlayback.assetId === asset.id &&
+    elements.assetViewerPlay.getAttribute("data-play-state") === "playing"
+  ) {
+    pauseViewerPlayback(elements, state, asset);
+    return;
+  }
+
+  if (state.viewerPlayback.assetId === asset.id && state.viewerPlayback.url) {
+    await playViewerVideoElement(context, asset, state.viewerPlayback.url);
+    return;
+  }
+
+  resetViewerPlayback(elements, state);
+  state.viewerPlayback.assetId = asset.id;
+  state.viewerPlayback.mediaKind = isLivePhotoAsset(asset) ? "live-photo" : "video";
+  state.viewerPlayback.requestId += 1;
+  const requestId = state.viewerPlayback.requestId;
+
+  setViewerPlayControlState(elements, asset, "loading");
+
+  if (asset.type === "video") {
+    showViewerPlayer(elements, "Loading");
+    showViewerLoading(elements);
+  }
+
+  try {
+    const url = context.service.loadAssetPlaybackUrl(asset);
+
+    if (!url) {
+      setViewerPlayControlState(elements, asset, "idle");
+      return;
+    }
+
+    if (
+      !collection.isOpen() ||
+      state.selectedAsset?.asset.id !== asset.id ||
+      state.viewerPlayback.requestId !== requestId ||
+      collection.isHidden()
+    ) {
+      return;
+    }
+
+    state.viewerPlayback.url = url;
+    await playViewerVideoElement(context, asset, url);
+  } catch {
+    if (
+      state.viewerPlayback.requestId !== requestId ||
+      state.selectedAsset?.asset.id !== asset.id
+    ) {
+      return;
+    }
+
+    resetViewerPlayback(elements, state);
+    renderViewerPlayControl(
+      elements,
+      asset,
+      asset.type === "video" || Boolean(state.viewerImages.imageUrls[asset.id])
+    );
+    showViewerMessage(
+      elements,
+      asset.type === "video" ? "Could not play this video." : "Could not play this live photo."
+    );
+  }
+}
+
+// The app was hidden: pause the slideshow and playback, and drop a start
+// still in progress. Nothing resumes by itself.
+export function suspendViewerPlayback(context: ViewerMediaContext): void {
+  const { collection, elements, state } = context;
+
+  if (state.viewerSlideshow.playing) {
+    context.pauseSlideshow();
+  }
+
+  const asset = state.selectedAsset?.asset;
+
+  if (!collection.isOpen() || !asset || state.viewerPlayback.assetId !== asset.id) {
+    return;
+  }
+
+  const playState = elements.assetViewerPlay.getAttribute("data-play-state");
+
+  if (playState === "playing") {
+    pauseViewerPlayback(elements, state, asset);
+    return;
+  }
+
+  if (playState === "loading") {
+    // A pending start would otherwise begin playing after the app returns.
+    const stillUrl = state.viewerImages.imageUrls[asset.id];
+
+    resetViewerPlayback(elements, state);
+    renderViewerPlayControl(elements, asset, asset.type === "video" || Boolean(stillUrl));
+
+    // Restore the still directly: re-rendering it would re-run video autoplay.
+    if (stillUrl) {
+      elements.assetViewerImage.src = stillUrl;
+      elements.assetViewerImage.hidden = false;
+      elements.assetViewerPlaceholder.hidden = true;
+      if (asset.type === "video") {
+        showIdleVideoPlayer(elements);
+      }
+    }
   }
 }

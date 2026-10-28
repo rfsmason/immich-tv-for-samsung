@@ -15,23 +15,22 @@ import {
   shouldAutoplayViewerVideo
 } from "../asset-viewer-window";
 import { clearStill, showStill } from "../media-elements";
-import { isLivePhotoAsset, isViewerPlayableAsset, readAssetTypeLabel } from "./asset-presentation";
+import { isViewerPlayableAsset, readAssetTypeLabel } from "./asset-presentation";
 import {
   createAssetViewerPlaybackState,
   handleLivePhotoPlaybackBoundary,
   handleViewerPlaybackEndedEvent,
   hideViewerPlayer,
-  pauseViewerPlayback,
-  playViewerVideoElement,
   renderViewerPlayControl,
   resetViewerPlayback,
-  setViewerPlayControlState,
   setViewerPlayerStatus,
   showIdleVideoPlayer,
   showViewerLoading,
   showViewerMessage,
-  showViewerPlayer,
-  updateViewerPlayerProgress
+  suspendViewerPlayback,
+  toggleViewerPlayback,
+  updateViewerPlayerProgress,
+  type ViewerMediaContext
 } from "./viewer-playback";
 import { createViewerControlsAutoHide } from "./viewer-autohide";
 import { createViewerFaces, type ViewerFaces } from "./viewer-faces";
@@ -92,7 +91,8 @@ export type AssetViewerController = {
 };
 
 type ViewerContext = AssetViewerOptions &
-  SlideshowContext & {
+  SlideshowContext &
+  ViewerMediaContext & {
     faces: ViewerFaces;
     isOpen(): boolean;
     // Re-reads whether anything is passively playing and tells the TV.
@@ -133,6 +133,7 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       settingsStore: options.settingsStore
     }),
     isOpen: () => collection.isOpen(),
+    pauseSlideshow: () => pauseViewerSlideshow(context),
     renderCurrent: () => renderAssetViewer(context, collection.index()),
     showSlide(index) {
       collection.select(index);
@@ -673,121 +674,6 @@ function focusViewerDefaultControl(context: ViewerContext): void {
 
   state.viewerPlayFocusPending = false;
   elements.assetViewerSlideshow.focus();
-}
-
-async function toggleViewerPlayback(context: ViewerContext): Promise<void> {
-  const { collection, elements, state } = context;
-  const asset = state.selectedAsset?.asset;
-
-  if (!asset || !isViewerPlayableAsset(asset)) {
-    return;
-  }
-
-  pauseViewerSlideshow(context);
-
-  if (
-    state.viewerPlayback.assetId === asset.id &&
-    elements.assetViewerPlay.getAttribute("data-play-state") === "playing"
-  ) {
-    pauseViewerPlayback(elements, state, asset);
-    return;
-  }
-
-  if (state.viewerPlayback.assetId === asset.id && state.viewerPlayback.url) {
-    await playViewerVideoElement(context, asset, state.viewerPlayback.url);
-    return;
-  }
-
-  resetViewerPlayback(elements, state);
-  state.viewerPlayback.assetId = asset.id;
-  state.viewerPlayback.mediaKind = isLivePhotoAsset(asset) ? "live-photo" : "video";
-  state.viewerPlayback.requestId += 1;
-  const requestId = state.viewerPlayback.requestId;
-
-  setViewerPlayControlState(elements, asset, "loading");
-
-  if (asset.type === "video") {
-    showViewerPlayer(elements, "Loading");
-    showViewerLoading(elements);
-  }
-
-  try {
-    const url = context.service.loadAssetPlaybackUrl(asset);
-
-    if (!url) {
-      setViewerPlayControlState(elements, asset, "idle");
-      return;
-    }
-
-    if (
-      !collection.isOpen() ||
-      state.selectedAsset?.asset.id !== asset.id ||
-      state.viewerPlayback.requestId !== requestId ||
-      collection.isHidden()
-    ) {
-      return;
-    }
-
-    state.viewerPlayback.url = url;
-    await playViewerVideoElement(context, asset, url);
-  } catch {
-    if (
-      state.viewerPlayback.requestId !== requestId ||
-      state.selectedAsset?.asset.id !== asset.id
-    ) {
-      return;
-    }
-
-    resetViewerPlayback(elements, state);
-    renderViewerPlayControl(
-      elements,
-      asset,
-      asset.type === "video" || Boolean(state.viewerImages.imageUrls[asset.id])
-    );
-    showViewerMessage(
-      elements,
-      asset.type === "video" ? "Could not play this video." : "Could not play this live photo."
-    );
-  }
-}
-
-function suspendViewerPlayback(context: ViewerContext): void {
-  const { collection, elements, state } = context;
-
-  if (state.viewerSlideshow.playing) {
-    pauseViewerSlideshow(context);
-  }
-
-  const asset = state.selectedAsset?.asset;
-
-  if (!collection.isOpen() || !asset || state.viewerPlayback.assetId !== asset.id) {
-    return;
-  }
-
-  const playState = elements.assetViewerPlay.getAttribute("data-play-state");
-
-  if (playState === "playing") {
-    pauseViewerPlayback(elements, state, asset);
-    return;
-  }
-
-  if (playState === "loading") {
-    // A pending start would otherwise begin playing after the app returns.
-    const stillUrl = state.viewerImages.imageUrls[asset.id];
-
-    resetViewerPlayback(elements, state);
-    renderViewerPlayControl(elements, asset, asset.type === "video" || Boolean(stillUrl));
-
-    // Restore the still directly: re-rendering it would re-run video autoplay.
-    if (stillUrl) {
-      elements.assetViewerImage.src = stillUrl;
-      elements.assetViewerImage.hidden = false;
-      elements.assetViewerPlaceholder.hidden = true;
-      if (asset.type === "video") {
-        showIdleVideoPlayer(elements);
-      }
-    }
-  }
 }
 
 function loadViewerImagesNearFocus(context: ViewerContext): void {

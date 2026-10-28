@@ -467,22 +467,20 @@ button.settings-section-button {
   text-align: left;
 }
 
+/* Settings' buttons look like the main menu's: the open section like the
+   current destination, and the standard white focus. Text fields and
+   checkboxes keep their own focus, which shows typing and ticks clearly. */
 button.settings-section-button[aria-selected="true"] {
-  border-color: rgba(120, 196, 255, 0.82);
-  background: rgba(66, 165, 245, 0.28);
+  border-color: rgba(120, 196, 255, 0.68);
+  background: rgba(66, 81, 176, 0.34);
   color: var(--immich-primary-on-dark);
 }
 
-.settings-layout .focusable:focus {
+.settings-layout input.focusable:focus {
   border-color: #ffffff;
-  background: var(--immich-primary);
+  background: rgba(66, 165, 245, 0.42);
   color: #ffffff;
   box-shadow: 0 0 0 7px rgba(255, 214, 102, 0.72);
-}
-
-.settings-layout input.focusable:focus,
-.settings-layout .focusable.dropdown-control:focus {
-  background: rgba(66, 165, 245, 0.42);
 }
 
 button.settings-section-button[data-dirty] .button-row-label::after {
@@ -672,12 +670,6 @@ button.icon-action > svg {
   background: #ffffff;
   color: #11131f;
   box-shadow: 0 0 0 8px rgba(66, 81, 176, 0.46);
-}
-
-button.icon-action:focus {
-  background: var(--immich-primary);
-  color: #ffffff;
-  box-shadow: 0 0 0 8px rgba(66, 81, 176, 0.42);
 }
 
 .actions {
@@ -1625,19 +1617,19 @@ button.asset-viewer-control {
   height: 64px;
   min-height: 64px;
   overflow: hidden;
-  border: 0;
+  border: 3px solid rgba(255, 255, 255, 0.24);
   border-radius: 8px;
-  background: rgba(5, 7, 17, 0.54);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--immich-primary-on-dark);
   padding: 0;
-  opacity: 0.88;
 }
 
+/* The main menu's focus: white, with the primary-colour ring. */
 button.asset-viewer-control:focus {
+  border-color: #ffffff;
   background: #ffffff;
   color: #11131f;
-  opacity: 1;
-  box-shadow: none;
+  box-shadow: 0 0 0 8px rgba(66, 81, 176, 0.46);
 }
 
 button.asset-viewer-slideshow::before,
@@ -1704,10 +1696,10 @@ button.asset-viewer-slideshow[data-slideshow-progress="running"]::after {
   stroke-width: 3;
 }
 
-/* Faces on: the button stays lit, like a pressed switch. */
+/* Faces on: the button stays lit like the main menu's current destination. */
 button.asset-viewer-faces[aria-pressed="true"] {
-  background: var(--immich-primary);
-  opacity: 1;
+  border-color: rgba(120, 196, 255, 0.68);
+  background: rgba(66, 81, 176, 0.34);
 }
 
 button.asset-viewer-faces[aria-pressed="true"]:focus {

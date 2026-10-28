@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   getKeyCode,
   isMediaPlayPauseKey,
+  readSkipDirection,
   readArrowDirection,
   readChannelDirection,
   registerOptionalRemoteKeys,
@@ -42,6 +43,18 @@ describe("Tizen remote keys", () => {
       expect(event.defaultPrevented).toBe(false);
       target.remove();
     }
+  });
+
+  it("keeps , and . typing in a text field", () => {
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    let translated = 0;
+    input.addEventListener("keydown", (event) => {
+      translated = getKeyCode(event as KeyboardEvent, {});
+    });
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: ",", keyCode: 188 }));
+    expect(translated).toBe(188);
+    input.remove();
   });
 
   it("preserves native Tizen Back and Backspace codes", () => {
@@ -86,6 +99,7 @@ describe("Tizen remote keys", () => {
           getSupportedKeys: vi.fn().mockReturnValue([
             { code: remoteKeys.mediaPlayPause, name: "MediaPlayPause" },
             { code: remoteKeys.mediaPause, name: "MediaPause" },
+            { code: remoteKeys.mediaRewind, name: "MediaRewind" },
             { code: remoteKeys.channelUp, name: "ChannelUp" },
             { code: remoteKeys.channelDown, name: "ChannelDown" },
             { code: remoteKeys.back, name: "Back" }
@@ -102,9 +116,11 @@ describe("Tizen remote keys", () => {
     expect(registerKey).toHaveBeenCalledWith("MediaPause");
     expect(registerKey).toHaveBeenCalledWith("ChannelUp");
     expect(registerKey).toHaveBeenCalledWith("ChannelDown");
+    expect(registerKey).toHaveBeenCalledWith("MediaRewind");
     expect(registerKey).not.toHaveBeenCalledWith("MediaPlay");
+    expect(registerKey).not.toHaveBeenCalledWith("MediaFastForward");
     expect(logger.info).toHaveBeenCalledWith("Some optional remote keys are not supported.", {
-      unsupported: ["MediaPlay"]
+      unsupported: ["MediaPlay", "MediaFastForward"]
     });
   });
 
@@ -152,7 +168,7 @@ describe("Tizen remote keys", () => {
 
     registerOptionalRemoteKeys(windowRef, logger);
 
-    expect(registerKey).toHaveBeenCalledTimes(5);
+    expect(registerKey).toHaveBeenCalledTimes(7);
     expect(logger.warn).toHaveBeenCalled();
   });
 
@@ -169,5 +185,22 @@ describe("Tizen remote keys", () => {
     expect(getKeyCode(pageUp, {} as Window)).toBe(remoteKeys.channelUp);
     expect(getKeyCode(pageDown, {} as Window)).toBe(remoteKeys.channelDown);
     expect(getKeyCode(pageUp, { tizen: {} } as unknown as Window)).toBe(33);
+  });
+
+  it("maps , and . to rewind and fast forward in the desktop preview only", () => {
+    const comma = new KeyboardEvent("keydown", { key: ",", keyCode: 188 });
+    const period = new KeyboardEvent("keydown", { key: ".", keyCode: 190 });
+
+    expect(getKeyCode(comma, {} as Window)).toBe(remoteKeys.mediaRewind);
+    expect(getKeyCode(period, {} as Window)).toBe(remoteKeys.mediaFastForward);
+    expect(getKeyCode(comma, { tizen: {} } as unknown as Window)).toBe(188);
+  });
+
+  it("reads the way a rewind or fast-forward key skips", () => {
+    expect(remoteKeys.mediaRewind).toBe(412);
+    expect(remoteKeys.mediaFastForward).toBe(417);
+    expect(readSkipDirection(remoteKeys.mediaRewind)).toBe(-1);
+    expect(readSkipDirection(remoteKeys.mediaFastForward)).toBe(1);
+    expect(readSkipDirection(remoteKeys.right)).toBeNull();
   });
 });

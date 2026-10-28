@@ -10,9 +10,11 @@ export const remoteKeys = {
   down: 40,
   enter: 13,
   left: 37,
+  mediaFastForward: 417,
   mediaPause: 19,
   mediaPlay: 415,
   mediaPlayPause: 10252,
+  mediaRewind: 412,
   right: 39,
   up: 38
 } as const;
@@ -26,9 +28,12 @@ const fallbackKeyCodes: Record<string, number> = {
   Escape: remoteKeys.back
 };
 
-// The desktop preview has no channel keys, so Page Up and Page Down stand in
-// for them, as Escape and Backspace stand in for Back.
+// The desktop preview has no channel or rewind keys, so Page Up and Page
+// Down stand in for the channel keys, and "," and "." for rewind and fast
+// forward, as Escape and Backspace stand in for Back (ADR 0015).
 const desktopChannelKeys: Record<string, number> = {
+  ",": remoteKeys.mediaRewind,
+  ".": remoteKeys.mediaFastForward,
   PageDown: remoteKeys.channelDown,
   PageUp: remoteKeys.channelUp
 };
@@ -40,17 +45,14 @@ export function getKeyCode(
   // Desktop KeyboardEvents carry keyCode 8/27, so handle these before the
   // native-code path. Editing keeps Backspace's normal deletion behaviour.
   if (!windowRef?.tizen && (event.key === "Backspace" || event.key === "Escape")) {
-    const target = event.target as HTMLElement | null;
-    const editing =
-      target?.isContentEditable ||
-      target?.closest?.('input, textarea, [contenteditable="true"], [contenteditable=""]');
-    if (event.key === "Backspace" && editing) {
+    if (event.key === "Backspace" && isEditingText(event)) {
       return event.keyCode || 8;
     }
     return remoteKeys.back;
   }
 
-  if (!windowRef?.tizen && desktopChannelKeys[event.key]) {
+  // Typing "," or "." in a text field stays typing.
+  if (!windowRef?.tizen && desktopChannelKeys[event.key] && !isEditingText(event)) {
     return desktopChannelKeys[event.key]!;
   }
 
@@ -59,6 +61,15 @@ export function getKeyCode(
   }
 
   return fallbackKeyCodes[event.key] || 0;
+}
+
+function isEditingText(event: KeyboardEvent): boolean {
+  const target = event.target as HTMLElement | null;
+
+  return Boolean(
+    target?.isContentEditable ||
+    target?.closest?.('input, textarea, [contenteditable="true"], [contenteditable=""]')
+  );
 }
 
 // The arrow a remote key code moves in, or null for any other key.
@@ -92,6 +103,15 @@ export function readChannelDirection(keyCode: number): -1 | 1 | null {
   return keyCode === remoteKeys.channelDown ? 1 : null;
 }
 
+// The way a rewind (-1) or fast-forward (1) key skips; null for any other key.
+export function readSkipDirection(keyCode: number): -1 | 1 | null {
+  if (keyCode === remoteKeys.mediaRewind) {
+    return -1;
+  }
+
+  return keyCode === remoteKeys.mediaFastForward ? 1 : null;
+}
+
 export function isMediaPlayPauseKey(keyCode: number): boolean {
   return (
     keyCode === remoteKeys.mediaPlayPause ||
@@ -100,7 +120,17 @@ export function isMediaPlayPauseKey(keyCode: number): boolean {
   );
 }
 
-const optionalKeyNames = ["MediaPlayPause", "MediaPlay", "MediaPause", "ChannelUp", "ChannelDown"];
+// Rewind and fast forward are on Samsung's standard remotes; the 2019 Smart
+// Remote has neither (ADR 0020).
+const optionalKeyNames = [
+  "MediaPlayPause",
+  "MediaPlay",
+  "MediaPause",
+  "MediaRewind",
+  "MediaFastForward",
+  "ChannelUp",
+  "ChannelDown"
+];
 
 // Registers the optional keys the app uses. Each is best-effort: the arrows,
 // Enter and Back work without registration, and every feature on an optional

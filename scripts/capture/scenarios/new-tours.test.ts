@@ -226,6 +226,31 @@ describe("Settings recording privacy and navigation", () => {
     expect(actions[actions.length - 1]).toEqual({ key: "up", focus: '[data-destination="home"]' });
   });
 
+  it("visits every section, plays the chosen album in ambient mode, then saves", async () => {
+    const { context, actions } = fixture();
+    await settingsTour.run(context);
+    const index = (key: string, focus: string) =>
+      actions.findIndex((action) => action.key === key && action.focus === focus);
+    const steps = [
+      index("ok", "#server-url"),
+      index("ok", "#slideshow-interval"),
+      index("ok", "#home-rail-recently-viewed:not(:checked)"),
+      index("ok", "#ambient-source"),
+      index("ok", "#ambient-album"),
+      index("ok", "#ambient-interval"),
+      index("ok", "#ambient-screen"),
+      index("back", "#ambient-start"),
+      index("ok", "#settings-save")
+    ];
+
+    expect(steps.every((step, at) => step > (at ? steps[at - 1]! : -1))).toBe(true);
+    // Mallorca is the fourth album: three Right presses along the first row.
+    expect(actions).toContainEqual({
+      key: "right",
+      focus: '#search-albums-grid [data-album-index="3"]'
+    });
+  });
+
   it("never opens Settings when masking cannot be verified", async () => {
     const { context, actions } = fixture(6, false);
     await expect(settingsTour.run(context)).rejects.toThrow("Cannot safely mask");

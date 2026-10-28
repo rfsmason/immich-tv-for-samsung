@@ -20,6 +20,7 @@
   /* Text: the light brand blue at a few strengths, white on accent fills, and
      dark text on light (focused) controls. */
   --text-on-light: #11131f;
+  --text-brand: var(--immich-primary-on-dark);
   --text-strong: #ffffff;
   --text-emphasis: rgba(173, 203, 250, 0.92);
   --text-label: rgba(173, 203, 250, 0.86);
@@ -65,6 +66,9 @@
   --divider-strong: rgba(255, 255, 255, 0.2);
   --rail-line: rgba(255, 255, 255, 0.14);
   --primary-action-border: rgba(66, 81, 176, 0.78);
+  --primary-action-fill: var(--immich-primary-soft);
+  /* The edge of a control being edited or an open drop-down list. */
+  --active-border: var(--immich-primary);
 
   /* Focus: the white fill with its primary-colour ring, the white halo
      around checkboxes and faces, and the date rail's yellow marker. */
@@ -77,6 +81,7 @@
   --focus-halo: #ffffff;
   --focus-accent: var(--immich-yellow);
   --focus-accent-glow: rgba(255, 214, 102, 0.9);
+  --pressed-focus-inset: var(--immich-primary);
 
   /* Selection: the current destination or section, a chosen picker item,
      and the date rail's current month. */
@@ -94,6 +99,19 @@
   --progress-glow: rgba(66, 165, 245, 0.36);
   --loading-ring: rgba(255, 255, 255, 0.34);
 
+  /* Shapes that high contrast adds, which change nothing by default: a
+     solid plate behind text over photos, a double edge on the selected
+     item, a dashed edge on a disabled control, opaque badges, and the
+     progress bar's fill. */
+  --overlay-plate: transparent;
+  --overlay-plate-padding: 0;
+  --overlay-plate-radius: 0;
+  --selected-border-style: solid;
+  --disabled-opacity: 0.55;
+  --disabled-border-style: solid;
+  --badge-opacity: 0.82;
+  --progress-fill: var(--immich-primary);
+
   /* Backing for text and badges over photos. */
   --overlay-fill: rgba(5, 7, 17, 0.64);
   --overlay-label-fill: rgba(5, 7, 17, 0.86);
@@ -107,6 +125,103 @@
   font-family: Arial, Helvetica, sans-serif;
   background: var(--surface);
   color: var(--text-primary);
+}
+
+/* High contrast (Settings → Display, ADR 0020): token overrides only. White
+   text on solid black with the background picture covered, a visible edge
+   on every control, a white-and-black focus ring that shows on any
+   background, solid plates behind text over photos, and shapes (a double
+   edge for the selection, a dashed edge when disabled) as well as colour.
+   scripts/check-contrast.mjs measures these pairs. */
+:root[data-contrast="high"] {
+  --surface: #000000;
+  --surface-raised: #0d0d0d;
+  --text-primary: #ffffff;
+  --text-muted: #e0e0e0;
+  --text-on-light: #000000;
+  --text-strong: #ffffff;
+  --text-brand: #ffffff;
+  --text-emphasis: #ffffff;
+  --text-label: #ffffff;
+  --text-badge: #ffffff;
+  --text-secondary: #e0e0e0;
+  --text-faint: #e0e0e0;
+  --text-status: #e0e0e0;
+  --text-hint: #e0e0e0;
+  --text-timeline: #e0e0e0;
+  --text-detail: #e0e0e0;
+  --text-support: #e0e0e0;
+  --text-placeholder: #c8c8c8;
+
+  --status-error: #ff8a80;
+  --status-warning: #ffd54f;
+  --status-pending: #ffd54f;
+  --status-success: #69f0ae;
+
+  --app-background: #000000;
+  --app-wash-start: #000000;
+  --app-wash-end: #000000;
+  --panel-fill: #000000;
+  --panel-border: #ffffff;
+  --dialog-scrim: #000000;
+  --dropdown-fill: #000000;
+  --viewer-backdrop: #000000;
+
+  --control-fill: #000000;
+  --control-border: #bfbfbf;
+  --placeholder-fill: #1a1a1a;
+  --placeholder-tint-start: #1a1a1a;
+  --placeholder-tint-end: #1a1a1a;
+  --chip-face-fill: #1a1a1a;
+  --stepper-fill: #000000;
+  --key-cap-border: #bfbfbf;
+  --divider: #808080;
+  --divider-strong: #808080;
+  --rail-line: #808080;
+  --primary-action-border: #ffffff;
+  --primary-action-fill: #000000;
+  --active-border: #ffffff;
+
+  --focus-fill: #ffffff;
+  --focus-border: #ffffff;
+  --focus-ring: #000000;
+  --focus-shadow: 0 0 0 5px #000000, 0 0 0 11px #ffffff;
+  --focus-ring-strong: #000000;
+  --focus-halo: #ffffff;
+  --focus-accent: #ffff00;
+  --focus-accent-glow: transparent;
+  --pressed-focus-inset: #000000;
+
+  --selected-border: #ffffff;
+  --selected-fill: #333333;
+  --selected-glow: transparent;
+  --tick: #808080;
+  --tick-year: #bfbfbf;
+  --tick-selected: #ffffff;
+  --chosen: #69f0ae;
+
+  --track: #808080;
+  --track-buffered: #bfbfbf;
+  --progress-glow: transparent;
+  --loading-ring: #808080;
+
+  --overlay-plate: #000000;
+  --overlay-plate-padding: 4px 12px;
+  --overlay-plate-radius: 8px;
+  --selected-border-style: double;
+  --disabled-opacity: 1;
+  --disabled-border-style: dashed;
+  --badge-opacity: 1;
+  --progress-fill: #ffffff;
+
+  --overlay-fill: #000000;
+  --overlay-label-fill: #000000;
+  --badge-fill: #000000;
+  --badge-fill-strong: #000000;
+  --caption-fade-start: #000000;
+  --caption-fade-end: #000000;
+  --overlay-text-shadow: transparent;
+  --ambient-text-shadow: transparent;
 }
 
 * {
@@ -262,7 +377,7 @@ input {
   min-height: 72px;
   margin-bottom: 22px;
   padding: 0;
-  color: var(--immich-primary-on-dark);
+  color: var(--text-brand);
   font-size: 17px;
   white-space: nowrap;
   font-weight: 900;
@@ -355,8 +470,9 @@ button.top-nav-item {
 
 button.top-nav-item[aria-current="page"] {
   border-color: var(--selected-border);
+  border-style: var(--selected-border-style);
   background: var(--selected-fill);
-  color: var(--immich-primary-on-dark);
+  color: var(--text-brand);
 }
 
 .top-nav-icon {
@@ -488,7 +604,7 @@ button.top-nav-item[aria-current="page"] {
 
 .eyebrow {
   margin: 0 0 22px;
-  color: var(--immich-primary-on-dark);
+  color: var(--text-brand);
   font-size: 28px;
   font-weight: 700;
   letter-spacing: 0;
@@ -503,7 +619,7 @@ button.top-nav-item[aria-current="page"] {
 h1 {
   max-width: 1080px;
   margin: 0;
-  color: var(--immich-primary-on-dark);
+  color: var(--text-brand);
   font-size: 78px;
   font-weight: 800;
   letter-spacing: 0;
@@ -512,7 +628,7 @@ h1 {
 
 h2 {
   margin: 0;
-  color: var(--immich-primary-on-dark);
+  color: var(--text-brand);
   font-size: 58px;
   font-weight: 800;
   letter-spacing: 0;
@@ -562,8 +678,9 @@ button.settings-section-button {
    takes the standard white focus with its primary-colour ring. */
 button.settings-section-button[aria-selected="true"] {
   border-color: var(--selected-border);
+  border-style: var(--selected-border-style);
   background: var(--selected-fill);
-  color: var(--immich-primary-on-dark);
+  color: var(--text-brand);
 }
 
 button.settings-section-button[data-dirty] .button-row-label::after {
@@ -752,7 +869,7 @@ button.icon-action > svg {
 
 .primary-action {
   border-color: var(--primary-action-border);
-  background: var(--immich-primary-soft);
+  background: var(--primary-action-fill);
 }
 
 .focusable:focus {
@@ -1121,7 +1238,7 @@ h1.screen-heading-subtle {
 .album-count {
   overflow: hidden;
   margin: 0;
-  color: var(--immich-primary-on-dark);
+  color: var(--text-brand);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1348,7 +1465,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1;
-  opacity: 0.82;
+  opacity: var(--badge-opacity);
 }
 
 .asset-media-badge > :not([hidden]) ~ :not([hidden]) {
@@ -1505,6 +1622,9 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   font-weight: 800;
   text-shadow: 0 3px 14px var(--overlay-text-shadow);
   transform: translateX(-50%);
+  padding: var(--overlay-plate-padding);
+  border-radius: var(--overlay-plate-radius);
+  background: var(--overlay-plate);
 }
 
 .asset-viewer-date,
@@ -1536,6 +1656,9 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   font-weight: 800;
   line-height: 1.2;
   text-shadow: 0 3px 14px var(--overlay-text-shadow);
+  padding: var(--overlay-plate-padding);
+  border-radius: var(--overlay-plate-radius);
+  background: var(--overlay-plate);
 }
 
 .asset-viewer-exif {
@@ -1554,6 +1677,9 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   text-shadow: 0 3px 14px var(--overlay-text-shadow);
   transform: translateX(-50%);
   white-space: nowrap;
+  padding: var(--overlay-plate-padding);
+  border-radius: var(--overlay-plate-radius);
+  background: var(--overlay-plate);
 }
 
 .asset-viewer-player {
@@ -1689,7 +1815,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
 }
 
 .asset-viewer-progress-fill {
-  background: var(--immich-primary);
+  background: var(--progress-fill);
   box-shadow: 0 0 18px var(--progress-glow);
 }
 
@@ -1723,7 +1849,7 @@ button.asset-viewer-control {
   border: 3px solid var(--control-border);
   border-radius: 8px;
   background: var(--control-fill);
-  color: var(--immich-primary-on-dark);
+  color: var(--text-brand);
   padding: 0;
 }
 
@@ -1802,12 +1928,13 @@ button.asset-viewer-slideshow[data-slideshow-progress="running"]::after {
 /* Faces on: the button stays lit like the main menu's current destination. */
 button.asset-viewer-faces[aria-pressed="true"] {
   border-color: var(--selected-border);
+  border-style: var(--selected-border-style);
   background: var(--selected-fill);
 }
 
 button.asset-viewer-faces[aria-pressed="true"]:focus {
   background: var(--focus-fill);
-  box-shadow: inset 0 0 0 4px var(--immich-primary);
+  box-shadow: inset 0 0 0 4px var(--pressed-focus-inset);
 }
 
 /* Face tags over the photo: a light outline with a dark edge reads on any
@@ -1839,7 +1966,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   padding: 6px 14px;
   border-radius: 8px;
   background: var(--overlay-label-fill);
-  color: var(--immich-primary-on-dark);
+  color: var(--text-brand);
   font-size: 24px;
   font-weight: 800;
   line-height: 1.2;
@@ -1893,6 +2020,9 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   text-shadow: 0 3px 14px var(--overlay-text-shadow);
   white-space: nowrap;
   pointer-events: none;
+  padding: var(--overlay-plate-padding);
+  border-radius: var(--overlay-plate-radius);
+  background: var(--overlay-plate);
 }
 
 .asset-viewer-slideshow-pause-symbol {
@@ -2627,7 +2757,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 }
 
 .focusable.search-date[data-editing] {
-  border-color: var(--immich-primary);
+  border-color: var(--active-border);
 }
 
 .search-stepper {
@@ -2635,7 +2765,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   flex-wrap: wrap;
   align-items: center;
   padding: 20px;
-  border: 4px solid var(--immich-primary);
+  border: 4px solid var(--active-border);
   border-radius: 12px;
   background: var(--stepper-fill);
 }
@@ -2664,7 +2794,8 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 }
 
 .focusable.search-show[aria-disabled="true"] {
-  opacity: 0.55;
+  border-style: var(--disabled-border-style);
+  opacity: var(--disabled-opacity);
 }
 
 .search-confirm {
@@ -2803,7 +2934,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 }
 
 .focusable.dropdown-control[aria-expanded="true"] {
-  border-color: var(--immich-primary);
+  border-color: var(--active-border);
 }
 
 .dropdown-list {
@@ -2814,7 +2945,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   min-width: 100%;
   margin-top: 8px;
   padding: 8px;
-  border: 4px solid var(--immich-primary);
+  border: 4px solid var(--active-border);
   border-radius: 12px;
   background: var(--dropdown-fill);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
@@ -3003,6 +3134,9 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   max-width: 760px;
   color: var(--text-faint);
   text-shadow: 0 2px 10px var(--ambient-text-shadow);
+  padding: var(--overlay-plate-padding);
+  border-radius: var(--overlay-plate-radius);
+  background: var(--overlay-plate);
 }
 
 .ambient-overlay[data-position="0"] {
@@ -3058,6 +3192,9 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   line-height: 1.4;
   text-align: center;
   transform: translate(-50%, -50%);
+  padding: var(--overlay-plate-padding);
+  border-radius: var(--overlay-plate-radius);
+  background: var(--overlay-plate);
 }
 
 /* Settings > Ambient: the drop-downs two to a row, so the whole section

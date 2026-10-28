@@ -12,7 +12,7 @@
     "format": "prettier --write . && eslint . --fix",
     "format:check": "prettier --check .",
     "lint": "eslint . && npm run lint:compat",
-    "lint:compat": "node scripts/check-css-compat.mjs && node scripts/check-js-compat.mjs",
+    "lint:compat": "node scripts/check-css-compat.mjs && node scripts/check-contrast.mjs && node scripts/check-js-compat.mjs",
     "preview": "npm run build && node scripts/serve-preview.mjs --root dist",
     "preview:restart": "node scripts/restart-preview.mjs",
     "stage:tizen": "npm run build && node scripts/package-tizen.mjs --stage-only",

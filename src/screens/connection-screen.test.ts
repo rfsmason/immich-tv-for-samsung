@@ -261,6 +261,28 @@ describe("Settings remote navigation and actions", () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 
+  it("chooses when the playback buttons fade, defaulting to 5 seconds, and saves Never", () => {
+    const { settingsStore } = mount();
+    controller!.show({ allowBack: true });
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.right);
+    for (let step = 0; step < 6; step += 1) pressKey(remoteKeys.down);
+    expect(document.activeElement).toBe(byId("playback-buttons-hide"));
+    expect(byId("playback-buttons-hide").textContent).toContain("After 5 seconds");
+
+    pressKey(remoteKeys.enter);
+    expect(document.activeElement?.textContent).toBe("✓After 5 seconds");
+    for (let step = 0; step < 3; step += 1) pressKey(remoteKeys.down);
+    expect(document.activeElement?.textContent).toBe("Never");
+    pressKey(remoteKeys.enter);
+
+    byId("settings-save").focus();
+    pressKey(remoteKeys.enter);
+    expect(settingsStore.save).toHaveBeenCalledWith(
+      expect.objectContaining({ playbackButtonsHide: "never" })
+    );
+  });
+
   it("opens the slideshow interval with OK, like Search's drop-downs, and never traps focus", () => {
     const { settingsStore } = mount();
     const interval = () => byId("slideshow-interval");

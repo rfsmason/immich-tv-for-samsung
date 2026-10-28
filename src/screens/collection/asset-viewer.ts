@@ -1,6 +1,6 @@
 import type { AlbumService } from "../../app/album-service";
 import type { AlbumAsset } from "../../domain/album";
-import type { AppSettings } from "../../domain/app-settings";
+import { readPlaybackButtonsHideMs, type AppSettings } from "../../domain/app-settings";
 import type { ViewingSource } from "../../domain/viewing-history";
 import { getKeyCode, isMediaPlayPauseKey, remoteKeys } from "../../platform/tizen/keys";
 import { noPassiveViewing, type PassiveViewing } from "../../platform/tizen/screensaver";
@@ -103,6 +103,7 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
   const { collection, elements } = options;
   const passiveHold = (options.passiveViewing || noPassiveViewing).createHold();
   const controlsAutoHide = createViewerControlsAutoHide({
+    hideAfterMs: () => readPlaybackButtonsHideMs(options.settingsStore.load()),
     onHiddenChange(hidden) {
       if (hidden) {
         elements.assetPlaceholder.setAttribute("data-controls", "hidden");

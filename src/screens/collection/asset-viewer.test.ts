@@ -7,7 +7,6 @@ import { remoteKeys } from "../../platform/tizen/keys";
 import { createPassiveViewing } from "../../platform/tizen/screensaver";
 import { TestDocument, type TestElement } from "../../test/document";
 import { createAssetViewer, type AssetViewerController } from "./asset-viewer";
-import { viewerControlsHideMs } from "./viewer-autohide";
 import type { ViewerCollection, ViewerElements } from "./viewer-types";
 
 // The viewer driven by a fake ordered collection, as People, Search or
@@ -472,6 +471,9 @@ describe("viewer and the TV screensaver", () => {
 });
 
 describe("viewer buttons during passive viewing", () => {
+  // The default Hide playback buttons choice.
+  const viewerControlsHideMs = 5000;
+
   const hidden = (f: ReturnType<typeof fixture>) =>
     f.elements.assetPlaceholder.getAttribute("data-controls") === "hidden";
 
@@ -522,6 +524,31 @@ describe("viewer buttons during passive viewing", () => {
     expect(hidden(f)).toBe(true);
     f.press(remoteKeys.back);
     expect(f.collection.exit).toHaveBeenCalled();
+  });
+
+  it("follows Hide playback buttons, and with Never keeps them so every key acts", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+    const f = fixture([asset("a"), asset("b"), asset("c")], {
+      playbackButtonsHide: 10,
+      slideshowIntervalSeconds: 60
+    });
+
+    viewer!.open(0);
+    f.press(remoteKeys.mediaPlay);
+    vi.advanceTimersByTime(9999);
+    expect(hidden(f)).toBe(false);
+    vi.advanceTimersByTime(1);
+    expect(hidden(f)).toBe(true);
+    f.press(remoteKeys.mediaPause);
+
+    f.settings().playbackButtonsHide = "never";
+    f.press(remoteKeys.mediaPlay);
+    vi.advanceTimersByTime(60000 - 1);
+    expect(hidden(f)).toBe(false);
+    f.collection.select.mockClear();
+    f.press(remoteKeys.right);
+    expect(f.collection.select).toHaveBeenCalledWith(1);
   });
 
   it("keeps the buttons while nothing plays, and shows them when playing stops or the viewer closes", async () => {

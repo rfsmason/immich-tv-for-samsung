@@ -37,6 +37,7 @@ describe("app settings store", () => {
       autoplayVideos: false,
       highContrast: false,
       homeRails: allRailsOn,
+      playbackButtonsHide: 5,
       showFaceTags: false,
       showViewerDate: true,
       showViewerExif: true,
@@ -80,6 +81,7 @@ describe("app settings store", () => {
       autoplayVideos: true,
       highContrast: true,
       homeRails: { ...allRailsOn, people: false },
+      playbackButtonsHide: "never" as const,
       showFaceTags: true,
       showViewerDate: false,
       showViewerExif: true,
@@ -109,6 +111,7 @@ describe("app settings store", () => {
       autoplayVideos: true,
       highContrast: false,
       homeRails: allRailsOn,
+      playbackButtonsHide: 5,
       showFaceTags: false,
       showViewerDate: true,
       showViewerExif: true,
@@ -157,8 +160,37 @@ describe("app settings store", () => {
       })
     );
 
-    expect(appSettingsSchemaVersion).toBe(3);
     expect(store.load()).toEqual({ ...defaultAppSettings, autoplayVideos: true });
+  });
+
+  it("migrates version 3 settings to version 4 with the buttons fading after 5 seconds", () => {
+    const version3: Partial<typeof defaultAppSettings> = { ...defaultAppSettings };
+    delete version3.playbackButtonsHide;
+    const store = createLocalAppSettingsStore(
+      createMemoryStorage({
+        "immich-tv.app-settings": JSON.stringify({
+          ...version3,
+          highContrast: true,
+          schemaVersion: 3
+        })
+      })
+    );
+
+    expect(appSettingsSchemaVersion).toBe(4);
+    expect(store.load()).toEqual({ ...defaultAppSettings, highContrast: true });
+    expect(store.load().playbackButtonsHide).toBe(5);
+  });
+
+  it("keeps each Hide playback buttons choice, and defaults anything else to 5 seconds", () => {
+    const load = (value: unknown) =>
+      createLocalAppSettingsStore(
+        createMemoryStorage({
+          "immich-tv.app-settings": JSON.stringify({ playbackButtonsHide: value, schemaVersion: 4 })
+        })
+      ).load().playbackButtonsHide;
+
+    expect([3, 5, 10, 15, "never"].map(load)).toEqual([3, 5, 10, 15, "never"]);
+    expect([4, 0, "5", null, "always"].map(load)).toEqual([5, 5, 5, 5, 5]);
   });
 
   it("keeps high contrast only when it was explicitly turned on", () => {

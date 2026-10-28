@@ -14,6 +14,95 @@
   /* All text is the light brand blue; muted text is the same blue, fainter. */
   --text-primary: var(--immich-primary-on-dark);
   --text-muted: rgba(173, 203, 250, 0.8);
+  /* The theme's other colours, named by role. High contrast
+     (ADR 0020) overrides these tokens only. */
+
+  /* Text: the light brand blue at a few strengths, white on accent fills, and
+     dark text on light (focused) controls. */
+  --text-on-light: #11131f;
+  --text-strong: #ffffff;
+  --text-emphasis: rgba(173, 203, 250, 0.92);
+  --text-label: rgba(173, 203, 250, 0.86);
+  --text-badge: rgba(173, 203, 250, 0.82);
+  --text-secondary: rgba(173, 203, 250, 0.78);
+  --text-faint: rgba(173, 203, 250, 0.72);
+  --text-status: rgba(173, 203, 250, 0.7);
+  --text-hint: rgba(173, 203, 250, 0.68);
+  --text-timeline: rgba(173, 203, 250, 0.66);
+  --text-detail: rgba(173, 203, 250, 0.6);
+  --text-support: rgba(173, 203, 250, 0.58);
+  --text-placeholder: rgba(173, 203, 250, 0.46);
+
+  /* Status messages; each keeps its words, so colour is never the only cue. */
+  --status-error: var(--immich-red);
+  --status-warning: var(--immich-yellow);
+  --status-pending: var(--immich-yellow);
+  --status-success: var(--immich-green);
+
+  /* Surfaces: the app background and its wash over the picture, panels,
+     dialogs, drop-down lists and the viewer's backdrop. */
+  --app-background: #151824;
+  --app-wash-start: rgba(17, 19, 31, 0.78);
+  --app-wash-end: rgba(17, 19, 31, 0.7);
+  --panel-fill: rgba(17, 19, 31, 0.68);
+  --panel-border: rgba(255, 255, 255, 0.16);
+  --dialog-scrim: rgba(8, 10, 18, 0.78);
+  --dialog-fill: var(--surface-raised);
+  --dropdown-fill: #1b1f33;
+  --viewer-backdrop: #050711;
+
+  /* Controls: fill and edge of every focusable control, placeholders and
+     dividers. */
+  --control-fill: rgba(255, 255, 255, 0.08);
+  --control-border: rgba(255, 255, 255, 0.24);
+  --placeholder-fill: rgba(255, 255, 255, 0.1);
+  --placeholder-tint-start: rgba(66, 81, 176, 0.28);
+  --placeholder-tint-end: rgba(237, 121, 181, 0.18);
+  --chip-face-fill: rgba(255, 255, 255, 0.14);
+  --stepper-fill: rgba(66, 81, 176, 0.18);
+  --key-cap-border: rgba(201, 206, 223, 0.45);
+  --divider: rgba(255, 255, 255, 0.18);
+  --divider-strong: rgba(255, 255, 255, 0.2);
+  --rail-line: rgba(255, 255, 255, 0.14);
+  --primary-action-border: rgba(66, 81, 176, 0.78);
+
+  /* Focus: the white fill with its primary-colour ring, the white halo
+     around checkboxes and faces, and the date rail's yellow marker. */
+  --focus-fill: #ffffff;
+  --focus-border: #ffffff;
+  --focus-text: var(--text-on-light);
+  --focus-ring: rgba(66, 81, 176, 0.46);
+  --focus-shadow: 0 0 0 8px var(--focus-ring);
+  --focus-ring-strong: rgba(66, 81, 176, 0.72);
+  --focus-halo: #ffffff;
+  --focus-accent: var(--immich-yellow);
+  --focus-accent-glow: rgba(255, 214, 102, 0.9);
+
+  /* Selection: the current destination or section, a chosen picker item,
+     and the date rail's current month. */
+  --selected-border: rgba(120, 196, 255, 0.68);
+  --selected-fill: rgba(66, 81, 176, 0.34);
+  --selected-glow: rgba(120, 196, 255, 0.8);
+  --tick: rgba(247, 248, 255, 0.34);
+  --tick-year: rgba(247, 248, 255, 0.56);
+  --tick-selected: #ffffff;
+  --chosen: var(--immich-green);
+
+  /* Progress and loading. */
+  --track: rgba(255, 255, 255, 0.22);
+  --track-buffered: rgba(255, 255, 255, 0.28);
+  --progress-glow: rgba(66, 165, 245, 0.36);
+  --loading-ring: rgba(255, 255, 255, 0.34);
+
+  /* Backing for text and badges over photos. */
+  --overlay-fill: rgba(5, 7, 17, 0.64);
+  --overlay-label-fill: rgba(5, 7, 17, 0.86);
+  --badge-fill: rgba(2, 7, 10, 0.5);
+  --badge-fill-strong: rgba(2, 7, 10, 0.72);
+  --caption-fade-start: rgba(2, 7, 10, 0);
+  --caption-fade-end: rgba(2, 7, 10, 0.84);
+  --overlay-text-shadow: rgba(0, 0, 0, 0.72);
+  --ambient-text-shadow: rgba(0, 0, 0, 0.65);
   color-scheme: dark;
   font-family: Arial, Helvetica, sans-serif;
   background: var(--surface);
@@ -50,9 +139,9 @@ body {
 
 body,
 .splash-screen {
-  background-color: #151824;
+  background-color: var(--app-background);
   background-image:
-    linear-gradient(135deg, rgba(17, 19, 31, 0.78) 0%, rgba(17, 19, 31, 0.7) 100%),
+    linear-gradient(135deg, var(--app-wash-start) 0%, var(--app-wash-end) 100%),
     url("../assets/app-background.jpg");
   background-position: center;
   background-size: cover;
@@ -105,12 +194,12 @@ input {
 }
 
 .splash-error {
-  color: var(--immich-red);
+  color: var(--status-error);
 }
 
 .splash-support {
   margin-top: 42px;
-  color: rgba(173, 203, 250, 0.58);
+  color: var(--text-support);
   font-size: 24px;
 }
 
@@ -265,8 +354,8 @@ button.top-nav-item {
 }
 
 button.top-nav-item[aria-current="page"] {
-  border-color: rgba(120, 196, 255, 0.68);
-  background: rgba(66, 81, 176, 0.34);
+  border-color: var(--selected-border);
+  background: var(--selected-fill);
   color: var(--immich-primary-on-dark);
 }
 
@@ -326,9 +415,9 @@ button.top-nav-item[aria-current="page"] {
   margin: 24px 0 0;
   padding: 14px 28px 14px 20px;
   border-radius: 8px;
-  background: #ffffff;
-  color: #11131f;
-  box-shadow: 0 0 0 8px rgba(66, 81, 176, 0.46);
+  background: var(--focus-fill);
+  color: var(--focus-text);
+  box-shadow: var(--focus-shadow);
   font-size: 28px;
   font-weight: 700;
 }
@@ -454,7 +543,7 @@ h2 {
   gap: 12px;
   margin-top: 28px;
   padding-top: 22px;
-  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  border-top: 1px solid var(--divider);
 }
 
 button.settings-section-button {
@@ -472,8 +561,8 @@ button.settings-section-button {
    destination, and every control (buttons, text fields and checkboxes)
    takes the standard white focus with its primary-colour ring. */
 button.settings-section-button[aria-selected="true"] {
-  border-color: rgba(120, 196, 255, 0.68);
-  background: rgba(66, 81, 176, 0.34);
+  border-color: var(--selected-border);
+  background: var(--selected-fill);
   color: var(--immich-primary-on-dark);
 }
 
@@ -482,7 +571,7 @@ button.settings-section-button[data-dirty] .button-row-label::after {
 }
 
 .settings-dirty-marker {
-  color: var(--immich-yellow);
+  color: var(--status-warning);
   font-weight: 900;
 }
 
@@ -495,7 +584,7 @@ button.settings-section-button[data-dirty] .button-row-label::after {
 .settings-main {
   min-width: 0;
   padding-left: 48px;
-  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  border-left: 1px solid var(--divider-strong);
 }
 
 .settings-section-panel {
@@ -507,14 +596,14 @@ button.settings-section-button[data-dirty] .button-row-label::after {
 .settings-unsaved-panel {
   max-width: 760px;
   padding: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--panel-border);
   border-radius: 8px;
-  background: rgba(17, 19, 31, 0.68);
+  background: var(--panel-fill);
 }
 
 .settings-unsaved-copy {
   margin: 0;
-  color: rgba(173, 203, 250, 0.78);
+  color: var(--text-secondary);
   font-size: 28px;
   font-weight: 700;
   line-height: 1.25;
@@ -543,7 +632,7 @@ button.settings-section-button[data-dirty] .button-row-label::after {
 .field-hint {
   display: block;
   margin-top: 6px;
-  color: rgba(173, 203, 250, 0.68);
+  color: var(--text-hint);
   font-size: 18px;
   font-weight: 600;
   line-height: 1.25;
@@ -577,15 +666,15 @@ button.settings-section-button[data-dirty] .button-row-label::after {
    inside the standard primary-colour one. */
 .choice-field input[type="checkbox"]:focus {
   box-shadow:
-    0 0 0 5px #ffffff,
-    0 0 0 13px rgba(66, 81, 176, 0.46);
+    0 0 0 5px var(--focus-halo),
+    0 0 0 13px var(--focus-ring);
 }
 
 .focusable {
   min-height: 78px;
-  border: 4px solid rgba(255, 255, 255, 0.24);
+  border: 4px solid var(--control-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--control-fill);
   color: var(--text-primary);
   font-size: 28px;
   font-weight: 700;
@@ -598,7 +687,7 @@ input.focusable,
 }
 
 input.focusable::placeholder {
-  color: rgba(173, 203, 250, 0.46);
+  color: var(--text-placeholder);
 }
 
 button.focusable {
@@ -662,16 +751,16 @@ button.icon-action > svg {
 }
 
 .primary-action {
-  border-color: rgba(66, 81, 176, 0.78);
+  border-color: var(--primary-action-border);
   background: var(--immich-primary-soft);
 }
 
 .focusable:focus {
   outline: 0;
-  border-color: #ffffff;
-  background: #ffffff;
-  color: #11131f;
-  box-shadow: 0 0 0 8px rgba(66, 81, 176, 0.46);
+  border-color: var(--focus-border);
+  background: var(--focus-fill);
+  color: var(--focus-text);
+  box-shadow: var(--focus-shadow);
 }
 
 .actions {
@@ -693,7 +782,7 @@ button.icon-action > svg {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(8, 10, 18, 0.78);
+  background: var(--dialog-scrim);
 }
 
 .exit-dialog[hidden] {
@@ -703,14 +792,14 @@ button.icon-action > svg {
 .exit-dialog-panel {
   max-width: 860px;
   padding: 48px 56px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--panel-border);
   border-radius: 8px;
-  background: var(--surface-raised);
+  background: var(--dialog-fill);
 }
 
 .exit-dialog-copy {
   margin: 18px 0 34px;
-  color: rgba(173, 203, 250, 0.78);
+  color: var(--text-secondary);
   font-size: 28px;
   font-weight: 700;
   line-height: 1.25;
@@ -735,19 +824,19 @@ button.icon-action > svg {
 }
 
 .status[data-state="pending"] {
-  color: var(--immich-yellow);
+  color: var(--status-pending);
 }
 
 .status[data-state="success"] {
-  color: var(--immich-green);
+  color: var(--status-success);
 }
 
 .status[data-state="error"] {
-  color: var(--immich-red);
+  color: var(--status-error);
 }
 
 .status[data-state="warning"] {
-  color: var(--immich-yellow);
+  color: var(--status-warning);
 }
 
 .screen-status {
@@ -771,15 +860,15 @@ button.icon-action > svg {
 }
 
 .screen-status[data-state="pending"] {
-  color: var(--immich-yellow);
+  color: var(--status-pending);
 }
 
 .screen-status[data-state="success"] {
-  color: var(--immich-green);
+  color: var(--status-success);
 }
 
 .screen-status[data-state="error"] {
-  color: var(--immich-red);
+  color: var(--status-error);
 }
 
 /* Fixed-focus rails: Home never scrolls. The rail stack and each rail move by
@@ -819,7 +908,7 @@ button.icon-action > svg {
 
 .home-empty-message {
   margin: 0 0 32px;
-  color: rgba(173, 203, 250, 0.86);
+  color: var(--text-label);
   font-size: 30px;
   line-height: 1.3;
 }
@@ -831,7 +920,7 @@ button.icon-action > svg {
 
 .home-rail-title {
   margin: 0 0 6px;
-  color: rgba(173, 203, 250, 0.78);
+  color: var(--text-secondary);
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 0;
@@ -845,7 +934,7 @@ h1.screen-heading-subtle {
   max-width: 1080px;
   overflow: hidden;
   margin: 0 0 6px;
-  color: rgba(173, 203, 250, 0.78);
+  color: var(--text-secondary);
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 0;
@@ -973,7 +1062,7 @@ h1.screen-heading-subtle {
   width: 100%;
   height: 100%;
   min-height: 0;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--placeholder-fill);
 }
 
 .album-cover-stage {
@@ -1011,7 +1100,7 @@ h1.screen-heading-subtle {
 .album-cover-placeholder {
   display: grid;
   place-items: center;
-  color: rgba(173, 203, 250, 0.72);
+  color: var(--text-faint);
   font-size: 54px;
   font-weight: 800;
 }
@@ -1025,7 +1114,7 @@ h1.screen-heading-subtle {
   grid-gap: 4px;
   gap: 4px;
   padding: 52px 18px 16px;
-  background: linear-gradient(180deg, rgba(2, 7, 10, 0), rgba(2, 7, 10, 0.84) 42%);
+  background: linear-gradient(180deg, var(--caption-fade-start), var(--caption-fade-end) 42%);
 }
 
 .album-name,
@@ -1117,9 +1206,9 @@ h1.screen-heading-subtle {
   display: grid;
   place-items: center;
   background:
-    linear-gradient(135deg, rgba(66, 81, 176, 0.28), rgba(237, 121, 181, 0.18)),
-    rgba(255, 255, 255, 0.08);
-  color: rgba(173, 203, 250, 0.78);
+    linear-gradient(135deg, var(--placeholder-tint-start), var(--placeholder-tint-end)),
+    var(--control-fill);
+  color: var(--text-secondary);
   font-size: 32px;
   font-weight: 800;
 }
@@ -1127,7 +1216,7 @@ h1.screen-heading-subtle {
 .asset-date-section-heading {
   grid-column: 1 / -1;
   margin: 18px 0 2px;
-  color: rgba(173, 203, 250, 0.92);
+  color: var(--text-emphasis);
   font-size: 30px;
   font-weight: 800;
   letter-spacing: 0;
@@ -1149,7 +1238,7 @@ h1.screen-heading-subtle {
   box-sizing: border-box;
   width: 118px;
   padding: 8px 4px 8px 18px;
-  border-left: 2px solid rgba(255, 255, 255, 0.14);
+  border-left: 2px solid var(--rail-line);
   overflow: visible;
 }
 
@@ -1173,7 +1262,7 @@ button.focusable.timeline-marker {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
-  color: rgba(173, 203, 250, 0.66);
+  color: var(--text-timeline);
   font-size: 16px;
   font-weight: 800;
   line-height: 1;
@@ -1184,7 +1273,7 @@ button.focusable.timeline-marker:focus {
   outline: 0;
   border: 0;
   background: transparent;
-  color: #ffffff;
+  color: var(--text-strong);
   box-shadow: none;
 }
 
@@ -1199,13 +1288,13 @@ button.focusable.timeline-marker:focus {
   height: 2px;
   border-radius: 2px;
   transform: translateY(-50%);
-  background: rgba(247, 248, 255, 0.34);
+  background: var(--tick);
 }
 
 button.focusable.timeline-marker[data-year-boundary="true"] .timeline-marker-tick {
   width: 20px;
   height: 3px;
-  background: rgba(247, 248, 255, 0.56);
+  background: var(--tick-year);
 }
 
 button.focusable.timeline-marker:focus .timeline-marker-tick,
@@ -1213,8 +1302,8 @@ button.focusable.timeline-marker[data-active="true"] .timeline-marker-tick,
 button.focusable.timeline-marker[data-selected="true"] .timeline-marker-tick {
   width: 34px;
   height: 4px;
-  background: #ffffff;
-  box-shadow: 0 0 14px rgba(120, 196, 255, 0.8);
+  background: var(--tick-selected);
+  box-shadow: 0 0 14px var(--selected-glow);
 }
 
 /* The marker with remote focus is yellow, the app's focus colour, so moving
@@ -1223,12 +1312,12 @@ button.focusable.timeline-marker[data-selected="true"] .timeline-marker-tick {
 button.focusable.timeline-marker:focus .timeline-marker-tick {
   width: 40px;
   height: 6px;
-  background: var(--immich-yellow);
-  box-shadow: 0 0 16px rgba(255, 214, 102, 0.9);
+  background: var(--focus-accent);
+  box-shadow: 0 0 16px var(--focus-accent-glow);
 }
 
 button.focusable.timeline-marker:focus .timeline-marker-label {
-  color: var(--immich-yellow);
+  color: var(--focus-accent);
 }
 
 /* Centred on the marker's middle, then lifted above its tick. */
@@ -1237,7 +1326,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   top: 50%;
   right: 0;
   transform: translateY(-50%) translateY(-20px);
-  color: rgba(173, 203, 250, 0.86);
+  color: var(--text-label);
   font-size: 20px;
   font-weight: 800;
   line-height: 1;
@@ -1253,8 +1342,8 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   min-height: 24px;
   padding: 4px 6px;
   border-radius: 4px;
-  background: rgba(2, 7, 10, 0.5);
-  color: rgba(173, 203, 250, 0.82);
+  background: var(--badge-fill);
+  color: var(--text-badge);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0;
@@ -1270,6 +1359,9 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   right: 10px;
 }
 
+/* Media-only colours (not tokens, ADR 0020): the badge glyphs below, the
+   loading spinner, drop shadows (depth, not colour), the face-box outline
+   and ambient mode's black letterbox look the same in both themes. */
 .asset-video-icon {
   width: 0;
   height: 0;
@@ -1322,7 +1414,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   bottom: 0;
   left: 0;
   z-index: 20;
-  background: #050711;
+  background: var(--viewer-backdrop);
 }
 
 .asset-viewer-stage,
@@ -1340,12 +1432,12 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
 
 .asset-viewer-image {
   object-fit: contain;
-  background: #050711;
+  background: var(--viewer-backdrop);
 }
 
 .asset-viewer-video {
   object-fit: contain;
-  background: #050711;
+  background: var(--viewer-backdrop);
 }
 
 .asset-viewer-placeholder {
@@ -1409,9 +1501,9 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   max-width: 1280px;
   margin: 0;
   overflow: hidden;
-  color: rgba(173, 203, 250, 0.92);
+  color: var(--text-emphasis);
   font-weight: 800;
-  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.72);
+  text-shadow: 0 3px 14px var(--overlay-text-shadow);
   transform: translateX(-50%);
 }
 
@@ -1430,7 +1522,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
 }
 
 .asset-viewer-time {
-  color: rgba(173, 203, 250, 0.78);
+  color: var(--text-secondary);
   font-size: 18px;
 }
 
@@ -1439,11 +1531,11 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   bottom: 0;
   left: 0;
   margin: 0 0 8px;
-  color: rgba(173, 203, 250, 0.78);
+  color: var(--text-secondary);
   font-size: 22px;
   font-weight: 800;
   line-height: 1.2;
-  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.72);
+  text-shadow: 0 3px 14px var(--overlay-text-shadow);
 }
 
 .asset-viewer-exif {
@@ -1453,13 +1545,13 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   max-width: calc(100% - 460px);
   margin: 0 0 8px;
   overflow: hidden;
-  color: rgba(173, 203, 250, 0.78);
+  color: var(--text-secondary);
   font-size: 22px;
   font-weight: 800;
   line-height: 1.2;
   text-align: center;
   text-overflow: ellipsis;
-  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.72);
+  text-shadow: 0 3px 14px var(--overlay-text-shadow);
   transform: translateX(-50%);
   white-space: nowrap;
 }
@@ -1474,9 +1566,9 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   grid-gap: 10px;
   gap: 10px;
   padding: 14px 18px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--panel-border);
   border-radius: 8px;
-  background: rgba(5, 7, 17, 0.64);
+  background: var(--overlay-fill);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
   pointer-events: none;
 }
@@ -1487,11 +1579,11 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   align-items: center;
   grid-gap: 16px;
   gap: 16px;
-  color: rgba(173, 203, 250, 0.82);
+  color: var(--text-badge);
   font-size: 20px;
   font-weight: 800;
   line-height: 1.15;
-  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.72);
+  text-shadow: 0 3px 14px var(--overlay-text-shadow);
 }
 
 .asset-viewer-status {
@@ -1500,7 +1592,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  color: rgba(173, 203, 250, 0.7);
+  color: var(--text-status);
   text-align: center;
 }
 
@@ -1545,7 +1637,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
 }
 
 .asset-viewer-status[data-player-state="loading"] .asset-viewer-status-icon {
-  border: 2px solid rgba(255, 255, 255, 0.34);
+  border: 2px solid var(--loading-ring);
   border-top-color: currentColor;
   border-radius: 50%;
   animation: asset-viewer-spin 900ms linear infinite;
@@ -1579,7 +1671,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--track);
 }
 
 .asset-viewer-buffered,
@@ -1593,12 +1685,12 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
 }
 
 .asset-viewer-buffered {
-  background: rgba(255, 255, 255, 0.28);
+  background: var(--track-buffered);
 }
 
 .asset-viewer-progress-fill {
   background: var(--immich-primary);
-  box-shadow: 0 0 18px rgba(66, 165, 245, 0.36);
+  box-shadow: 0 0 18px var(--progress-glow);
 }
 
 .asset-viewer-controls {
@@ -1628,19 +1720,19 @@ button.asset-viewer-control {
   height: 64px;
   min-height: 64px;
   overflow: hidden;
-  border: 3px solid rgba(255, 255, 255, 0.24);
+  border: 3px solid var(--control-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--control-fill);
   color: var(--immich-primary-on-dark);
   padding: 0;
 }
 
 /* The main menu's focus: white, with the primary-colour ring. */
 button.asset-viewer-control:focus {
-  border-color: #ffffff;
-  background: #ffffff;
-  color: #11131f;
-  box-shadow: 0 0 0 8px rgba(66, 81, 176, 0.46);
+  border-color: var(--focus-border);
+  background: var(--focus-fill);
+  color: var(--focus-text);
+  box-shadow: var(--focus-shadow);
 }
 
 button.asset-viewer-slideshow::before,
@@ -1657,7 +1749,7 @@ button.asset-viewer-slideshow::after {
 }
 
 button.asset-viewer-slideshow::before {
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--track);
 }
 
 button.asset-viewer-slideshow::after {
@@ -1709,12 +1801,12 @@ button.asset-viewer-slideshow[data-slideshow-progress="running"]::after {
 
 /* Faces on: the button stays lit like the main menu's current destination. */
 button.asset-viewer-faces[aria-pressed="true"] {
-  border-color: rgba(120, 196, 255, 0.68);
-  background: rgba(66, 81, 176, 0.34);
+  border-color: var(--selected-border);
+  background: var(--selected-fill);
 }
 
 button.asset-viewer-faces[aria-pressed="true"]:focus {
-  background: #ffffff;
+  background: var(--focus-fill);
   box-shadow: inset 0 0 0 4px var(--immich-primary);
 }
 
@@ -1746,7 +1838,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   overflow: hidden;
   padding: 6px 14px;
   border-radius: 8px;
-  background: rgba(5, 7, 17, 0.86);
+  background: var(--overlay-label-fill);
   color: var(--immich-primary-on-dark);
   font-size: 24px;
   font-weight: 800;
@@ -1792,13 +1884,13 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   max-width: 360px;
   margin: 0;
   overflow: hidden;
-  color: rgba(173, 203, 250, 0.78);
+  color: var(--text-secondary);
   font-size: 18px;
   font-weight: 800;
   line-height: 1.2;
   text-align: right;
   text-overflow: ellipsis;
-  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.72);
+  text-shadow: 0 3px 14px var(--overlay-text-shadow);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -2246,7 +2338,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 .home-more-tile {
   display: block;
   text-align: center;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--control-fill);
 }
 
 .home-more-icon {
@@ -2335,7 +2427,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   height: var(--person-tile-size);
   overflow: hidden;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--placeholder-fill);
   transition:
     transform 160ms ease-out,
     box-shadow 160ms ease-out;
@@ -2343,8 +2435,8 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 
 .focusable.person-card:focus .person-face {
   box-shadow:
-    0 0 0 6px #ffffff,
-    0 0 0 12px rgba(66, 81, 176, 0.72);
+    0 0 0 6px var(--focus-halo),
+    0 0 0 12px var(--focus-ring-strong);
   transform: scale(1.06);
 }
 
@@ -2357,7 +2449,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(173, 203, 250, 0.72);
+  color: var(--text-faint);
   font-size: 64px;
   font-weight: 800;
 }
@@ -2382,7 +2474,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: rgba(2, 7, 10, 0.72);
+  background: var(--badge-fill-strong);
   color: var(--immich-pink);
   font-size: 24px;
   line-height: 40px;
@@ -2402,7 +2494,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 }
 
 .focusable.person-card:focus .person-name {
-  color: #ffffff;
+  color: var(--text-strong);
 }
 
 /* Search: a remote-first criteria panel built from the same pieces as
@@ -2476,7 +2568,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   height: 44px;
   overflow: hidden;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--chip-face-fill);
   font-size: 20px;
   line-height: 44px;
   text-align: center;
@@ -2545,7 +2637,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   padding: 20px;
   border: 4px solid var(--immich-primary);
   border-radius: 12px;
-  background: rgba(66, 81, 176, 0.18);
+  background: var(--stepper-fill);
 }
 
 .search-stepper > * + * {
@@ -2587,7 +2679,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 }
 
 .search-message[data-state="error"] {
-  color: var(--immich-yellow);
+  color: var(--status-warning);
 }
 
 /* People picker: a selected person has a green ring and a check mark, so the
@@ -2626,7 +2718,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   display: inline-block;
   margin-right: 6px;
   padding: 3px 12px;
-  border: 2px solid rgba(201, 206, 223, 0.45);
+  border: 2px solid var(--key-cap-border);
   border-radius: 8px;
   color: var(--text-primary);
   font-size: 20px;
@@ -2651,23 +2743,23 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 }
 
 .focusable.album-tile[data-selected] {
-  box-shadow: inset 0 0 0 8px var(--immich-green);
+  box-shadow: inset 0 0 0 8px var(--chosen);
 }
 
 .focusable.album-tile[data-selected]:focus {
   box-shadow:
-    inset 0 0 0 8px var(--immich-green),
-    0 0 0 8px rgba(66, 81, 176, 0.46);
+    inset 0 0 0 8px var(--chosen),
+    var(--focus-shadow);
 }
 
 .focusable.person-card[data-selected] .person-face {
-  box-shadow: 0 0 0 8px var(--immich-green);
+  box-shadow: 0 0 0 8px var(--chosen);
 }
 
 .focusable.person-card[data-selected]:focus .person-face {
   box-shadow:
-    0 0 0 8px var(--immich-green),
-    0 0 0 16px #ffffff;
+    0 0 0 8px var(--chosen),
+    0 0 0 16px var(--focus-halo);
 }
 
 .picker-check {
@@ -2676,10 +2768,10 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   left: 4px;
   width: 48px;
   height: 48px;
-  border: 3px solid #ffffff;
+  border: 3px solid var(--text-strong);
   border-radius: 50%;
-  background: var(--immich-green);
-  color: #ffffff;
+  background: var(--chosen);
+  color: var(--text-strong);
   font-size: 30px;
   font-weight: 800;
   line-height: 42px;
@@ -2724,7 +2816,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   padding: 8px;
   border: 4px solid var(--immich-primary);
   border-radius: 12px;
-  background: #1b1f33;
+  background: var(--dropdown-fill);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
 }
 
@@ -2909,8 +3001,8 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 .ambient-overlay {
   position: absolute;
   max-width: 760px;
-  color: rgba(173, 203, 250, 0.72);
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+  color: var(--text-faint);
+  text-shadow: 0 2px 10px var(--ambient-text-shadow);
 }
 
 .ambient-overlay[data-position="0"] {
@@ -2946,7 +3038,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 .ambient-details {
   margin: 8px 0 0;
   overflow: hidden;
-  color: rgba(173, 203, 250, 0.6);
+  color: var(--text-detail);
   font-size: 24px;
   font-weight: 600;
   text-overflow: ellipsis;
@@ -2960,7 +3052,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   width: 1200px;
   max-width: 80%;
   margin: 0;
-  color: rgba(173, 203, 250, 0.7);
+  color: var(--text-status);
   font-size: 30px;
   font-weight: 600;
   line-height: 1.4;

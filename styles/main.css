@@ -1,6 +1,9 @@
 :root {
   --immich-primary: #4251b0;
   --immich-primary-soft: rgba(66, 81, 176, 0.28);
+  /* Immich's dark-theme primary: the brand colour for text on the dark,
+     pictured background, where the primary itself is too dark to read. */
+  --immich-primary-on-dark: #adcbfa;
   --immich-blue: #1e83f7;
   --immich-green: #18c249;
   --immich-pink: #ed79b5;
@@ -168,7 +171,7 @@ input {
   min-height: 72px;
   margin-bottom: 22px;
   padding: 0;
-  color: var(--immich-primary);
+  color: var(--immich-primary-on-dark);
   font-size: 17px;
   white-space: nowrap;
   font-weight: 900;
@@ -394,7 +397,7 @@ button.top-nav-item[aria-current="page"] {
 
 .eyebrow {
   margin: 0 0 22px;
-  color: var(--immich-primary);
+  color: var(--immich-primary-on-dark);
   font-size: 28px;
   font-weight: 700;
   letter-spacing: 0;

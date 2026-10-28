@@ -391,5 +391,7 @@ describe("ambient mode over a long run", () => {
     expect(f.counts().created).toBe(f.counts().revoked);
     expect(screen!.timerCount()).toBe(0);
     expect(vi.getTimerCount()).toBe(baselineListeners);
-  });
+    // Eight simulated hours take under a second alone, but can pass the
+    // default 5 s limit while the whole suite runs in parallel.
+  }, 30000);
 });

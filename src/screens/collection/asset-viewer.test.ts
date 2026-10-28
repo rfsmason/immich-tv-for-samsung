@@ -4,8 +4,10 @@ import type { AssetFace } from "../../domain/face";
 import { AppError } from "../../errors/app-error";
 import { defaultAppSettings, type AppSettings } from "../../domain/app-settings";
 import { remoteKeys } from "../../platform/tizen/keys";
+import { createPassiveViewing } from "../../platform/tizen/screensaver";
 import { TestDocument, type TestElement } from "../../test/document";
 import { createAssetViewer, type AssetViewerController } from "./asset-viewer";
+import { viewerControlsHideMs } from "./viewer-autohide";
 import type { ViewerCollection, ViewerElements } from "./viewer-types";
 
 // The viewer driven by a fake ordered collection, as People, Search or
@@ -105,11 +107,18 @@ function fixture(
     revokeImageUrl: vi.fn()
   };
   const onAssetViewed = vi.fn();
+  const onControlsHiddenChange = vi.fn();
+  const setScreenSaver = vi.fn();
 
   viewer = createAssetViewer({
     collection,
     elements,
     onAssetViewed,
+    onControlsHiddenChange,
+    passiveViewing: createPassiveViewing({
+      logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
+      windowRef: { webapis: { appcommon: { setScreenSaver } } }
+    }),
     service,
     settingsStore: {
       load: () => storedSettings,
@@ -146,9 +155,12 @@ function fixture(
     documentRef,
     elements,
     onAssetViewed,
+    onControlsHiddenChange,
     pause,
     play,
     press,
+    // The TV screensaver states sent so far: 0 off, 1 on.
+    screensaver: () => setScreenSaver.mock.calls.map(([state]) => state as number),
     service,
     settings: () => storedSettings
   };
@@ -367,6 +379,177 @@ describe("asset viewer over any ordered collection", () => {
     expect(f.elements.assetPlaceholder.hidden).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
     expect(f.service.revokeImageUrl).toHaveBeenCalledWith("blob:a");
+  });
+});
+
+describe("viewer and the TV screensaver", () => {
+  it("keeps the TV screensaver off while a slideshow runs", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+    const f = fixture([asset("a"), asset("b"), asset("c")], { slideshowIntervalSeconds: 5 });
+
+    viewer!.open(0);
+    expect(f.screensaver()).toEqual([]);
+    f.press(remoteKeys.mediaPlay);
+    expect(f.screensaver()).toEqual([0]);
+    vi.advanceTimersByTime(5000);
+    expect(f.screensaver()).toEqual([0]);
+    f.press(remoteKeys.mediaPause);
+    expect(f.screensaver()).toEqual([0, 1]);
+
+    f.press(remoteKeys.mediaPlay);
+    viewer!.close();
+    expect(f.screensaver()).toEqual([0, 1, 0, 1]);
+  });
+
+  it("lets the screensaver back when a slideshow reaches the end or the app is hidden", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+    const f = fixture([asset("a"), asset("b")], { slideshowIntervalSeconds: 5 });
+
+    viewer!.open(0);
+    f.press(remoteKeys.mediaPlay);
+    vi.advanceTimersByTime(10000);
+    expect(f.screensaver()).toEqual([0, 1]);
+
+    f.press(remoteKeys.left);
+    f.press(remoteKeys.mediaPlay);
+    viewer!.suspend();
+    expect(f.screensaver()).toEqual([0, 1, 0, 1]);
+  });
+
+  it("keeps it off while a video plays, and lets it back on pause and when the viewer closes", async () => {
+    const video = asset("v", { durationMs: 3000, type: "video" });
+    const f = fixture([video, asset("b")]);
+    const element = f.elements.assetViewerVideo;
+    f.play.mockImplementation(async () => {
+      Object.assign(element, { paused: false });
+      element.dispatchEvent(new Event("playing"));
+    });
+    f.pause.mockImplementation(() => {
+      if (!element.paused) {
+        Object.assign(element, { paused: true });
+        element.dispatchEvent(new Event("pause"));
+      }
+    });
+
+    viewer!.open(0);
+    f.press(remoteKeys.enter);
+    await vi.waitFor(() => expect(f.screensaver()).toEqual([0]));
+    f.press(remoteKeys.enter);
+    expect(f.screensaver()).toEqual([0, 1]);
+
+    f.press(remoteKeys.enter);
+    await vi.waitFor(() => expect(f.screensaver()).toEqual([0, 1, 0]));
+    viewer!.suspend();
+    expect(f.screensaver()).toEqual([0, 1, 0, 1]);
+
+    f.press(remoteKeys.enter);
+    await vi.waitFor(() => expect(f.screensaver()).toEqual([0, 1, 0, 1, 0]));
+    viewer!.close();
+    expect(f.screensaver()).toEqual([0, 1, 0, 1, 0, 1]);
+  });
+
+  it("keeps it off while Live Photo motion plays, and back on when it ends", async () => {
+    const live = asset("live", { livePhotoVideoId: "motion" });
+    const f = fixture([live, asset("b")]);
+    const element = f.elements.assetViewerVideo;
+    f.play.mockImplementation(async () => {
+      Object.assign(element, { paused: false });
+      element.dispatchEvent(new Event("playing"));
+    });
+
+    viewer!.open(0);
+    await vi.waitFor(() => expect(f.elements.assetViewerPlay.hidden).toBe(false));
+    f.elements.assetViewerPlay.focus();
+    f.press(remoteKeys.enter);
+    await vi.waitFor(() => expect(f.screensaver()).toEqual([0]));
+
+    Object.assign(element, { ended: true });
+    element.dispatchEvent(new Event("ended"));
+    expect(f.screensaver()).toEqual([0, 1]);
+  });
+});
+
+describe("viewer buttons during passive viewing", () => {
+  const hidden = (f: ReturnType<typeof fixture>) =>
+    f.elements.assetPlaceholder.getAttribute("data-controls") === "hidden";
+
+  it("hides the buttons a few seconds into a slideshow, and a key only shows them", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+    const f = fixture([asset("a"), asset("b"), asset("c")], { slideshowIntervalSeconds: 60 });
+
+    viewer!.open(0);
+    f.collection.select.mockClear();
+    f.press(remoteKeys.enter); // Slideshow is focused: OK starts it.
+    vi.advanceTimersByTime(viewerControlsHideMs - 1);
+    expect(hidden(f)).toBe(false);
+    vi.advanceTimersByTime(1);
+    expect(hidden(f)).toBe(true);
+    expect(f.onControlsHiddenChange).toHaveBeenLastCalledWith(true);
+
+    // The press that shows them doesn't move to the next photo.
+    const wake = f.press(remoteKeys.right);
+    expect(wake.defaultPrevented).toBe(true);
+    expect(hidden(f)).toBe(false);
+    expect(f.onControlsHiddenChange).toHaveBeenLastCalledWith(false);
+    expect(f.collection.select).not.toHaveBeenCalled();
+
+    // Each key restarts the countdown; once shown, keys act as usual.
+    vi.advanceTimersByTime(viewerControlsHideMs - 1);
+    f.press(remoteKeys.up);
+    vi.advanceTimersByTime(viewerControlsHideMs - 1);
+    expect(hidden(f)).toBe(false);
+    f.press(remoteKeys.right);
+    expect(f.collection.select).toHaveBeenCalledWith(1);
+  });
+
+  it("lets Back and the media keys act while the buttons are hidden", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+    const f = fixture([asset("a"), asset("b")], { slideshowIntervalSeconds: 60 });
+
+    viewer!.open(0);
+    f.press(remoteKeys.mediaPlay);
+    vi.advanceTimersByTime(viewerControlsHideMs);
+    f.press(remoteKeys.mediaPause);
+    expect(f.screensaver()).toEqual([0, 1]);
+    expect(hidden(f)).toBe(false);
+
+    f.press(remoteKeys.mediaPlay);
+    vi.advanceTimersByTime(viewerControlsHideMs);
+    expect(hidden(f)).toBe(true);
+    f.press(remoteKeys.back);
+    expect(f.collection.exit).toHaveBeenCalled();
+  });
+
+  it("keeps the buttons while nothing plays, and shows them when playing stops or the viewer closes", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+    const video = asset("v", { durationMs: 3000, type: "video" });
+    const f = fixture([video, asset("b")]);
+    const element = f.elements.assetViewerVideo;
+
+    viewer!.open(0);
+    vi.advanceTimersByTime(viewerControlsHideMs * 2);
+    expect(hidden(f)).toBe(false);
+
+    Object.assign(element, { hidden: false, paused: false });
+    element.dispatchEvent(new Event("playing"));
+    vi.advanceTimersByTime(viewerControlsHideMs);
+    expect(hidden(f)).toBe(true);
+
+    Object.assign(element, { paused: true });
+    element.dispatchEvent(new Event("pause"));
+    expect(hidden(f)).toBe(false);
+
+    Object.assign(element, { paused: false });
+    element.dispatchEvent(new Event("playing"));
+    vi.advanceTimersByTime(viewerControlsHideMs);
+    viewer!.close();
+    expect(hidden(f)).toBe(false);
+    expect(f.onControlsHiddenChange).toHaveBeenLastCalledWith(false);
   });
 });
 

@@ -57,7 +57,7 @@ The application UI should follow established Smart TV design principles througho
 
 ## Current Scope / Status
 
-The current `main` branch contains Milestones 1-15: deployable Tizen app, Immich connectivity, TypeScript application foundation, albums, bounded album asset browsing, a full-screen asset viewer with image, video, and Live Photo support, slideshow mode with configurable interval, pause/resume, viewer control refinements, settings-screen rationalisation, startup splash, the permanent top-level application shell, the Photos / main timeline experience, Home, Memories, foundation hardening (Chromium 63 compatibility enforcement, request timeouts, lifecycle and exit handling, and the structural refactor), the Home polish (paged Home collections, fixed-focus rails, and See more), People, Search v1, Favorites and Library Views, and Personalisation and Navigation.
+The current `main` branch contains Milestones 1-16: deployable Tizen app, Immich connectivity, TypeScript application foundation, albums, bounded album asset browsing, a full-screen asset viewer with image, video, and Live Photo support, slideshow mode with configurable interval, pause/resume, viewer control refinements, settings-screen rationalisation, startup splash, the permanent top-level application shell, the Photos / main timeline experience, Home, Memories, foundation hardening (Chromium 63 compatibility enforcement, request timeouts, lifecycle and exit handling, and the structural refactor), the Home polish (paged Home collections, fixed-focus rails, and See more), People, Search v1, Favorites and Library Views, Personalisation and Navigation, and Search v2.
 
 The application remains read-only.
 
@@ -79,7 +79,11 @@ Fixes from TV testing (picker face flicker, a sharper launcher icon, an earlier 
 
 Milestone 15, Personalisation and Navigation, is complete on `main` (PR #3, see [ADR 0017](architecture/0017-personalisation-and-navigation.md)); physical Q950R acceptance passed on 26 October 2026 (user confirmation), including every item on PR #3's combined checklist. It adds date-rail hold acceleration and CH year jumps, Home rail visibility in Settings, a Newest first / Oldest first toggle on collections, viewer face tags, a standard background, and partners' photos in Photos and Recently Added.
 
-Milestone 16, Search v2, is implemented (see [ADR 0018](architecture/0018-search-v2.md)); physical Q950R acceptance is pending. Search adds an Asset type drop-down beside the dates (All, Photos, Live Photos, Videos), a place picker (country, region, city) and an album picker, all chosen with the remote. The roadmap continues after it with Shared Content, Ambient / Screensaver Mode, Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 17-20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
+Milestone 16, Search v2, is complete on `main` (PR #4, see [ADR 0018](architecture/0018-search-v2.md)); physical Q950R acceptance passed on 26 October 2026 (user confirmation), covering every item on PR #4's checklist. Search adds an Asset type drop-down beside the dates (All, Photos, Live Photos, Videos), a place picker (country, region, city) and an album picker, all chosen with the remote.
+
+Milestone 17, Shared Content, is parked by the user's decision (26 October 2026): deferred, not cancelled. Its section below and its success criterion stay for later.
+
+Milestone 18, Ambient / Screensaver Mode, is implemented (PR #5, see [ADR 0019](architecture/0019-ambient-mode.md)); physical Q950R acceptance passed on 27 October 2026 (user confirmation), covering every item on PR #5's checklist, including the overnight soak test. Slideshows, playback and ambient mode now hold the TV's own screensaver off as Samsung requires, and an in-app ambient mode plays All photos, your own Favourites, Recent, an album or Memories, started from Settings → Ambient or after an idle time. The roadmap continues after it with Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 19 and 20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
 
 ## Post-MVP Product Roadmap
 
@@ -439,7 +443,7 @@ Four features chosen from TV use, each reusing the existing shared collection, v
 
 Success criterion: everyday browsing is faster and more personal on the TV, without new frameworks, extra backend services or unbounded resource use.
 
-### Milestone 16 - Search v2
+### Milestone 16 - Search v2 - complete; physical-TV acceptance passed 26 October 2026
 
 Extend Search v1 (ADR 0014) with three remote-friendly criteria. Each new criterion is one criteria field plus its helpers, one mapper line and one panel row; no query builder.
 
@@ -447,7 +451,7 @@ Extend Search v1 (ADR 0014) with three remote-friendly criteria. Each new criter
 - **Location:** one place, chosen by drilling down from a country to an optional region and then an optional city, using values from `GET /search/suggestions?type=country|state|city` (asset read). Nothing is typed. The filter uses `country`, `state` and `city`.
 - **Albums:** a multi-select picker reusing the people-picker pattern. It matches photos in *any* chosen album (`albumIds.any`), and the panel says so in plain words.
 
-**Status:** implemented on 26 October 2026 ([ADR 0018](architecture/0018-search-v2.md)); physical Q950R acceptance pending.
+**Status:** complete on `main` (PR #4, [ADR 0018](architecture/0018-search-v2.md)); physical Q950R acceptance passed on 26 October 2026 (user confirmation).
 
 **Permissions.** Media type and location need only asset read. The album filter also needs album read on each chosen album (`resolveSearchScopeV3` checks `Permission.AlbumRead`), which the app already uses for Albums, so there is no new permission.
 
@@ -464,7 +468,9 @@ Extend Search v1 (ADR 0014) with three remote-friendly criteria. Each new criter
 
 Verify the API again at implementation time.
 
-### Milestone 17 - Shared Content
+### Milestone 17 - Shared Content - parked
+
+**Status:** parked by the user's decision on 26 October 2026: deferred, not cancelled. Nothing below is implemented yet.
 
 Add appropriate support for Immich content shared with the current user.
 
@@ -485,6 +491,31 @@ Do not create a separate image loading/playback engine. Ambient mode must contin
 Investigate Samsung/Tizen lifecycle and screensaver restrictions before deciding whether this can act as a true platform screensaver or should instead be an in-app ambient mode.
 
 Success criterion: the television can reliably display Immich content for an extended period without memory growth, crashes, or repeated manual intervention.
+
+**Status:** implemented on 26 October 2026 ([ADR 0019](architecture/0019-ambient-mode.md)); physical Q950R acceptance passed on 27 October 2026 (user confirmation), including the overnight soak test and the idle-timer fix. The investigation found no public route for a third-party app to be the TV's screensaver or Ambient Mode app, so ambient mode is in-app.
+
+#### Concrete scope (26 October 2026)
+
+- **The TV's own screensaver.** Slideshows, video and Live Photo playback, and ambient mode tell the TV that passive viewing is under way through `webapis.appcommon.setScreenSaver`, behind a reference-counted platform module (`src/platform/tizen/screensaver.ts`). Samsung requires this of store apps, and the app didn't do it before. Investigate first whether a third-party app can be the TV's real screensaver or Ambient Mode app; the expected outcome is an in-app ambient mode plus correct control of the TV screensaver.
+- **Viewer split first.** `asset-viewer.ts` (972 lines) is split so ambient mode reuses the viewer's single-asset media handling instead of copying it. No separate image loading or playback engine.
+- **Sources:**
+  - **All photos** (default): `POST /search/random` in small batches.
+  - **Favourites**, your own only: sampled from the timeline buckets Favourites already uses (`isFavorite=true`, no partners), weighting buckets by count and loading one bucket at a time.
+  - **Recent**: taken in the last 90 days.
+  - **An album**: chosen with a single-select album picker; shuffled or in order.
+  - **Memories**: in Memory order or shuffled.
+- **Order:** Shuffle by default; In order for Album and Memories. A bounded ring of recent ids prevents immediate repeats; small sources wrap around.
+- **Media:** photos only by default; videos optionally, muted and capped at 60 seconds. Live Photos show their still.
+- **Presentation:** a full-screen `ambient` route over everything, crossfading with opacity only between two layers, with at most three decoded images. Interval 10 s to 5 min (30 s default). Optional quiet overlays (a clock, on by default; photo details) that move around the safe area every few minutes against burn-in. Contain, on a dark background.
+- **Starting and stopping:**
+  - Start now from Settings → Ambient.
+  - Start after idle (off by default; 5 to 30 minutes), only on browsing screens.
+  - Any key exits and returns exactly where you were, and that press does nothing else.
+  - Stop after (never by default; 1 to 4 hours) ends ambient mode and lets the TV's screensaver take over.
+  - Hiding the app pauses ambient mode.
+- **Long runs:** failed assets are skipped (bounded); an unreachable server shows a calm message and retries with capped backoff; no unbounded arrays, listeners, timers or object URLs.
+- **Settings → Ambient:** source, album, order, interval, include videos, show clock, show photo details, start after idle, stop after, and Start now, persisted in `AppSettings` with a schema bump.
+- No new Home rail and no new left-rail destination.
 
 ### Milestone 19 - Consumer-Friendly Pairing and Authentication
 

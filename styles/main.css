@@ -1,6 +1,9 @@
 :root {
   --immich-primary: #4251b0;
   --immich-primary-soft: rgba(66, 81, 176, 0.28);
+  /* Immich's dark-theme primary: the brand colour for text on the dark,
+     pictured background, where the primary itself is too dark to read. */
+  --immich-primary-on-dark: #adcbfa;
   --immich-blue: #1e83f7;
   --immich-green: #18c249;
   --immich-pink: #ed79b5;
@@ -8,8 +11,9 @@
   --immich-yellow: #ffb400;
   --surface: #171923;
   --surface-raised: #202434;
-  --text-primary: #f7f8ff;
-  --text-muted: #c9cedf;
+  /* All text is the light brand blue; muted text is the same blue, fainter. */
+  --text-primary: var(--immich-primary-on-dark);
+  --text-muted: rgba(173, 203, 250, 0.8);
   color-scheme: dark;
   font-family: Arial, Helvetica, sans-serif;
   background: var(--surface);
@@ -38,9 +42,14 @@ body.settings-text-entry-active {
 /* One standard background behind every screen (a library-chosen picture may
    become a setting later). The picture is bright, so a dark wash keeps white
    text readable from across the room; the gradient alone remains if the
-   picture cannot load. */
+   picture cannot load. The splash screen covers the app while it starts, so
+   it carries the same background. */
 body {
   overflow: hidden;
+}
+
+body,
+.splash-screen {
   background-color: #151824;
   background-image:
     linear-gradient(135deg, rgba(17, 19, 31, 0.78) 0%, rgba(17, 19, 31, 0.7) 100%),
@@ -66,8 +75,6 @@ input {
   grid-gap: 28px;
   gap: 28px;
   padding: 104px;
-  background:
-    linear-gradient(135deg, rgba(28, 31, 44, 0.96), rgba(17, 19, 31, 0.98)), var(--surface);
 }
 
 .splash-brand {
@@ -103,7 +110,7 @@ input {
 
 .splash-support {
   margin-top: 42px;
-  color: rgba(226, 232, 255, 0.58);
+  color: rgba(173, 203, 250, 0.58);
   font-size: 24px;
 }
 
@@ -152,7 +159,8 @@ input {
   padding-top: 0;
   transition:
     width 160ms ease,
-    min-width 160ms ease;
+    min-width 160ms ease,
+    opacity 400ms ease;
 }
 
 /* The logo fills a box the size of a collapsed rail button (72 x 64). */
@@ -165,7 +173,7 @@ input {
   min-height: 72px;
   margin-bottom: 22px;
   padding: 0;
-  color: var(--immich-primary);
+  color: var(--immich-primary-on-dark);
   font-size: 17px;
   white-space: nowrap;
   font-weight: 900;
@@ -259,7 +267,7 @@ button.top-nav-item {
 button.top-nav-item[aria-current="page"] {
   border-color: rgba(120, 196, 255, 0.68);
   background: rgba(66, 81, 176, 0.34);
-  color: #ffffff;
+  color: var(--immich-primary-on-dark);
 }
 
 .top-nav-icon {
@@ -391,7 +399,7 @@ button.top-nav-item[aria-current="page"] {
 
 .eyebrow {
   margin: 0 0 22px;
-  color: var(--immich-primary);
+  color: var(--immich-primary-on-dark);
   font-size: 28px;
   font-weight: 700;
   letter-spacing: 0;
@@ -406,7 +414,7 @@ button.top-nav-item[aria-current="page"] {
 h1 {
   max-width: 1080px;
   margin: 0;
-  color: #ffffff;
+  color: var(--immich-primary-on-dark);
   font-size: 78px;
   font-weight: 800;
   letter-spacing: 0;
@@ -415,7 +423,7 @@ h1 {
 
 h2 {
   margin: 0;
-  color: #ffffff;
+  color: var(--immich-primary-on-dark);
   font-size: 58px;
   font-weight: 800;
   letter-spacing: 0;
@@ -460,22 +468,13 @@ button.settings-section-button {
   text-align: left;
 }
 
+/* Settings looks like the main menu: the open section like the current
+   destination, and every control (buttons, text fields and checkboxes)
+   takes the standard white focus with its primary-colour ring. */
 button.settings-section-button[aria-selected="true"] {
-  border-color: rgba(120, 196, 255, 0.82);
-  background: rgba(66, 165, 245, 0.28);
-  color: #ffffff;
-}
-
-.settings-layout .focusable:focus {
-  border-color: #ffffff;
-  background: var(--immich-primary);
-  color: #ffffff;
-  box-shadow: 0 0 0 7px rgba(255, 214, 102, 0.72);
-}
-
-.settings-layout input.focusable:focus,
-.settings-layout .focusable.dropdown-control:focus {
-  background: rgba(66, 165, 245, 0.42);
+  border-color: rgba(120, 196, 255, 0.68);
+  background: rgba(66, 81, 176, 0.34);
+  color: var(--immich-primary-on-dark);
 }
 
 button.settings-section-button[data-dirty] .button-row-label::after {
@@ -515,7 +514,7 @@ button.settings-section-button[data-dirty] .button-row-label::after {
 
 .settings-unsaved-copy {
   margin: 0;
-  color: rgba(226, 232, 255, 0.78);
+  color: rgba(173, 203, 250, 0.78);
   font-size: 28px;
   font-weight: 700;
   line-height: 1.25;
@@ -544,7 +543,7 @@ button.settings-section-button[data-dirty] .button-row-label::after {
 .field-hint {
   display: block;
   margin-top: 6px;
-  color: rgba(226, 232, 255, 0.68);
+  color: rgba(173, 203, 250, 0.68);
   font-size: 18px;
   font-weight: 600;
   line-height: 1.25;
@@ -574,6 +573,14 @@ button.settings-section-button[data-dirty] .button-row-label::after {
   accent-color: var(--immich-primary);
 }
 
+/* A checkbox cannot take the white fill, so its focus is a white ring
+   inside the standard primary-colour one. */
+.choice-field input[type="checkbox"]:focus {
+  box-shadow:
+    0 0 0 5px #ffffff,
+    0 0 0 13px rgba(66, 81, 176, 0.46);
+}
+
 .focusable {
   min-height: 78px;
   border: 4px solid rgba(255, 255, 255, 0.24);
@@ -591,7 +598,7 @@ input.focusable,
 }
 
 input.focusable::placeholder {
-  color: rgba(244, 248, 251, 0.46);
+  color: rgba(173, 203, 250, 0.46);
 }
 
 button.focusable {
@@ -667,12 +674,6 @@ button.icon-action > svg {
   box-shadow: 0 0 0 8px rgba(66, 81, 176, 0.46);
 }
 
-button.icon-action:focus {
-  background: var(--immich-primary);
-  color: #ffffff;
-  box-shadow: 0 0 0 8px rgba(66, 81, 176, 0.42);
-}
-
 .actions {
   display: flex;
   margin-top: 8px;
@@ -709,7 +710,7 @@ button.icon-action:focus {
 
 .exit-dialog-copy {
   margin: 18px 0 34px;
-  color: rgba(226, 232, 255, 0.78);
+  color: rgba(173, 203, 250, 0.78);
   font-size: 28px;
   font-weight: 700;
   line-height: 1.25;
@@ -818,7 +819,7 @@ button.icon-action:focus {
 
 .home-empty-message {
   margin: 0 0 32px;
-  color: rgba(247, 248, 255, 0.86);
+  color: rgba(173, 203, 250, 0.86);
   font-size: 30px;
   line-height: 1.3;
 }
@@ -830,7 +831,7 @@ button.icon-action:focus {
 
 .home-rail-title {
   margin: 0 0 6px;
-  color: rgba(247, 248, 255, 0.78);
+  color: rgba(173, 203, 250, 0.78);
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 0;
@@ -844,7 +845,7 @@ h1.screen-heading-subtle {
   max-width: 1080px;
   overflow: hidden;
   margin: 0 0 6px;
-  color: rgba(247, 248, 255, 0.78);
+  color: rgba(173, 203, 250, 0.78);
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 0;
@@ -1010,7 +1011,7 @@ h1.screen-heading-subtle {
 .album-cover-placeholder {
   display: grid;
   place-items: center;
-  color: rgba(247, 248, 255, 0.72);
+  color: rgba(173, 203, 250, 0.72);
   font-size: 54px;
   font-weight: 800;
 }
@@ -1031,7 +1032,7 @@ h1.screen-heading-subtle {
 .album-count {
   overflow: hidden;
   margin: 0;
-  color: #ffffff;
+  color: var(--immich-primary-on-dark);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1118,7 +1119,7 @@ h1.screen-heading-subtle {
   background:
     linear-gradient(135deg, rgba(66, 81, 176, 0.28), rgba(237, 121, 181, 0.18)),
     rgba(255, 255, 255, 0.08);
-  color: rgba(247, 248, 255, 0.78);
+  color: rgba(173, 203, 250, 0.78);
   font-size: 32px;
   font-weight: 800;
 }
@@ -1126,7 +1127,7 @@ h1.screen-heading-subtle {
 .asset-date-section-heading {
   grid-column: 1 / -1;
   margin: 18px 0 2px;
-  color: rgba(247, 248, 255, 0.92);
+  color: rgba(173, 203, 250, 0.92);
   font-size: 30px;
   font-weight: 800;
   letter-spacing: 0;
@@ -1172,7 +1173,7 @@ button.focusable.timeline-marker {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
-  color: rgba(247, 248, 255, 0.66);
+  color: rgba(173, 203, 250, 0.66);
   font-size: 16px;
   font-weight: 800;
   line-height: 1;
@@ -1236,7 +1237,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   top: 50%;
   right: 0;
   transform: translateY(-50%) translateY(-20px);
-  color: rgba(247, 248, 255, 0.86);
+  color: rgba(173, 203, 250, 0.86);
   font-size: 20px;
   font-weight: 800;
   line-height: 1;
@@ -1253,7 +1254,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   padding: 4px 6px;
   border-radius: 4px;
   background: rgba(2, 7, 10, 0.5);
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(173, 203, 250, 0.82);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0;
@@ -1408,7 +1409,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   max-width: 1280px;
   margin: 0;
   overflow: hidden;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(173, 203, 250, 0.92);
   font-weight: 800;
   text-shadow: 0 3px 14px rgba(0, 0, 0, 0.72);
   transform: translateX(-50%);
@@ -1429,7 +1430,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
 }
 
 .asset-viewer-time {
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(173, 203, 250, 0.78);
   font-size: 18px;
 }
 
@@ -1438,7 +1439,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   bottom: 0;
   left: 0;
   margin: 0 0 8px;
-  color: rgba(247, 248, 255, 0.78);
+  color: rgba(173, 203, 250, 0.78);
   font-size: 22px;
   font-weight: 800;
   line-height: 1.2;
@@ -1452,7 +1453,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   max-width: calc(100% - 460px);
   margin: 0 0 8px;
   overflow: hidden;
-  color: rgba(247, 248, 255, 0.78);
+  color: rgba(173, 203, 250, 0.78);
   font-size: 22px;
   font-weight: 800;
   line-height: 1.2;
@@ -1486,7 +1487,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   align-items: center;
   grid-gap: 16px;
   gap: 16px;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(173, 203, 250, 0.82);
   font-size: 20px;
   font-weight: 800;
   line-height: 1.15;
@@ -1499,7 +1500,7 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(173, 203, 250, 0.7);
   text-align: center;
 }
 
@@ -1609,6 +1610,15 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   grid-gap: 12px;
   gap: 12px;
   pointer-events: auto;
+  transition: opacity 400ms ease;
+}
+
+/* During a slideshow or video the buttons and the rail fade out a few
+   seconds after the last key, and the next key brings them back
+   (viewer-autohide.ts, ADR 0006). */
+.asset-viewer[data-controls="hidden"] .asset-viewer-controls,
+.app-shell[data-rail-hidden] .top-nav {
+  opacity: 0;
 }
 
 button.asset-viewer-control {
@@ -1618,19 +1628,19 @@ button.asset-viewer-control {
   height: 64px;
   min-height: 64px;
   overflow: hidden;
-  border: 0;
+  border: 3px solid rgba(255, 255, 255, 0.24);
   border-radius: 8px;
-  background: rgba(5, 7, 17, 0.54);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--immich-primary-on-dark);
   padding: 0;
-  opacity: 0.88;
 }
 
+/* The main menu's focus: white, with the primary-colour ring. */
 button.asset-viewer-control:focus {
+  border-color: #ffffff;
   background: #ffffff;
   color: #11131f;
-  opacity: 1;
-  box-shadow: none;
+  box-shadow: 0 0 0 8px rgba(66, 81, 176, 0.46);
 }
 
 button.asset-viewer-slideshow::before,
@@ -1697,10 +1707,10 @@ button.asset-viewer-slideshow[data-slideshow-progress="running"]::after {
   stroke-width: 3;
 }
 
-/* Faces on: the button stays lit, like a pressed switch. */
+/* Faces on: the button stays lit like the main menu's current destination. */
 button.asset-viewer-faces[aria-pressed="true"] {
-  background: var(--immich-primary);
-  opacity: 1;
+  border-color: rgba(120, 196, 255, 0.68);
+  background: rgba(66, 81, 176, 0.34);
 }
 
 button.asset-viewer-faces[aria-pressed="true"]:focus {
@@ -1737,7 +1747,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   padding: 6px 14px;
   border-radius: 8px;
   background: rgba(5, 7, 17, 0.86);
-  color: #ffffff;
+  color: var(--immich-primary-on-dark);
   font-size: 24px;
   font-weight: 800;
   line-height: 1.2;
@@ -1782,7 +1792,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   max-width: 360px;
   margin: 0;
   overflow: hidden;
-  color: rgba(247, 248, 255, 0.78);
+  color: rgba(173, 203, 250, 0.78);
   font-size: 18px;
   font-weight: 800;
   line-height: 1.2;
@@ -2347,7 +2357,7 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(247, 248, 255, 0.72);
+  color: rgba(173, 203, 250, 0.72);
   font-size: 64px;
   font-weight: 800;
 }
@@ -2850,4 +2860,142 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
    than opening a screen. */
 .top-nav-refresh {
   margin-top: 28px;
+}
+
+/* Ambient mode (ADR 0019): full screen above everything, pictures shown
+   whole on black. The two layers crossfade by opacity alone (no filters or
+   transforms on full-screen images). The overlays are small and quiet, and
+   move between four places inside the safe area against burn-in. */
+.ambient-screen {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
+  overflow: hidden;
+  background: #000000;
+  outline: 0;
+}
+
+.ambient-screen[hidden] {
+  display: none;
+}
+
+.ambient-layer,
+.ambient-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: transparent;
+}
+
+.ambient-layer {
+  opacity: 0;
+  transition: opacity 1500ms linear;
+}
+
+.ambient-layer[data-visible] {
+  opacity: 1;
+}
+
+.ambient-video {
+  background: #000000;
+}
+
+.ambient-overlay {
+  position: absolute;
+  max-width: 760px;
+  color: rgba(173, 203, 250, 0.72);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+}
+
+.ambient-overlay[data-position="0"] {
+  bottom: 72px;
+  left: 96px;
+}
+
+.ambient-overlay[data-position="1"] {
+  right: 96px;
+  bottom: 72px;
+  text-align: right;
+}
+
+.ambient-overlay[data-position="2"] {
+  top: 64px;
+  right: 96px;
+  text-align: right;
+}
+
+.ambient-overlay[data-position="3"] {
+  top: 64px;
+  left: 96px;
+}
+
+.ambient-clock {
+  margin: 0;
+  font-size: 64px;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+}
+
+.ambient-details {
+  margin: 8px 0 0;
+  overflow: hidden;
+  color: rgba(173, 203, 250, 0.6);
+  font-size: 24px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ambient-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1200px;
+  max-width: 80%;
+  margin: 0;
+  color: rgba(173, 203, 250, 0.7);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+/* Settings > Ambient: the drop-downs two to a row, so the whole section
+   fits the screen; the album and order fields appear only when they apply. */
+.ambient-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-gap: 20px 32px;
+  gap: 20px 32px;
+  max-width: 1080px;
+}
+
+.ambient-settings-grid > [hidden] {
+  display: none;
+}
+
+.focusable.ambient-album-button {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ambient-start-actions {
+  display: flex;
+  align-items: center;
+}
+
+.ambient-start-actions > .field-hint {
+  margin: 0 0 0 24px;
 }

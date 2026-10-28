@@ -5,9 +5,12 @@ import { createAlbumTile, albumTileLabel, setAlbumTileCover } from "../albums/al
 import { mountCardGrid } from "../card-grid";
 import { createPickerSelection } from "./picker-selection";
 
-// Search's album picker (ADR 0018): every album you own or that is shared
-// with you, as Albums lists them, in the shared card grid. OK toggles an
-// album; Done and Back both return the selection, like the people picker.
+// The album picker (ADR 0018): every album you own or that is shared with
+// you, as Albums lists them, in the shared card grid. For Search it is
+// multi-select: OK toggles an album, and Done and Back both return the
+// selection, like the people picker. For ambient mode (ADR 0019) it is
+// single-select: OK chooses an album at once, and Back leaves the choice as
+// it was.
 // GET /albums returns the whole list at once; the grid still pages through
 // it so only the tiles and covers near focus exist.
 
@@ -20,18 +23,24 @@ type AlbumPickerOptions = {
   service: Pick<AlbumService, "loadAlbums" | "loadThumbnailUrl" | "revokeThumbnailUrl">;
 };
 
+export type AlbumPickerMode = "multi" | "single";
+
 export type AlbumPickerController = {
   destroy(): void;
   focusContent(): void;
   hide(): void;
   // Opens with the albums already chosen shown as selected.
-  open(selected: SearchAlbum[]): void;
+  open(selected: SearchAlbum[], mode?: AlbumPickerMode): void;
   reset(): void;
 };
 
 export function mountAlbumPicker(options: AlbumPickerOptions): AlbumPickerController {
   const documentRef = options.documentRef || document;
   const done = requireElement(documentRef, "search-albums-done");
+  const title = requireElement(documentRef, "search-albums-title");
+  const okHint = requireElement(documentRef, "search-albums-hint-ok");
+  const backHint = requireElement(documentRef, "search-albums-hint-back");
+  let mode: AlbumPickerMode = "multi";
   const selection = createPickerSelection<SearchAlbum>({
     capMessage: (name) =>
       `You can choose up to ${maxSearchAlbums} albums. Remove one to add ${name}.`,
@@ -54,6 +63,11 @@ export function mountAlbumPicker(options: AlbumPickerOptions): AlbumPickerContro
   }
 
   function toggle(album: Album): void {
+    if (mode === "single") {
+      options.onDone([{ id: album.id, name: album.name }]);
+      return;
+    }
+
     if (selection.toggle({ id: album.id, name: album.name }, album.name)) {
       grid.refreshCards();
     }
@@ -115,8 +129,13 @@ export function mountAlbumPicker(options: AlbumPickerOptions): AlbumPickerContro
     hide() {
       grid.hide();
     },
-    open(selected) {
+    open(selected, openMode = "multi") {
+      mode = openMode;
       selection.open(selected);
+      done.hidden = mode === "single";
+      title.textContent = mode === "single" ? "Choose an album" : "Choose albums";
+      okHint.textContent = mode === "single" ? "Choose" : "Select";
+      backHint.textContent = mode === "single" ? "Cancel" : "Done";
       grid.show();
     },
     reset() {

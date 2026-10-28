@@ -35,3 +35,13 @@ Video playback quality and compatibility remain areas for later hardening, inclu
 ## Update: Faces control (Milestone 15)
 
 The viewer's bottom-right controls gain **Faces** (between Slideshow and Back) for photos and Live Photo stills. It draws Immich's face tags over the photo once it has decoded, requesting faces for the current photo only and caching the last three, so the bounded previous/current/next window is unchanged. See [ADR 0017](0017-personalisation-and-navigation.md).
+
+## Update: the viewer split (Milestone 18, 26 October 2026)
+
+`asset-viewer.ts` had reached 998 lines, so it was split, behaviour-neutral, before ambient mode reused it:
+
+- **Showing and releasing one asset's still and video** (`showStill`, `clearStill`, `releaseVideo`) moved to `src/screens/media-elements.ts`. The viewer and ambient mode present every asset through it.
+- **Preview loading and retention** stays in `asset-viewer-window.ts`, which ambient mode reuses as it is.
+- **The slideshow** moved to `src/screens/collection/viewer-slideshow.ts`.
+
+`asset-viewer.ts` is now 864 lines, and every existing test passed unchanged. While open, the viewer also holds the TV's screensaver off during slideshows and playback ([ADR 0006](0006-slideshow-mode.md) update, [ADR 0019](0019-ambient-mode.md)).

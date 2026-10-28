@@ -25,7 +25,7 @@ const { values } = parseArgs({
     port: { type: "string", default: "5173" },
     interval: { type: "string", default: "8" },
     "tour-delay": { type: "string", default: "1200" },
-    "slide-changes": { type: "string", default: "2" },
+    "slide-changes": { type: "string", default: "3" },
     "no-highlights": { type: "boolean", default: false }
   }
 });
@@ -50,8 +50,8 @@ async function main(): Promise<void> {
   const slideChanges = Number(values["slide-changes"]);
   if (!Number.isInteger(tourDelay) || tourDelay < 0 || tourDelay > 10_000)
     throw new CaptureError("--tour-delay must be an integer from 0 to 10000 milliseconds.");
-  if (slideChanges !== 1 && slideChanges !== 2)
-    throw new CaptureError("--slide-changes must be 1 or 2.");
+  if (slideChanges !== 1 && slideChanges !== 2 && slideChanges !== 3)
+    throw new CaptureError("--slide-changes must be 1, 2 or 3.");
   const pinnedDate = new Date(values.date!);
   if (scale !== 1 && scale !== 2) throw new CaptureError("--scale-factor must be 1 or 2.");
   if (!Number.isInteger(port) || port < 1 || port > 65535)

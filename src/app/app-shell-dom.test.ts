@@ -109,6 +109,16 @@ describe("shell rail navigation", () => {
     expect(rail()).toBe("expanded");
   });
 
+  it("hides the rail while the viewer's buttons are hidden, and shows it again", () => {
+    mountShell();
+    const root = byId("app-shell");
+
+    shell!.setRailHidden(true);
+    expect(root.getAttribute("data-rail-hidden")).toBe("true");
+    shell!.setRailHidden(false);
+    expect(root.hasAttribute("data-rail-hidden")).toBe(false);
+  });
+
   it("reaches Refresh below Settings without changing screen, and OK refreshes", () => {
     const onRefresh = vi.fn();
     const screens = mountShell({ onRefresh });

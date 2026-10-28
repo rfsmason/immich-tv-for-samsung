@@ -39,10 +39,31 @@ function mount(
   const onBack = vi.fn();
   const onSaved = vi.fn();
   const onReturnToShell = vi.fn();
+  const onAppSettingsSaved = vi.fn();
+  const onChooseAmbientAlbum = vi.fn();
+  const onStartAmbient = vi.fn();
 
-  controller = mountConnectionScreen({ onBack, onReturnToShell, onSaved, service, settingsStore });
+  controller = mountConnectionScreen({
+    onAppSettingsSaved,
+    onBack,
+    onChooseAmbientAlbum,
+    onReturnToShell,
+    onSaved,
+    onStartAmbient,
+    service,
+    settingsStore
+  });
 
-  return { onBack, onReturnToShell, onSaved, service, settingsStore };
+  return {
+    onAppSettingsSaved,
+    onBack,
+    onChooseAmbientAlbum,
+    onReturnToShell,
+    onSaved,
+    onStartAmbient,
+    service,
+    settingsStore
+  };
 }
 
 function changeAutoplay(): void {
@@ -292,6 +313,94 @@ describe("Settings remote navigation and actions", () => {
     expect(settingsStore.save).toHaveBeenCalledWith(
       expect.objectContaining({ slideshowIntervalSeconds: 20 })
     );
+  });
+
+  it("offers Settings → Ambient, showing the album and order fields only where they apply", () => {
+    const f = mount();
+    controller!.show({ allowBack: true });
+    byId("settings-section-ambient").focus();
+    pressKey(remoteKeys.right);
+
+    expect(document.activeElement).toBe(byId("ambient-source"));
+    expect(byId("ambient-source").textContent).toContain("All photos");
+    expect(byId("ambient-album-field").hidden).toBe(true);
+    expect(byId("ambient-order-field").hidden).toBe(true);
+
+    // Every control is reachable with Down, in order.
+    const reached: string[] = [];
+    for (let step = 0; step < 7; step += 1) {
+      pressKey(remoteKeys.down);
+      reached.push(document.activeElement?.id || "");
+    }
+    expect(reached).toEqual([
+      "ambient-interval",
+      "ambient-idle",
+      "ambient-stop",
+      "ambient-include-videos",
+      "ambient-show-clock",
+      "ambient-show-details",
+      "ambient-start"
+    ]);
+
+    // Memories offers In order; an album also asks for the album.
+    byId("ambient-source").focus();
+    pressKey(remoteKeys.enter);
+    for (let step = 0; step < 4; step += 1) pressKey(remoteKeys.down);
+    pressKey(remoteKeys.enter);
+    expect(byId("ambient-order-field").hidden).toBe(false);
+    expect(byId("ambient-album-field").hidden).toBe(true);
+    pressKey(remoteKeys.enter);
+    pressKey(remoteKeys.up);
+    pressKey(remoteKeys.enter);
+    expect(byId("ambient-album-field").hidden).toBe(false);
+
+    byId("ambient-album").focus();
+    pressKey(remoteKeys.enter);
+    expect(f.onChooseAmbientAlbum).toHaveBeenCalledWith(null);
+  });
+
+  it("saves ambient choices, and Start now uses them unsaved", () => {
+    const f = mount();
+    controller!.show({ allowBack: true });
+    byId("settings-section-ambient").focus();
+    pressKey(remoteKeys.right);
+    // Interval: 1 min.
+    byId("ambient-interval").focus();
+    pressKey(remoteKeys.enter);
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.enter);
+    byId<HTMLInputElement>("ambient-show-details").click();
+
+    byId("ambient-start").focus();
+    pressKey(remoteKeys.enter);
+    expect(f.onStartAmbient).toHaveBeenCalledWith(
+      expect.objectContaining({ intervalSeconds: 60, showDetails: true })
+    );
+    expect(f.settingsStore.save).not.toHaveBeenCalled();
+
+    byId("settings-save").focus();
+    pressKey(remoteKeys.enter);
+    expect(f.settingsStore.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ambient: expect.objectContaining({ intervalSeconds: 60, showDetails: true })
+      })
+    );
+    expect(f.onAppSettingsSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it("comes back from the album picker with the album and unsaved choices kept", () => {
+    mount();
+    controller!.show({ allowBack: true });
+    byId<HTMLInputElement>("ambient-show-details").click();
+    controller!.hide();
+
+    controller!.resumeAfterAlbumPicker({ id: "album-1", name: "Summer Example" });
+    controller!.focusAmbientAlbum();
+
+    expect(document.activeElement).toBe(byId("ambient-album"));
+    expect(byId("ambient-album").textContent).toBe("Summer Example");
+    expect(byId<HTMLInputElement>("ambient-show-details").checked).toBe(true);
+    expect(byId("settings-panel-ambient").hidden).toBe(false);
   });
 
   it("turns Home rails on and off in Home order, keeping settings saved elsewhere", () => {

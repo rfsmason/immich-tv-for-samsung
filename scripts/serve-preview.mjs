@@ -27,6 +27,10 @@ const contentTypes = {
 
 const indexPath = resolve(root, "index.html");
 const previewScriptTag = '    <script src="scripts/dev-preview.js"></script>\n';
+// The TV resolves $WEBAPIS to Samsung's Product API script. A desktop browser
+// would ask this server for it and get a 404, so the preview leaves it out
+// (ADR 0019); the app treats a missing webapis as "no TV screensaver".
+const webapisScriptPattern = /[ \t]*<script src="\$WEBAPIS\/webapis\/webapis\.js"><\/script>\n?/;
 const mainScriptTag = '    <script src="scripts/main.js"></script>';
 const proxyPath = "/__immich-proxy";
 
@@ -67,7 +71,7 @@ async function handleRequest(request, response) {
     }
 
     if (filePath === indexPath) {
-      const html = await readFile(filePath, "utf8");
+      const html = (await readFile(filePath, "utf8")).replace(webapisScriptPattern, "");
       const previewHtml = html.includes(mainScriptTag)
         ? html.replace(mainScriptTag, `${previewScriptTag}${mainScriptTag}`)
         : html.replace("</body>", `${previewScriptTag}  </body>`);

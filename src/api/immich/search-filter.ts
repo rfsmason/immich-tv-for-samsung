@@ -1,3 +1,4 @@
+import type { AmbientRandomQuery } from "../../domain/ambient";
 import type {
   CalendarDate,
   SearchCriteria,
@@ -89,4 +90,25 @@ export function buildPlaceSuggestionQuery(
   }
 
   return parts.join("&");
+}
+
+// The filter for `POST /search/random` (ADR 0019): the timeline's assets,
+// not trashed; photos (Live Photos included) or photos and videos; taken on
+// or after a moment; within one album.
+export function buildRandomAssetFilter(query: AmbientRandomQuery): Record<string, unknown> {
+  const filter: Record<string, unknown> = {
+    trashedAt: { eq: null },
+    type: query.includeVideos ? { in: ["IMAGE", "VIDEO"] } : { eq: "IMAGE" },
+    visibility: { eq: "timeline" }
+  };
+
+  if (query.takenFrom) {
+    filter.takenAt = { gte: query.takenFrom.toISOString() };
+  }
+
+  if (query.albumId) {
+    filter.albumIds = { any: [query.albumId] };
+  }
+
+  return filter;
 }

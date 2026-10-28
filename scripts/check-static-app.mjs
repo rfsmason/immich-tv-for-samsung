@@ -45,6 +45,14 @@ for (const asset of ["styles/main.css", "scripts/main.js"]) {
   }
 }
 
+// Samsung's documented tag for the Product APIs (AppCommon screensaver
+// control), loaded before the app so webapis exists when it starts.
+const webapisIndex = indexHtml.indexOf('<script src="$WEBAPIS/webapis/webapis.js"></script>');
+
+if (webapisIndex < 0 || webapisIndex > indexHtml.indexOf('<script src="scripts/main.js">')) {
+  failures.push("index.html should load $WEBAPIS/webapis/webapis.js before scripts/main.js.");
+}
+
 if (indexHtml.includes("scripts/dev-preview.js")) {
   failures.push("index.html must not load the desktop-only preview script.");
 }

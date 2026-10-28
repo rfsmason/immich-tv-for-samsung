@@ -20,6 +20,7 @@ import {
   invalidateAsyncGeneration,
   isCurrentGeneration
 } from "./async-generation";
+import type { PassiveViewing } from "../platform/tizen/screensaver";
 import { createAssetViewer } from "./collection/asset-viewer";
 import {
   createCollectionGrid,
@@ -69,11 +70,15 @@ type AlbumDetailScreenOptions = {
   onReturnToShell?(): void;
   onViewerClosed?(): void;
   onViewerOpened?(): void;
+  // The viewer's buttons hid during passive viewing, or showed again.
+  onViewerControlsHiddenChange?(hidden: boolean): void;
   onAssetViewed?(asset: AlbumAsset, source: ViewingSource): void;
   // Loads one page of a paged Home collection.
   loadFeedPage(feed: CollectionFeed, page: AlbumAssetPageToken): Promise<AlbumAssetPage>;
   // The date rail's clock and frame scheduling; tests replace them.
   now?: () => number;
+  // The TV screensaver control the viewer holds during passive viewing.
+  passiveViewing?: PassiveViewing;
   scheduleFrame?: ScheduleFrame;
   service: AlbumService;
   settingsStore: AppSettingsStore;
@@ -95,6 +100,8 @@ export type AlbumDetailScreenController = {
   // Forgets album order reversals, which last until the connection changes.
   forgetSessionSortOrders(): void;
   hide(): void;
+  // Whether the full-screen viewer is showing an asset.
+  isViewerOpen(): boolean;
   refreshPhotos(): void;
   show(album: Album, parent: "albums" | "home"): void;
   showPerson(person: Person, parent: "home" | "people"): void;
@@ -208,6 +215,8 @@ export function mountAlbumDetailScreen(
     },
     elements,
     onAssetViewed: options.onAssetViewed,
+    onControlsHiddenChange: options.onViewerControlsHiddenChange,
+    passiveViewing: options.passiveViewing,
     service: options.service,
     settingsStore: options.settingsStore
   });
@@ -738,6 +747,7 @@ export function mountAlbumDetailScreen(
       grid.resetThumbnails();
       viewer.resetImages();
     },
+    isViewerOpen: () => !elements.root.hidden && isViewerOpen(model),
     forgetSessionSortOrders() {
       sessionAlbumOrders = {};
     },

@@ -55,8 +55,8 @@ describe("Albums, Memories and media demo hooks", () => {
 
   it("uses only element IDs that exist in the app markup", () => {
     const markup = readFileSync("index.html", "utf8");
-    const tours = ["collection-demo", "media-tour", "albums-tour", "memories-tour"].map((name) =>
-      readFileSync(`scripts/capture/scenarios/${name}.ts`, "utf8")
+    const tours = ["collection-demo", "media-tour", "albums-tour", "memories-tour", "ambient"].map(
+      (name) => readFileSync(`scripts/capture/scenarios/${name}.ts`, "utf8")
     );
     const ids = new Set(
       tours

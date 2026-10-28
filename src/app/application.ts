@@ -3,12 +3,14 @@ import type { Memory, Person } from "../domain/home";
 import type { SearchAlbum, SearchCriteria, SearchPerson, SearchPlace } from "../domain/search";
 import type { Logger } from "../logging/logger";
 import type { AppLifecycle } from "../platform/tizen/lifecycle";
+import type { PassiveViewing } from "../platform/tizen/screensaver";
 import { mountAlbumDetailScreen, type CollectionFeed } from "../screens/album-detail-screen";
 import { isLibraryView, type LibraryView } from "../domain/library";
 import { formatLibraryViewTitle } from "../presentation/library-labels";
 import type { HomeAssetRailId } from "../screens/home/home-model";
 import { viewingHistoryLimit } from "../storage/viewing-history-store";
 import { mountAlbumsScreen } from "../screens/albums-screen";
+import { mountAmbientScreen } from "../screens/ambient/ambient-screen";
 import { mountConnectionScreen } from "../screens/connection-screen";
 import { mountExitConfirmation } from "../screens/exit-confirmation";
 import { mountHomeScreen } from "../screens/home-screen";
@@ -21,6 +23,8 @@ import { mountSearchScreen } from "../screens/search/search-screen";
 import type { AppSettingsStore } from "../storage/app-settings-store";
 import { readEnabledHomeRails } from "../domain/app-settings";
 import type { AlbumService } from "./album-service";
+import { createAmbientController } from "./ambient-controller";
+import { createAmbientSource } from "./ambient-sources";
 import {
   mountApplicationShell,
   type ShellScreenController,
@@ -37,6 +41,10 @@ import type { ViewingHistoryService } from "./viewing-history-service";
 
 type AppRoute =
   | { kind: "destination"; destination: TopLevelDestinationId }
+  // Ambient mode covers everything; ending it returns to this route.
+  | { kind: "ambient"; returnTo: AppRoute | null }
+  // Settings → Ambient's single-select album picker.
+  | { kind: "ambient-album"; parent: "settings" }
   | { kind: "memories" }
   | { kind: "people" }
   | { kind: "album"; parent: "albums" | "home" }
@@ -56,6 +64,8 @@ export type ApplicationDependencies = {
   documentRef?: Document;
   lifecycle: AppLifecycle;
   logger: Logger;
+  // The TV's own screensaver, held off during passive viewing (ADR 0019).
+  passiveViewing: PassiveViewing;
   settingsStore: AppSettingsStore;
   viewingHistory: ViewingHistoryService;
 };
@@ -192,6 +202,11 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
   const albumPicker = mountAlbumPicker({
     documentRef,
     onDone(albums) {
+      if (route?.kind === "ambient-album") {
+        returnToAmbientSettings(albums[0] || null);
+        return;
+      }
+
       searchScreen.setAlbums(albums);
       showSearch();
     },
@@ -207,6 +222,16 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     },
     onReturnToShell() {
       shell.focusActiveDestinationNav();
+    },
+    onAppSettingsSaved() {
+      ambient.refresh();
+    },
+    onChooseAmbientAlbum(album) {
+      enterChild({ kind: "ambient-album", parent: "settings" }, "search-albums", albumPicker);
+      albumPicker.open(album ? [album] : [], "single");
+    },
+    onStartAmbient(settings) {
+      ambient.startNow(settings);
     },
     onSaved() {
       collectionScreen.forgetSessionSortOrders();
@@ -244,9 +269,13 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
     onReturnToShell() {
       shell.focusActiveDestinationNav();
     },
+    onViewerControlsHiddenChange(hidden) {
+      shell.setRailHidden(hidden);
+    },
     onViewerOpened() {
       shell.collapseRail();
     },
+    passiveViewing: dependencies.passiveViewing,
     service: albumService,
     settingsStore
   });
@@ -323,12 +352,86 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
       settings: destination(
         () => connectionScreen.focusContent(),
         () => {
+          const albumChosen = resumeSettingsWith;
+
           enterDestination("settings", "settings", null);
+          resumeSettingsWith = undefined;
+
+          if (albumChosen !== undefined) {
+            connectionScreen.resumeAfterAlbumPicker(albumChosen);
+            return;
+          }
+
           connectionScreen.show({ allowBack: albumService.loadSettings() !== null });
         }
       )
     }
   });
+
+  // Set while Settings comes back from the ambient album picker, so it shows
+  // as it was left (unsaved choices included) with the album chosen, if any.
+  let resumeSettingsWith: { id: string; name: string } | null | undefined;
+  const ambientScreen = mountAmbientScreen({
+    documentRef,
+    onExit() {
+      ambient.exit();
+    },
+    passiveViewing: dependencies.passiveViewing,
+    service: albumService
+  });
+  const ambient = createAmbientController({
+    canStartFromIdle,
+    createSource: (settings) => createAmbientSource(settings, albumService),
+    documentRef,
+    lifecycle,
+    logger,
+    onEnded(focusRestored) {
+      route = route?.kind === "ambient" ? route.returnTo : route;
+
+      if (!focusRestored) {
+        shell.focusActiveContent();
+      }
+    },
+    onStarted() {
+      route = { kind: "ambient", returnTo: route };
+    },
+    screen: ambientScreen,
+    settings: () => settingsStore.load().ambient
+  });
+
+  // Ambient mode starts by itself only over a browsing screen: never over
+  // the splash, Settings, a picker, the exit question, the viewer (slideshow
+  // and playback included) or Search while a date or list is open.
+  function canStartFromIdle(): boolean {
+    const browsing =
+      route !== null &&
+      (route.kind === "destination"
+        ? route.destination !== "settings"
+        : [
+            "album",
+            "home-collection",
+            "library",
+            "memories",
+            "memory",
+            "people",
+            "person",
+            "search-results"
+          ].indexOf(route.kind) >= 0);
+
+    return (
+      browsing &&
+      !shell.isSplashVisible() &&
+      !exitConfirmation.isOpen() &&
+      !collectionScreen.isViewerOpen() &&
+      !searchScreen.isEditing()
+    );
+  }
+
+  function returnToAmbientSettings(album: { id: string; name: string } | null): void {
+    resumeSettingsWith = album;
+    shell.activateDestination("settings");
+    connectionScreen.focusAmbientAlbum();
+  }
 
   lifecycle.onVisibilityChange((visibility) => {
     if (visibility === "hidden") {
@@ -619,6 +722,8 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
   return {
     destroy() {
       destroyed = true;
+      ambient.destroy();
+      ambientScreen.destroy();
       exitConfirmation.destroy();
       shell.destroy();
       homeScreen.destroy();

@@ -8,9 +8,11 @@ import type {
   SortOrder,
   TimelineBucket
 } from "../domain/album";
-import { defaultAppSettings } from "../domain/app-settings";
+import { defaultAmbientSettings } from "../domain/ambient";
+import { defaultAppSettings, type AppSettings } from "../domain/app-settings";
 import type { Memory, Person } from "../domain/home";
 import { remoteKeys } from "../platform/tizen/keys";
+import { createPassiveViewing } from "../platform/tizen/screensaver";
 import { byId, loadAppMarkup, pressKey } from "../test/app-markup";
 import { createFakeLifecycle, type FakeLifecycle } from "../test/fake-lifecycle";
 import type { AlbumService } from "./album-service";
@@ -58,6 +60,8 @@ const settings = { apiKey: "test-api-key", serverUrl: "https://immich.example" }
 
 let application: Application | null = null;
 let lifecycle: FakeLifecycle;
+// The TV screensaver states the app has sent: 0 off, 1 on.
+let setScreenSaver: ReturnType<typeof vi.fn<(state: number) => void>>;
 
 function createServices(
   options: {
@@ -114,6 +118,9 @@ function createServices(
     ),
     loadSearchAssetsPage: vi.fn(() => page(assets.slice(0, 2))),
     loadPlaceSuggestions: vi.fn(async () => ["Exampleland"]),
+    loadRandomAssets: vi.fn(async () => assets.slice(0, 2)),
+    loadFavoriteBuckets: vi.fn(async () => [bucket]),
+    loadFavoriteBucketAssets: vi.fn(async () => assets.slice(0, 2)),
     loadVideoAssets: vi.fn(() => page(assets.slice(0, 2))),
     loadVideoAssetsPage: vi.fn(() => page(assets.slice(0, 2))),
     loadTimelineBuckets: vi.fn(async () => [bucket]),
@@ -134,6 +141,7 @@ function createServices(
 
 async function start(
   options: Parameters<typeof createServices>[0] & {
+    appSettings?: AppSettings;
     history?: AlbumAsset[];
     // false for a startup that should leave the splash up (a failure).
     waitForReveal?: boolean;
@@ -150,11 +158,21 @@ async function start(
     record: vi.fn(async () => undefined)
   };
 
+  let storedAppSettings = options.appSettings || defaultAppSettings;
+
   lifecycle = createFakeLifecycle();
+  setScreenSaver = vi.fn<(state: number) => void>();
   application = composeApplication({
     ...services,
     lifecycle,
-    settingsStore: { load: () => defaultAppSettings, save: (value) => value },
+    passiveViewing: createPassiveViewing({
+      logger: services.logger,
+      windowRef: { webapis: { appcommon: { setScreenSaver } } }
+    }),
+    settingsStore: {
+      load: () => storedAppSettings,
+      save: (value) => (storedAppSettings = value)
+    },
     viewingHistory
   });
   application.start();
@@ -1032,10 +1050,15 @@ describe("application routing", () => {
     pressKey(remoteKeys.mediaPlayPause);
     expect(byId("asset-viewer-slideshow").getAttribute("data-slideshow-state")).toBe("playing");
 
+    expect(setScreenSaver.mock.calls.map(([state]) => state)).toEqual([0]);
+
     lifecycle.setVisibility("hidden");
     expect(byId("asset-viewer-slideshow").getAttribute("data-slideshow-state")).toBe("paused");
+    // Nothing is passively playing, so the TV's screensaver may come back.
+    expect(setScreenSaver.mock.calls.map(([state]) => state)).toEqual([0, 1]);
     lifecycle.setVisibility("visible");
     expect(byId("asset-viewer-slideshow").getAttribute("data-slideshow-state")).toBe("paused");
+    expect(setScreenSaver.mock.calls.map(([state]) => state)).toEqual([0, 1]);
   });
 
   it("returns Home and refreshes after Settings are saved", async () => {
@@ -1059,6 +1082,120 @@ describe("application routing", () => {
     expect(byId("splash-error").textContent).toBe("Storage unavailable");
     expect(services.logger.error).toHaveBeenCalledWith("Immich TV startup failed.", {
       error: failure
+    });
+  });
+
+  describe("ambient mode", () => {
+    const stills = {
+      loadAssetViewerStillUrl: vi.fn(async (item: AlbumAsset) => `blob:${item.id}`)
+    };
+
+    async function openAmbientSettings(): Promise<void> {
+      rail("settings").focus();
+      pressKey(remoteKeys.enter);
+      byId("settings-section-ambient").focus();
+      pressKey(remoteKeys.right);
+    }
+
+    it("starts from Settings, and any key returns to Start now without asking to exit", async () => {
+      await start({ overrides: stills });
+      await openAmbientSettings();
+      expect(active()).toBe(byId("ambient-source"));
+      byId("ambient-start").focus();
+      pressKey(remoteKeys.enter);
+
+      await vi.waitFor(() => expect(byId("ambient-screen").hidden).toBe(false));
+      expect(setScreenSaver.mock.calls.map(([state]) => state)).toEqual([0]);
+      pressKey(remoteKeys.back);
+
+      expect(byId("ambient-screen").hidden).toBe(true);
+      expect(byId("exit-dialog").hidden).toBe(true);
+      expect(byId("connection-screen").hidden).toBe(false);
+      expect(active()).toBe(byId("ambient-start"));
+      expect(setScreenSaver.mock.calls.map(([state]) => state)).toEqual([0, 1]);
+    });
+
+    it("uses the Settings form's current choices for Start now", async () => {
+      const { albumService } = await start({ overrides: stills });
+      await openAmbientSettings();
+      // Source: Recent, chosen but not saved.
+      pressKey(remoteKeys.enter);
+      pressKey(remoteKeys.down);
+      pressKey(remoteKeys.down);
+      pressKey(remoteKeys.enter);
+      expect(byId("ambient-source").textContent).toContain("Recent");
+      byId("ambient-start").focus();
+      pressKey(remoteKeys.enter);
+
+      await vi.waitFor(() =>
+        expect(albumService.loadRandomAssets).toHaveBeenCalledWith(
+          expect.objectContaining({ takenFrom: expect.any(Date) }),
+          20
+        )
+      );
+      pressKey(remoteKeys.enter);
+    });
+
+    it("chooses one album in the album picker and returns to the unsaved Settings", async () => {
+      await start({ overrides: stills });
+      await openAmbientSettings();
+      // Source: An album, which shows the album field.
+      pressKey(remoteKeys.enter);
+      for (let step = 0; step < 3; step += 1) pressKey(remoteKeys.down);
+      pressKey(remoteKeys.enter);
+      expect(byId("ambient-album-field").hidden).toBe(false);
+      expect(byId("ambient-order-field").hidden).toBe(false);
+      byId("ambient-album").focus();
+      pressKey(remoteKeys.enter);
+
+      expect(byId("search-albums-screen").hidden).toBe(false);
+      expect(byId("search-albums-title").textContent).toBe("Choose an album");
+      expect(byId("search-albums-done").hidden).toBe(true);
+      await vi.waitFor(() => expect(active()?.hasAttribute("data-album-id")).toBe(true));
+      const chosen = active()!.getAttribute("data-album-id");
+      pressKey(remoteKeys.enter);
+
+      expect(byId("search-albums-screen").hidden).toBe(true);
+      expect(byId("connection-screen").hidden).toBe(false);
+      expect(active()).toBe(byId("ambient-album"));
+      expect(byId("ambient-album").textContent).not.toBe("Choose an album");
+      expect(byId("ambient-source").textContent).toContain("An album");
+      expect(chosen).toBeTruthy();
+    });
+
+    it("starts by itself after the idle time on Home, but not over the viewer", async () => {
+      await start({
+        appSettings: {
+          ...defaultAppSettings,
+          ambient: { ...defaultAmbientSettings, startAfterIdleMinutes: 5 }
+        },
+        overrides: stills
+      });
+      await focusHomeRail("recently-added");
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+      pressKey(remoteKeys.right);
+      pressKey(remoteKeys.left);
+      const tile = active();
+
+      await vi.advanceTimersByTimeAsync(5 * 60000 - 1);
+      expect(byId("ambient-screen").hidden).toBe(true);
+      // A quiet start shows once its first picture has decoded (here, after
+      // the decode wait, as the test DOM never loads images).
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(byId("ambient-screen").hidden).toBe(false);
+      pressKey(remoteKeys.enter);
+      expect(byId("ambient-screen").hidden).toBe(true);
+      expect(active()).toBe(tile);
+      expect(byId("asset-placeholder").hidden).toBe(true);
+
+      // Over the viewer, it never starts: open the collection, then a photo.
+      pressKey(remoteKeys.enter);
+      await vi.advanceTimersByTimeAsync(100);
+      pressKey(remoteKeys.enter);
+      expect(byId("asset-placeholder").hidden).toBe(false);
+      await vi.advanceTimersByTimeAsync(20 * 60000);
+      expect(byId("ambient-screen").hidden).toBe(true);
+      vi.useRealTimers();
     });
   });
 });

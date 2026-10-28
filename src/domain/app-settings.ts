@@ -19,6 +19,8 @@ const savedSortOrderKinds: SavedSortOrderKind[] = [
 export type AppSettings = {
   ambient: AmbientSettings;
   autoplayVideos: boolean;
+  // White text on solid dark, with stronger edges and focus (ADR 0020).
+  highContrast: boolean;
   homeRails: HomeRailVisibility;
   // Face tags over photos in the viewer (the viewer's Faces button).
   showFaceTags: boolean;
@@ -34,6 +36,7 @@ export const defaultSlideshowIntervalSeconds = 8;
 export const defaultAppSettings: AppSettings = {
   ambient: defaultAmbientSettings,
   autoplayVideos: false,
+  highContrast: false,
   homeRails: normalizeHomeRailVisibility(null),
   showFaceTags: false,
   showViewerDate: true,
@@ -47,6 +50,7 @@ export function normalizeAppSettings(settings: Partial<AppSettings> | null): App
   return {
     ambient: normalizeAmbientSettings(settings?.ambient),
     autoplayVideos: settings?.autoplayVideos === true,
+    highContrast: settings?.highContrast === true,
     homeRails: normalizeHomeRailVisibility(settings?.homeRails),
     showFaceTags: settings?.showFaceTags === true,
     showViewerDate: settings?.showViewerDate !== false,

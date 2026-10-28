@@ -35,6 +35,7 @@ describe("app settings store", () => {
     expect(store.load()).toEqual({
       ambient: defaultAmbientSettings,
       autoplayVideos: false,
+      highContrast: false,
       homeRails: allRailsOn,
       showFaceTags: false,
       showViewerDate: true,
@@ -77,6 +78,7 @@ describe("app settings store", () => {
         stopAfterHours: 2
       },
       autoplayVideos: true,
+      highContrast: true,
       homeRails: { ...allRailsOn, people: false },
       showFaceTags: true,
       showViewerDate: false,
@@ -105,6 +107,7 @@ describe("app settings store", () => {
     expect(store.load()).toEqual({
       ambient: defaultAmbientSettings,
       autoplayVideos: true,
+      highContrast: false,
       homeRails: allRailsOn,
       showFaceTags: false,
       showViewerDate: true,
@@ -121,7 +124,7 @@ describe("app settings store", () => {
     });
   });
 
-  it("migrates version 1 settings to version 2 with ambient mode's defaults", () => {
+  it("migrates version 1 settings with ambient mode's defaults", () => {
     const store = createLocalAppSettingsStore(
       createMemoryStorage({
         "immich-tv.app-settings": JSON.stringify({
@@ -132,13 +135,43 @@ describe("app settings store", () => {
       })
     );
 
-    expect(appSettingsSchemaVersion).toBe(2);
     expect(store.load()).toEqual({
       ...defaultAppSettings,
       ambient: defaultAmbientSettings,
       autoplayVideos: true,
       slideshowIntervalSeconds: 12
     });
+  });
+
+  it("migrates version 2 settings to version 3 with high contrast off", () => {
+    // Version 2 had every current setting except High contrast.
+    const version2: Partial<typeof defaultAppSettings> = { ...defaultAppSettings };
+    delete version2.highContrast;
+    const store = createLocalAppSettingsStore(
+      createMemoryStorage({
+        "immich-tv.app-settings": JSON.stringify({
+          ...version2,
+          autoplayVideos: true,
+          schemaVersion: 2
+        })
+      })
+    );
+
+    expect(appSettingsSchemaVersion).toBe(3);
+    expect(store.load()).toEqual({ ...defaultAppSettings, autoplayVideos: true });
+  });
+
+  it("keeps high contrast only when it was explicitly turned on", () => {
+    const load = (value: unknown) =>
+      createLocalAppSettingsStore(
+        createMemoryStorage({
+          "immich-tv.app-settings": JSON.stringify({ highContrast: value, schemaVersion: 3 })
+        })
+      ).load().highContrast;
+
+    expect(load(true)).toBe(true);
+    expect(load("yes")).toBe(false);
+    expect(load(1)).toBe(false);
   });
 
   it("falls back safely from unknown ambient values", () => {

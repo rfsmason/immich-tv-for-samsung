@@ -5,6 +5,7 @@ import { createPassiveViewing } from "../platform/tizen/screensaver";
 import { createLocalAppSettingsStore } from "../storage/app-settings-store";
 import { createLocalConnectionSettingsStore } from "../storage/connection-settings-store";
 import { createLocalViewingHistoryStore } from "../storage/viewing-history-store";
+import { applyContrastTheme } from "../screens/theme";
 import { createAlbumService } from "./album-service";
 import { composeApplication } from "./application";
 import { createConnectionService } from "./connection-service";
@@ -12,6 +13,12 @@ import { createViewingHistoryService } from "./viewing-history-service";
 
 // Entry point: creates the real services and platform adapters for the TV
 // runtime, then composes and starts the application.
+
+const settingsStore = createLocalAppSettingsStore(window.localStorage);
+
+// The theme first, before the splash is next drawn, so high contrast never
+// flashes the normal colours (ADR 0020).
+applyContrastTheme(document, settingsStore.load().highContrast);
 
 // Let the TV draw the splash before the app is assembled behind it: building
 // every screen and starting Home takes a noticeable moment on the TV, and
@@ -29,7 +36,7 @@ afterNextPaint(() => {
     lifecycle,
     logger: consoleLogger,
     passiveViewing: createPassiveViewing({ logger: consoleLogger }),
-    settingsStore: createLocalAppSettingsStore(window.localStorage),
+    settingsStore,
     viewingHistory: createViewingHistoryService({
       connections: store,
       fetchImpl,

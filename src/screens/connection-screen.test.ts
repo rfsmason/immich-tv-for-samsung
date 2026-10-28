@@ -150,7 +150,7 @@ describe("Settings remote navigation and actions", () => {
     expect(document.activeElement).toBe(byId("settings-section-display"));
     pressKey(remoteKeys.enter);
     expect(byId("settings-panel-display").hidden).toBe(false);
-    expect(document.activeElement).toBe(byId("autoplay-videos"));
+    expect(document.activeElement).toBe(byId("high-contrast"));
   });
 
   it("enables text entry only after OK and keeps the API key masked until shown", () => {
@@ -239,8 +239,8 @@ describe("Settings remote navigation and actions", () => {
     controller!.show({ allowBack: true });
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);
-    pressKey(remoteKeys.enter);
-    for (let step = 0; step < 4; step += 1) pressKey(remoteKeys.down);
+    pressKey(remoteKeys.enter); // High contrast on.
+    for (let step = 0; step < 5; step += 1) pressKey(remoteKeys.down);
     // Arriving only focuses the interval; OK opens its list on the current value.
     expect(document.activeElement).toBe(byId("slideshow-interval"));
     pressKey(remoteKeys.enter);
@@ -255,7 +255,7 @@ describe("Settings remote navigation and actions", () => {
 
     expect(service.save).toHaveBeenCalledWith(savedSettings);
     expect(settingsStore.save).toHaveBeenCalledWith(
-      expect.objectContaining({ autoplayVideos: true, slideshowIntervalSeconds: 12 })
+      expect.objectContaining({ highContrast: true, slideshowIntervalSeconds: 12 })
     );
     expect(byId("settings-summary").textContent).toBe("Settings saved.");
     expect(onSaved).not.toHaveBeenCalled();
@@ -268,7 +268,7 @@ describe("Settings remote navigation and actions", () => {
     controller!.show({ allowBack: true });
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);
-    for (let step = 0; step < 4; step += 1) pressKey(remoteKeys.down);
+    for (let step = 0; step < 5; step += 1) pressKey(remoteKeys.down);
     expect(document.activeElement).toBe(interval());
     expect(list()).toBeNull();
 

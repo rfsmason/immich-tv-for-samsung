@@ -20,6 +20,7 @@ import { mountAlbumPicker } from "../screens/search/album-picker-screen";
 import { mountPeoplePicker } from "../screens/search/people-picker-screen";
 import { mountPlacePicker } from "../screens/search/place-picker-screen";
 import { mountSearchScreen } from "../screens/search/search-screen";
+import { applyContrastTheme } from "../screens/theme";
 import type { AppSettingsStore } from "../storage/app-settings-store";
 import { readEnabledHomeRails } from "../domain/app-settings";
 import type { AlbumService } from "./album-service";
@@ -224,6 +225,7 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
       shell.focusActiveDestinationNav();
     },
     onAppSettingsSaved() {
+      applyContrastTheme(documentRef, settingsStore.load().highContrast);
       ambient.refresh();
     },
     onChooseAmbientAlbum(album) {

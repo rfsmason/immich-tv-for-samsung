@@ -6,9 +6,10 @@ const slideshowIntervalOptions = [5, 8, 12, 20].map((seconds) => ({
   value: String(seconds)
 }));
 
-// Settings > Display: viewer overlays, video autoplay and the slideshow
-// interval.
+// Settings > Display: high contrast, video autoplay, viewer overlays and the
+// slideshow interval.
 export function createDisplaySection(documentRef: Document): SettingsSection {
+  const highContrastInput = requireElement<HTMLInputElement>(documentRef, "high-contrast");
   const autoplayVideosInput = requireElement<HTMLInputElement>(documentRef, "autoplay-videos");
   const showViewerDateInput = requireElement<HTMLInputElement>(documentRef, "show-viewer-date");
   const showViewerExifInput = requireElement<HTMLInputElement>(documentRef, "show-viewer-exif");
@@ -24,10 +25,11 @@ export function createDisplaySection(documentRef: Document): SettingsSection {
     dropdowns: [slideshowInterval],
     id: "display",
     panel: requireElement(documentRef, "settings-panel-display"),
-    firstControl: () => autoplayVideosInput,
+    firstControl: () => highContrastInput,
     readAppSettings() {
       return {
         autoplayVideos: autoplayVideosInput.checked,
+        highContrast: highContrastInput.checked,
         showViewerDate: showViewerDateInput.checked,
         showViewerExif: showViewerExifInput.checked,
         showViewerTime: showViewerTimeInput.checked,
@@ -36,6 +38,7 @@ export function createDisplaySection(documentRef: Document): SettingsSection {
     },
     showAppSettings(settings) {
       autoplayVideosInput.checked = settings.autoplayVideos;
+      highContrastInput.checked = settings.highContrast;
       showViewerDateInput.checked = settings.showViewerDate;
       showViewerExifInput.checked = settings.showViewerExif;
       showViewerTimeInput.checked = settings.showViewerTime;
@@ -44,6 +47,7 @@ export function createDisplaySection(documentRef: Document): SettingsSection {
     snapshot() {
       return {
         autoplayVideos: autoplayVideosInput.checked,
+        highContrast: highContrastInput.checked,
         showViewerDate: showViewerDateInput.checked,
         showViewerExif: showViewerExifInput.checked,
         showViewerTime: showViewerTimeInput.checked,

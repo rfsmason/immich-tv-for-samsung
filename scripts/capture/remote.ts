@@ -137,4 +137,7 @@ export class Remote {
   ok = (expected: string, options: { pauseAfter?: boolean } = {}): Promise<void> =>
     this.press("Enter", expected, options.pauseAfter);
   back = (expected: string): Promise<void> => this.press("Backspace", expected);
+  // The desktop preview maps Page Up/Page Down to the TV's CH ▲ / CH ▼ (ADR 0017).
+  channelUp = (expected: string): Promise<void> => this.press("PageUp", expected);
+  channelDown = (expected: string): Promise<void> => this.press("PageDown", expected);
 }

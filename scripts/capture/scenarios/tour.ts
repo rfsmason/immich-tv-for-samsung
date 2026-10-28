@@ -1,10 +1,25 @@
-import { asset, homeTile, secondAlbum, slideshow, viewer, type Scenario } from "./shared";
+import {
+  asset,
+  homeAlbum,
+  homeTile,
+  reverseOrder,
+  showFaces,
+  slideshow,
+  viewer,
+  type Scenario
+} from "./shared";
+
+// The general tour: the fourth album on Home, its order reversed, then the
+// first photo, a slideshow paused on the fourth photo, its face tags and
+// back to Home.
 export const tour: Scenario = {
   name: "tour",
   video: true,
   async run(context) {
     const { remote, page, interval } = context;
-    await secondAlbum(context);
+    await homeAlbum(context, 3);
+    await reverseOrder(context, "oldest-first");
+    await remote.down(asset);
     await viewer(context);
     let previous = await page.locator("#asset-placeholder-summary").textContent();
     // Start watching immediately, rather than consuming the first interval
@@ -13,7 +28,7 @@ export const tour: Scenario = {
     await remote.visible(`${slideshow}[data-slideshow-state="playing"]`);
     try {
       await context.guide?.highlight(slideshow, "Next photo countdown", "::after");
-      const changes = context.slideChanges ?? 2;
+      const changes = context.slideChanges ?? 3;
       for (let index = 0; index < changes; index += 1) {
         const advance = await page.waitForFunction(
           (value) => {
@@ -34,9 +49,10 @@ export const tour: Scenario = {
     } finally {
       await context.guide?.clear();
     }
+    await showFaces(context);
     await remote.back("[data-asset-index]");
     await remote.visible(asset);
-    await remote.back(homeTile("albums", 1));
+    await remote.back(homeTile("albums", 3));
     await remote.visible("#home-screen");
   }
 };

@@ -5,14 +5,26 @@ import type { TourGuide } from "../tour-guide";
 import type { ScenarioContext } from "./shared";
 import { tour } from "./tour";
 
+const events = vi.hoisted((): string[] => []);
+
 vi.mock("./shared", async (original) => ({
   ...(await original<typeof import("./shared")>()),
-  secondAlbum: vi.fn(),
-  viewer: vi.fn()
+  homeAlbum: vi.fn(async () => {
+    events.push("album");
+  }),
+  reverseOrder: vi.fn(async () => {
+    events.push("reverse");
+  }),
+  showFaces: vi.fn(async () => {
+    events.push("faces");
+  }),
+  viewer: vi.fn(async () => {
+    events.push("viewer");
+  })
 }));
 
-function fixture(changes: 1 | 2) {
-  const events: string[] = [];
+function fixture(changes: 1 | 2 | 3) {
+  events.length = 0;
   const ok = vi.fn(async () => {
     events.push("ok");
   });
@@ -25,6 +37,7 @@ function fixture(changes: 1 | 2) {
     events.push("advance");
     return { jsonValue: async () => `Photo ${count} of 4`, dispose: vi.fn() };
   });
+  const back = vi.fn();
   const highlight = vi.fn();
   const clear = vi.fn();
   const context: ScenarioContext = {
@@ -32,17 +45,37 @@ function fixture(changes: 1 | 2) {
       locator: () => ({ textContent: async () => "Photo 1 of 4" }),
       waitForFunction
     } as unknown as Page,
-    remote: { ok, visible: vi.fn(), ready, back: vi.fn() } as unknown as Remote,
+    remote: { ok, visible: vi.fn(), ready, back, down: vi.fn() } as unknown as Remote,
     guide: { highlight, clear } as unknown as TourGuide,
     capture: { still: vi.fn() },
     interval: 8,
     slideChanges: changes
   };
-  return { context, events, ok, waitForFunction, highlight, clear };
+  return { context, events, ok, back, waitForFunction, highlight, clear };
 }
 
-describe("short slideshow tour", () => {
-  it.each([1, 2] as const)(
+describe("general tour", () => {
+  it("reverses the fourth album, then pauses on the fourth photo, shows faces and returns Home", async () => {
+    const { context, back } = fixture(3);
+    const shared = await import("./shared");
+    await tour.run(context);
+    expect(shared.homeAlbum).toHaveBeenCalledWith(context, 3);
+    expect(shared.reverseOrder).toHaveBeenCalledWith(context, "oldest-first");
+    expect(events.filter((event) => event !== "ready")).toEqual([
+      "album",
+      "reverse",
+      "viewer",
+      "ok",
+      "advance",
+      "advance",
+      "advance",
+      "ok",
+      "faces"
+    ]);
+    expect(back).toHaveBeenLastCalledWith('[data-home-rail="albums"][data-home-index="3"]');
+  });
+
+  it.each([1, 2, 3] as const)(
     "shows %i change(s), then pauses before waiting for rendering",
     async (changes) => {
       const { context, events, ok, waitForFunction, highlight, clear } = fixture(changes);

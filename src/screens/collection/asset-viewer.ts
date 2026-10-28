@@ -3,7 +3,12 @@ import type { AlbumAsset } from "../../domain/album";
 import { readPlaybackButtonsHideMs, type AppSettings } from "../../domain/app-settings";
 import type { ViewingSource } from "../../domain/viewing-history";
 import type { Logger } from "../../logging/logger";
-import { getKeyCode, isMediaPlayPauseKey, remoteKeys } from "../../platform/tizen/keys";
+import {
+  getKeyCode,
+  isMediaPlayPauseKey,
+  readSkipDirection,
+  remoteKeys
+} from "../../platform/tizen/keys";
 import { noPassiveViewing, type PassiveViewing } from "../../platform/tizen/screensaver";
 import type { AppSettingsStore } from "../../storage/app-settings-store";
 import {
@@ -36,6 +41,7 @@ import {
 } from "./viewer-playback";
 import { createViewerControlsAutoHide } from "./viewer-autohide";
 import { createViewerFaces, type ViewerFaces } from "./viewer-faces";
+import { createViewerSeek, type ViewerSeek } from "./viewer-seek";
 import {
   handleSlideshowVideoEnded,
   handleSlideshowVideoError,
@@ -101,6 +107,7 @@ type ViewerContext = AssetViewerOptions &
   ViewerMediaContext & {
     faces: ViewerFaces;
     isOpen(): boolean;
+    seek: ViewerSeek;
     // Re-reads whether anything is passively playing and tells the TV.
     syncPassiveViewing(): void;
   };
@@ -147,6 +154,16 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       return state.viewerPlayback.assetId === assetId && !elements.assetViewerVideo.paused;
     },
     renderCurrent: () => renderAssetViewer(context, collection.index()),
+    seek: createViewerSeek({
+      currentVideoId() {
+        const asset = state.selectedAsset?.asset;
+
+        return collection.isOpen() && asset?.type === "video" && !elements.assetViewerPlayer.hidden
+          ? asset.id
+          : null;
+      },
+      elements
+    }),
     showSlide(index) {
       collection.select(index);
       resetViewerPlayback(elements, state);
@@ -233,7 +250,10 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
     context.syncPassiveViewing();
   };
   const handleViewerPlaybackProgress = () => {
-    updateViewerPlayerProgress(elements);
+    // A seek's target shows until it is committed.
+    if (!context.seek.isPending()) {
+      updateViewerPlayerProgress(elements);
+    }
     handleLivePhotoPlaybackBoundary(context);
   };
   const handleViewerPlaybackTimeUpdate = () => {
@@ -307,10 +327,12 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       elements.assetPlaceholder.hidden = true;
       resetViewerPlayback(elements, state);
       resetViewerImages(context);
+      context.seek.cancel();
       passiveHold.set(false);
       controlsAutoHide.setPassive(false);
     },
     destroy() {
+      context.seek.cancel();
       passiveHold.set(false);
       controlsAutoHide.destroy();
       listeners.forEach(([target, type, listener, capture]) =>
@@ -331,7 +353,8 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
         collection.isOpen() &&
         controlsAutoHide.wake() &&
         keyCode !== remoteKeys.back &&
-        !isMediaPlayPauseKey(keyCode)
+        !isMediaPlayPauseKey(keyCode) &&
+        readSkipDirection(keyCode) === null
       ) {
         event.preventDefault();
         stopEvent(event);
@@ -341,6 +364,8 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       handleAssetViewerKeydown(event, keyCode, context);
     },
     handleKeyup(event) {
+      context.seek.release(getKeyCode(event));
+
       if (!collection.isOpen() || getKeyCode(event) !== remoteKeys.enter) {
         return;
       }
@@ -413,6 +438,21 @@ function handleAssetViewerKeydown(
     return;
   }
 
+  // Rewind and fast forward skip while a video shows, wherever focus is.
+  const skip = readSkipDirection(keyCode);
+
+  if (skip !== null) {
+    if (context.seek.isAvailable()) {
+      event.preventDefault();
+      context.seek.skip(skip, String(keyCode), event.repeat);
+    }
+    return;
+  }
+
+  if (context.seek.isFocused() && handleSeekBarKey(event, keyCode, context)) {
+    return;
+  }
+
   if (keyCode === remoteKeys.left || keyCode === remoteKeys.right) {
     event.preventDefault();
     pauseViewerSlideshow(context);
@@ -423,6 +463,17 @@ function handleAssetViewerKeydown(
   if (keyCode === remoteKeys.up || keyCode === remoteKeys.down) {
     event.preventDefault();
     state.viewerPlayFocusPending = false;
+
+    // Up from Play, the top button, reaches a video's progress bar.
+    if (
+      keyCode === remoteKeys.up &&
+      activeElementOf(elements) === elements.assetViewerPlay &&
+      context.seek.isAvailable()
+    ) {
+      context.seek.focus();
+      return;
+    }
+
     moveViewerControlFocus(keyCode, elements);
     return;
   }
@@ -466,6 +517,38 @@ function handleAssetViewerKeydown(
 
     state.viewerPlayFocusPending = false;
   }
+}
+
+// The focused progress bar: Left/Right skip, OK plays or pauses, Up or Down
+// returns to Play (viewer-seek.ts). Back keeps its usual meaning.
+function handleSeekBarKey(event: KeyboardEvent, keyCode: number, context: ViewerContext): boolean {
+  const { elements, seek } = context;
+
+  if (!seek.isAvailable()) {
+    focusViewerDefaultControl(context);
+    return keyCode !== remoteKeys.back;
+  }
+
+  if (keyCode === remoteKeys.left || keyCode === remoteKeys.right) {
+    event.preventDefault();
+    seek.skip(keyCode === remoteKeys.left ? -1 : 1, String(keyCode), event.repeat);
+    return true;
+  }
+
+  if (keyCode === remoteKeys.enter) {
+    event.preventDefault();
+    stopEvent(event);
+    void toggleViewerPlayback(context);
+    return true;
+  }
+
+  if (keyCode === remoteKeys.up || keyCode === remoteKeys.down) {
+    event.preventDefault();
+    elements.assetViewerPlay.focus();
+    return true;
+  }
+
+  return false;
 }
 
 function moveViewerControlFocus(keyCode: number, elements: ViewerElements): void {

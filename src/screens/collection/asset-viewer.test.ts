@@ -43,6 +43,7 @@ const elementIds: Record<keyof ViewerElements, string> = {
   assetViewerPlayerDuration: "asset-viewer-duration",
   assetViewerPlayerElapsed: "asset-viewer-elapsed",
   assetViewerPlayerProgress: "asset-viewer-progress-fill",
+  assetViewerPlayerSeek: "asset-viewer-seek",
   assetViewerPlayerStatus: "asset-viewer-status",
   assetViewerPlayerStatusText: "asset-viewer-status-text",
   assetViewerSlideshow: "asset-viewer-slideshow",
@@ -568,6 +569,170 @@ describe("slideshow videos in full", () => {
     await vi.advanceTimersByTimeAsync(5000);
     const loaded = f.service.loadAssetViewerStillUrl.mock.calls.map(([item]) => item.id);
     expect(new Set(loaded)).toEqual(new Set(["a", "v", "b"]));
+  });
+});
+
+describe("skipping through a video", () => {
+  const longVideo = (id: string) => asset(id, { durationMs: 600000, type: "video" });
+
+  function videoFixture(assets: AlbumAsset[], settings: Partial<AppSettings> = {}) {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+    const f = fixture(assets, { playbackButtonsHide: "never", ...settings });
+    const element = f.elements.assetViewerVideo;
+    const sets: number[] = [];
+    let time = 100;
+
+    Object.assign(element, { duration: 600 });
+    Object.defineProperty(element, "currentTime", {
+      configurable: true,
+      get: () => time,
+      set: (value: number) => {
+        sets.push(value);
+        time = value;
+      }
+    });
+    const release = (keyCode: number) => {
+      const event = new Event("keyup", { cancelable: true }) as KeyboardEvent;
+      Object.defineProperty(event, "keyCode", { value: keyCode });
+      viewer!.handleKeyup(event);
+    };
+
+    return { ...f, release, sets };
+  }
+
+  it("reaches the progress bar with Up from Play, and returns to Play", () => {
+    const f = videoFixture([longVideo("v"), asset("b")]);
+    const bar = f.elements.assetViewerPlayerSeek;
+
+    viewer!.open(0);
+    expect(f.documentRef.activeElement).toBe(f.elements.assetViewerPlay);
+    f.press(remoteKeys.up);
+    expect(f.documentRef.activeElement).toBe(bar);
+    expect(bar.getAttribute("aria-valuetext")).toBe("Video position, 0:00 of 0:00");
+
+    // Down and Up both return to Play.
+    f.press(remoteKeys.down);
+    expect(f.documentRef.activeElement).toBe(f.elements.assetViewerPlay);
+    f.press(remoteKeys.up);
+    f.press(remoteKeys.up);
+    expect(f.documentRef.activeElement).toBe(f.elements.assetViewerPlay);
+  });
+
+  it("skips with Left/Right on the bar, committing once, instead of moving between items", () => {
+    const f = videoFixture([longVideo("v"), asset("b")]);
+
+    viewer!.open(0);
+    f.press(remoteKeys.up);
+    f.collection.select.mockClear();
+    f.press(remoteKeys.right);
+    f.press(remoteKeys.right);
+    expect(f.elements.assetViewerPlayerElapsed.textContent).toBe("2:00");
+    expect(f.elements.assetViewerPlayerSeek.getAttribute("aria-valuemax")).toBe("600");
+    f.release(remoteKeys.right);
+    expect(f.sets).toEqual([120]);
+    expect(f.collection.select).not.toHaveBeenCalled();
+  });
+
+  it("plays and pauses with OK on the bar", async () => {
+    const f = videoFixture([longVideo("v"), asset("b")]);
+
+    viewer!.open(0);
+    f.press(remoteKeys.up);
+    f.press(remoteKeys.enter);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.play).toHaveBeenCalledTimes(1);
+    expect(f.elements.assetViewerPlay.getAttribute("data-play-state")).toBe("playing");
+    f.press(remoteKeys.enter);
+    expect(f.elements.assetViewerPlay.getAttribute("data-play-state")).toBe("idle");
+  });
+
+  it("keeps Left/Right on the buttons moving between items", () => {
+    const f = videoFixture([longVideo("v"), asset("b")]);
+
+    viewer!.open(0);
+    f.collection.select.mockClear();
+    f.press(remoteKeys.right);
+    expect(f.collection.select).toHaveBeenCalledWith(1);
+    expect(f.sets).toEqual([]);
+  });
+
+  it("skips with rewind and fast forward wherever focus is, while a video shows", () => {
+    const f = videoFixture([longVideo("v"), asset("b")], { playbackButtonsHide: 3 });
+
+    viewer!.open(0);
+    f.elements.assetViewerSlideshow.focus();
+    const event = f.press(remoteKeys.mediaFastForward);
+    expect(event.defaultPrevented).toBe(true);
+    f.release(remoteKeys.mediaFastForward);
+    f.press(remoteKeys.mediaRewind);
+    f.press(remoteKeys.mediaRewind);
+    f.release(remoteKeys.mediaRewind);
+    expect(f.sets).toEqual([110, 90]);
+  });
+
+  it("does nothing with rewind and fast forward on a photo, and offers no bar on a Live Photo", async () => {
+    const f = videoFixture([asset("a"), asset("live", { livePhotoVideoId: "m" })]);
+
+    viewer!.open(0);
+    const event = f.press(remoteKeys.mediaFastForward);
+    expect(event.defaultPrevented).toBe(false);
+    expect(f.sets).toEqual([]);
+
+    f.press(remoteKeys.right);
+    await vi.advanceTimersByTimeAsync(0);
+    f.elements.assetViewerPlay.focus();
+    f.press(remoteKeys.up);
+    expect(f.documentRef.activeElement).not.toBe(f.elements.assetViewerPlayerSeek);
+  });
+
+  it("only shows hidden buttons on the first Left/Right, while fast forward acts at once", async () => {
+    const f = videoFixture([longVideo("v"), asset("b")], { playbackButtonsHide: 3 });
+    const element = f.elements.assetViewerVideo;
+
+    f.play.mockImplementation(async () => {
+      Object.assign(element, { paused: false });
+    });
+    viewer!.open(0);
+    f.press(remoteKeys.up);
+    f.press(remoteKeys.enter);
+    await vi.advanceTimersByTimeAsync(0);
+    element.dispatchEvent(new Event("playing"));
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(f.elements.assetPlaceholder.getAttribute("data-controls")).toBe("hidden");
+
+    f.press(remoteKeys.right);
+    f.release(remoteKeys.right);
+    expect(f.sets).toEqual([]);
+
+    await vi.advanceTimersByTimeAsync(3000);
+    f.press(remoteKeys.mediaFastForward);
+    f.release(remoteKeys.mediaFastForward);
+    expect(f.sets).toEqual([110]);
+  });
+
+  it("seeking to the end of a slideshow's video ends it, and the slideshow moves on", async () => {
+    const f = videoFixture([asset("a"), longVideo("v"), asset("b")], {
+      autoplayVideos: true,
+      slideshowIntervalSeconds: 5
+    });
+    const element = f.elements.assetViewerVideo;
+
+    f.play.mockImplementation(async () => {
+      Object.assign(element, { ended: false, paused: false });
+    });
+    viewer!.open(0);
+    f.press(remoteKeys.mediaPlay);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+
+    for (let press = 0; press < 60; press += 1) f.press(remoteKeys.mediaFastForward);
+    f.release(remoteKeys.mediaFastForward);
+    expect(f.sets[f.sets.length - 1]).toBe(599.5);
+
+    Object.assign(element, { ended: true, paused: true });
+    element.dispatchEvent(new Event("ended"));
+    expect(f.collection.select).toHaveBeenLastCalledWith(2);
   });
 });
 

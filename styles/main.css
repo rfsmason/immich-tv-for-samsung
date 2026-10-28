@@ -1800,6 +1800,16 @@ button.focusable.timeline-marker:focus .timeline-marker-label {
   background: var(--track);
 }
 
+/* The progress bar as a slider (viewer-seek.ts): focused, it thickens and
+   takes a white edge inside the standard focus ring. */
+.asset-viewer-progress:focus {
+  height: 16px;
+  outline: 0;
+  box-shadow:
+    0 0 0 3px var(--focus-border),
+    var(--focus-shadow);
+}
+
 .asset-viewer-buffered,
 .asset-viewer-progress-fill {
   position: absolute;

@@ -19,6 +19,8 @@ export type ViewerElements = {
   assetViewerPlayerDuration: HTMLElement;
   assetViewerPlayerElapsed: HTMLElement;
   assetViewerPlayerProgress: HTMLElement;
+  // The progress bar, a focusable slider while a video shows (viewer-seek.ts).
+  assetViewerPlayerSeek: HTMLElement;
   assetViewerPlayerStatus: HTMLElement;
   assetViewerPlayerStatusText: HTMLElement;
   assetViewerSlideshow: HTMLButtonElement;

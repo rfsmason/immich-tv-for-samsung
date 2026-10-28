@@ -90,12 +90,10 @@ export function showViewerPlayer(elements: ViewerElements, status: string): void
 
 export function hideViewerPlayer(elements: ViewerElements): void {
   elements.assetViewerPlayer.hidden = true;
-  elements.assetViewerPlayerElapsed.textContent = "0:00";
-  elements.assetViewerPlayerDuration.textContent = "0:00";
   elements.assetViewerPlayerStatusText.textContent = "";
   elements.assetViewerPlayerStatus.setAttribute("data-player-state", "idle");
   setViewerProgressWidth(elements.assetViewerPlayerBuffered, 0);
-  setViewerProgressWidth(elements.assetViewerPlayerProgress, 0);
+  renderViewerPlayerPosition(elements, 0, 0);
 }
 
 export function setViewerPlayerStatus(elements: ViewerElements, status: string): void {
@@ -114,12 +112,10 @@ export function showIdleVideoPlayer(elements: ViewerElements): void {
   const videoMetadata = readSelectedVideoPlayerMetadata(elements);
 
   elements.assetViewerPlayer.hidden = false;
-  elements.assetViewerPlayerElapsed.textContent = "0:00";
-  elements.assetViewerPlayerDuration.textContent = "0:00";
   elements.assetViewerPlayerStatusText.textContent = videoMetadata;
   elements.assetViewerPlayerStatus.setAttribute("data-player-state", "paused");
   setViewerProgressWidth(elements.assetViewerPlayerBuffered, 0);
-  setViewerProgressWidth(elements.assetViewerPlayerProgress, 0);
+  renderViewerPlayerPosition(elements, 0, 0);
 }
 
 function readSelectedVideoPlayerMetadata(elements: ViewerElements): string {
@@ -143,13 +139,7 @@ export function updateViewerPlayerProgress(elements: ViewerElements): void {
   const duration = readFiniteMediaTime(video.duration);
   const currentTime = readFiniteMediaTime(video.currentTime);
 
-  elements.assetViewerPlayerElapsed.textContent = formatMediaTime(currentTime);
-  elements.assetViewerPlayerDuration.textContent =
-    duration > 0 ? formatMediaTime(duration) : "0:00";
-  setViewerProgressWidth(
-    elements.assetViewerPlayerProgress,
-    duration > 0 ? currentTime / duration : 0
-  );
+  renderViewerPlayerPosition(elements, currentTime, duration);
   setViewerProgressWidth(elements.assetViewerPlayerBuffered, readBufferedRatio(video, duration));
 
   if (
@@ -159,6 +149,31 @@ export function updateViewerPlayerProgress(elements: ViewerElements): void {
   ) {
     setViewerPlayerStatus(elements, "Playing");
   }
+}
+
+// The elapsed time, the bar's fill and the slider's values for a position,
+// which is the video's, or a seek's target before it is committed.
+export function renderViewerPlayerPosition(
+  elements: Pick<
+    ViewerElements,
+    | "assetViewerPlayerDuration"
+    | "assetViewerPlayerElapsed"
+    | "assetViewerPlayerProgress"
+    | "assetViewerPlayerSeek"
+  >,
+  seconds: number,
+  duration: number
+): void {
+  const elapsed = formatMediaTime(seconds);
+  const total = duration > 0 ? formatMediaTime(duration) : "0:00";
+  const seek = elements.assetViewerPlayerSeek;
+
+  elements.assetViewerPlayerElapsed.textContent = elapsed;
+  elements.assetViewerPlayerDuration.textContent = total;
+  setViewerProgressWidth(elements.assetViewerPlayerProgress, duration > 0 ? seconds / duration : 0);
+  seek.setAttribute("aria-valuemax", String(Math.floor(duration)));
+  seek.setAttribute("aria-valuenow", String(Math.floor(seconds)));
+  seek.setAttribute("aria-valuetext", `Video position, ${elapsed} of ${total}`);
 }
 
 function readViewerPlayerState(status: string): string {
@@ -201,7 +216,7 @@ function setViewerProgressWidth(element: HTMLElement, ratio: number): void {
   element.style.width = `${Math.round(clampedRatio * 1000) / 10}%`;
 }
 
-function readFiniteMediaTime(value: number): number {
+export function readFiniteMediaTime(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 

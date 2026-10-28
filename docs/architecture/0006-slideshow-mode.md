@@ -41,3 +41,4 @@ See [ADR 0019](0019-ambient-mode.md).
 - **They stay** whenever nothing plays: paused, at the end of a slideshow, after a video ends, and when the viewer closes or the app is hidden.
 - **The same passive-viewing state drives both** the TV screensaver hold and the countdown, in `src/screens/collection/viewer-autohide.ts`. The viewer marks itself `data-controls="hidden"`, and the shell hides its rail through `setRailHidden`, so the viewer never reaches into the shell.
 - **Opacity only,** with no layout change, so focus and the remote's moves are unaffected.
+- **Confirmed on the Q950R** on 28 October 2026 (user confirmation), together with the Settings and viewer button restyling.

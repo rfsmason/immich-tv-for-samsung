@@ -57,7 +57,7 @@ The application UI should follow established Smart TV design principles througho
 
 ## Current Scope / Status
 
-The current `main` branch contains Milestones 1-16: deployable Tizen app, Immich connectivity, TypeScript application foundation, albums, bounded album asset browsing, a full-screen asset viewer with image, video, and Live Photo support, slideshow mode with configurable interval, pause/resume, viewer control refinements, settings-screen rationalisation, startup splash, the permanent top-level application shell, the Photos / main timeline experience, Home, Memories, foundation hardening (Chromium 63 compatibility enforcement, request timeouts, lifecycle and exit handling, and the structural refactor), the Home polish (paged Home collections, fixed-focus rails, and See more), People, Search v1, Favorites and Library Views, Personalisation and Navigation, and Search v2.
+The current `main` branch contains Milestones 1-16 and 18: deployable Tizen app, Immich connectivity, TypeScript application foundation, albums, bounded album asset browsing, a full-screen asset viewer with image, video, and Live Photo support, slideshow mode with configurable interval, pause/resume, viewer control refinements, settings-screen rationalisation, startup splash, the permanent top-level application shell, the Photos / main timeline experience, Home, Memories, foundation hardening (Chromium 63 compatibility enforcement, request timeouts, lifecycle and exit handling, and the structural refactor), the Home polish (paged Home collections, fixed-focus rails, and See more), People, Search v1, Favorites and Library Views, Personalisation and Navigation, Search v2, and Ambient / Screensaver Mode.
 
 The application remains read-only.
 
@@ -83,7 +83,9 @@ Milestone 16, Search v2, is complete on `main` (PR #4, see [ADR 0018](architectu
 
 Milestone 17, Shared Content, is parked by the user's decision (26 October 2026): deferred, not cancelled. Its section below and its success criterion stay for later.
 
-Milestone 18, Ambient / Screensaver Mode, is implemented (PR #5, see [ADR 0019](architecture/0019-ambient-mode.md)); physical Q950R acceptance passed on 27 October 2026 (user confirmation), covering every item on PR #5's checklist, including the overnight soak test. Slideshows, playback and ambient mode now hold the TV's own screensaver off as Samsung requires, and an in-app ambient mode plays All photos, your own Favourites, Recent, an album or Memories, started from Settings → Ambient or after an idle time. The roadmap continues after it with Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 19 and 20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
+Milestone 18, Ambient / Screensaver Mode, is complete on `main` (PR #5, see [ADR 0019](architecture/0019-ambient-mode.md)); physical Q950R acceptance passed on 27 October 2026 (user confirmation), covering every item on PR #5's checklist, including the overnight soak test, and the later button restyling and auto-hiding viewer buttons were confirmed on 28 October 2026. Slideshows, playback and ambient mode now hold the TV's own screensaver off as Samsung requires, and an in-app ambient mode plays All photos, your own Favourites, Recent, an album or Memories, started from Settings → Ambient or after an idle time. The roadmap continues after it with Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 19 and 20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
+
+Milestone 18.5, Viewing and Accessibility Polish, is the current implementation milestone. By the user's decision (28 October 2026) it takes priority over Milestones 17 (parked), 19 and 20; it is numbered 18.5, following Milestone 11.5, so nothing is renumbered.
 
 ## Post-MVP Product Roadmap
 
@@ -411,7 +413,7 @@ Carry-over (16 October 2026): Recently Added paging. **Resolved in Milestone 14:
 
 Success criterion: important common library subsets can be browsed without duplicating collection, viewer, or slideshow logic.
 
-### Milestone 15 - Personalisation and Navigation
+### Milestone 15 - Personalisation and Navigation - complete; physical-TV acceptance passed 26 October 2026
 
 **Status:** complete on `main` (ADR 0017); physical-TV acceptance passed 26 October 2026.
 
@@ -480,7 +482,7 @@ Shared content should integrate naturally with the existing Albums/Home/asset br
 
 Success criterion: content legitimately available to the logged-in Immich user can be discovered and viewed consistently regardless of ownership.
 
-### Milestone 18 - Ambient / Screensaver Mode
+### Milestone 18 - Ambient / Screensaver Mode - complete; physical-TV acceptance passed 27 October 2026
 
 Build an ambient photo-frame/screensaver-style experience on top of the existing slideshow/viewer infrastructure.
 
@@ -492,7 +494,7 @@ Investigate Samsung/Tizen lifecycle and screensaver restrictions before deciding
 
 Success criterion: the television can reliably display Immich content for an extended period without memory growth, crashes, or repeated manual intervention.
 
-**Status:** implemented on 26 October 2026 ([ADR 0019](architecture/0019-ambient-mode.md)); physical Q950R acceptance passed on 27 October 2026 (user confirmation), including the overnight soak test and the idle-timer fix. The investigation found no public route for a third-party app to be the TV's screensaver or Ambient Mode app, so ambient mode is in-app.
+**Status:** complete on `main` (PR #5, [ADR 0019](architecture/0019-ambient-mode.md)); physical Q950R acceptance passed on 27 October 2026 (user confirmation), including the overnight soak test and the idle-timer fix. The investigation found no public route for a third-party app to be the TV's screensaver or Ambient Mode app, so ambient mode is in-app.
 
 #### Concrete scope (26 October 2026)
 
@@ -516,6 +518,21 @@ Success criterion: the television can reliably display Immich content for an ext
 - **Long runs:** failed assets are skipped (bounded); an unreachable server shows a calm message and retries with capped backoff; no unbounded arrays, listeners, timers or object URLs.
 - **Settings → Ambient:** source, album, order, interval, include videos, show clock, show photo details, start after idle, stop after, and Start now, persisted in `AppSettings` with a schema bump.
 - No new Home rail and no new left-rail destination.
+
+### Milestone 18.5 - Viewing and Accessibility Polish
+
+Four improvements to viewing and accessibility, chosen by the user, which take priority over Milestones 17 (parked), 19 and 20 (user decision, 28 October 2026):
+
+- **High contrast.** A Settings → Display → High contrast option: white text on solid dark surfaces, no background picture, a visible edge on every control, a two-colour focus ring that shows on any background including photos, and solid backing behind text over photos. Colours move onto named tokens first, so the theme only overrides tokens. It applies before the splash's first paint. The light-blue default look stays the default.
+- **When the playback buttons fade.** Settings → Display → Hide playback buttons: 3, 5 (default), 10 or 15 seconds, or Never (WCAG 2.2.1).
+- **Slideshows play videos in full** when "Autoplay videos" is on: a video plays to its end with sound, then the slideshow moves on. Photos keep the interval and Live Photos stay stills. A video that fails or stalls is skipped. With autoplay off, nothing changes.
+- **Skipping through a video.** The progress bar becomes a focusable slider: Left/Right skip 10 s, speeding up to 30 s and 60 s steps when held, and the seek is committed when the keys stop. Rewind and fast-forward keys skip while a video shows. Left/Right on the picture keep moving between items.
+
+Constraints: ADR 0012's patterns (Samsung APIs under `src/platform/tizen/`, Settings sections under `src/screens/settings/`, schema bumps with migration tests, no second media engine); seeking in its own module, with `asset-viewer.ts` kept under about 920 lines; no new framework or dependency.
+
+Success criterion: on the physical Q950R, high contrast is readable and its focus unmistakable from the sofa, the buttons fade when chosen, a slideshow plays its videos through, and a video can be skipped through with the remote.
+
+**Status:** current implementation milestone.
 
 ### Milestone 19 - Consumer-Friendly Pairing and Authentication
 

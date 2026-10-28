@@ -410,20 +410,41 @@ function showLivePhotoStill(elements: ViewerElements): void {
 // Play or pause the selected video or Live Photo (the Play button). Playing
 // pauses any slideshow first.
 export async function toggleViewerPlayback(context: ViewerMediaContext): Promise<void> {
-  const { collection, elements, state } = context;
+  const { elements, state } = context;
   const asset = state.selectedAsset?.asset;
 
   if (!asset || !isViewerPlayableAsset(asset)) {
     return;
   }
 
+  // A video the slideshow plays in full pauses with the slideshow.
+  const slideshowVideo =
+    state.viewerSlideshow.playing && state.viewerSlideshow.videoAssetId === asset.id;
+
   context.pauseSlideshow();
+
+  if (slideshowVideo) {
+    return;
+  }
 
   if (
     state.viewerPlayback.assetId === asset.id &&
     elements.assetViewerPlay.getAttribute("data-play-state") === "playing"
   ) {
     pauseViewerPlayback(elements, state, asset);
+    return;
+  }
+
+  await startViewerMedia(context);
+}
+
+// Plays the selected video or Live Photo, continuing where it was paused,
+// without touching the slideshow; the slideshow uses it for its videos.
+export async function startViewerMedia(context: ViewerMediaContext): Promise<void> {
+  const { collection, elements, state } = context;
+  const asset = state.selectedAsset?.asset;
+
+  if (!asset || !isViewerPlayableAsset(asset)) {
     return;
   }
 

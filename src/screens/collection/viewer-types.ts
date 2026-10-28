@@ -46,7 +46,12 @@ export type ViewerState = {
   };
   viewerSlideshow: {
     playing: boolean;
+    // A slideshow stall check while it plays a video in full (ADR 0006).
+    stallTimerId: number | null;
     timerId: number | null;
+    // The video the slideshow is playing in full, kept while paused so
+    // resuming continues it.
+    videoAssetId: string | null;
   };
 };
 

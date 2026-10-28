@@ -262,6 +262,7 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
   const collectionScreen = mountAlbumDetailScreen({
     documentRef,
     loadFeedPage: (feed, page) => loadFeedPage(feed, page),
+    logger,
     onAssetViewed(asset, source) {
       void viewingHistory.record(asset, source);
     },

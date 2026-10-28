@@ -2,6 +2,7 @@ import type { AlbumService } from "../../app/album-service";
 import type { AlbumAsset } from "../../domain/album";
 import { readPlaybackButtonsHideMs, type AppSettings } from "../../domain/app-settings";
 import type { ViewingSource } from "../../domain/viewing-history";
+import type { Logger } from "../../logging/logger";
 import { getKeyCode, isMediaPlayPauseKey, remoteKeys } from "../../platform/tizen/keys";
 import { noPassiveViewing, type PassiveViewing } from "../../platform/tizen/screensaver";
 import type { AppSettingsStore } from "../../storage/app-settings-store";
@@ -27,6 +28,7 @@ import {
   showIdleVideoPlayer,
   showViewerLoading,
   showViewerMessage,
+  startViewerMedia,
   suspendViewerPlayback,
   toggleViewerPlayback,
   updateViewerPlayerProgress,
@@ -35,6 +37,9 @@ import {
 import { createViewerControlsAutoHide } from "./viewer-autohide";
 import { createViewerFaces, type ViewerFaces } from "./viewer-faces";
 import {
+  handleSlideshowVideoEnded,
+  handleSlideshowVideoError,
+  handleSlideshowVideoProgress,
   handleViewerSlideshowMediaKey,
   pauseViewerSlideshow,
   renderViewerSlideshowControl,
@@ -56,6 +61,7 @@ export type ViewerService = Pick<
 type AssetViewerOptions = {
   collection: ViewerCollection;
   elements: ViewerElements;
+  logger?: Pick<Logger, "info">;
   onAssetViewed?(asset: AlbumAsset, source: ViewingSource): void;
   // Told when the viewer's buttons hide during passive viewing and show
   // again, so the screen around the viewer can step aside too.
@@ -134,6 +140,12 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
     }),
     isOpen: () => collection.isOpen(),
     pauseSlideshow: () => pauseViewerSlideshow(context),
+    async playSlideVideo() {
+      const assetId = state.selectedAsset?.asset.id;
+
+      await startViewerMedia(context);
+      return state.viewerPlayback.assetId === assetId && !elements.assetViewerVideo.paused;
+    },
     renderCurrent: () => renderAssetViewer(context, collection.index()),
     showSlide(index) {
       collection.select(index);
@@ -151,7 +163,7 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       viewerImages: createAssetViewerImageState(),
       viewerPlayFocusPending: false,
       viewerPlayback: createAssetViewerPlaybackState(),
-      viewerSlideshow: { playing: false, timerId: null }
+      viewerSlideshow: { playing: false, stallTimerId: null, timerId: null, videoAssetId: null }
     },
     syncPassiveViewing() {
       const video = elements.assetViewerVideo;
@@ -217,11 +229,19 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
   const handleViewerPlaybackEnded = () => {
     handleViewerPlaybackEndedEvent(context);
     context.faces.sync();
+    handleSlideshowVideoEnded(context);
     context.syncPassiveViewing();
   };
   const handleViewerPlaybackProgress = () => {
     updateViewerPlayerProgress(elements);
     handleLivePhotoPlaybackBoundary(context);
+  };
+  const handleViewerPlaybackTimeUpdate = () => {
+    handleViewerPlaybackProgress();
+    handleSlideshowVideoProgress(context);
+  };
+  const handleViewerPlaybackError = () => {
+    handleSlideshowVideoError(context);
   };
   const handleViewerPlaybackStateChange = () => {
     handleLivePhotoPlaybackBoundary(context);
@@ -266,7 +286,8 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
     [elements.assetViewerVideo, "pause", handleViewerPlaybackStateChange],
     [elements.assetViewerVideo, "playing", handleViewerPlaybackStateChange],
     [elements.assetViewerVideo, "progress", handleViewerPlaybackProgress],
-    [elements.assetViewerVideo, "timeupdate", handleViewerPlaybackProgress],
+    [elements.assetViewerVideo, "error", handleViewerPlaybackError],
+    [elements.assetViewerVideo, "timeupdate", handleViewerPlaybackTimeUpdate],
     [elements.assetViewerVideo, "waiting", handleViewerPlaybackWaiting]
   ];
 

@@ -7,6 +7,7 @@ import { remoteKeys } from "../../platform/tizen/keys";
 import { createPassiveViewing } from "../../platform/tizen/screensaver";
 import { TestDocument, type TestElement } from "../../test/document";
 import { createAssetViewer, type AssetViewerController } from "./asset-viewer";
+import { slideshowVideoStallMs } from "./viewer-slideshow";
 import type { ViewerCollection, ViewerElements } from "./viewer-types";
 
 // The viewer driven by a fake ordered collection, as People, Search or
@@ -56,7 +57,8 @@ let viewer: AssetViewerController | null = null;
 function fixture(
   assets: AlbumAsset[],
   settings: Partial<AppSettings> = {},
-  loadAssetFaces: (assetId: string) => Promise<AssetFace[]> = async () => []
+  loadAssetFaces: (assetId: string) => Promise<AssetFace[]> = async () => [],
+  logger?: { info(message: string, details?: unknown): void }
 ) {
   const documentRef = new TestDocument();
   let storedSettings: AppSettings = { ...defaultAppSettings, ...settings };
@@ -112,6 +114,7 @@ function fixture(
   viewer = createAssetViewer({
     collection,
     elements,
+    logger,
     onAssetViewed,
     onControlsHiddenChange,
     passiveViewing: createPassiveViewing({
@@ -378,6 +381,193 @@ describe("asset viewer over any ordered collection", () => {
     expect(f.elements.assetPlaceholder.hidden).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
     expect(f.service.revokeImageUrl).toHaveBeenCalledWith("blob:a");
+  });
+});
+
+describe("slideshow videos in full", () => {
+  const video = (id: string) => asset(id, { durationMs: 30000, type: "video" });
+  const state = (f: ReturnType<typeof fixture>) =>
+    f.elements.assetViewerSlideshow.getAttribute("data-slideshow-state");
+
+  // The video element starts and stops as a browser's would.
+  function playable(f: ReturnType<typeof fixture>) {
+    const element = f.elements.assetViewerVideo;
+
+    f.play.mockImplementation(async () => {
+      Object.assign(element, { ended: false, paused: false });
+    });
+    f.pause.mockImplementation(() => {
+      Object.assign(element, { paused: true });
+    });
+
+    return {
+      element,
+      end() {
+        Object.assign(element, { ended: true, paused: true });
+        element.dispatchEvent(new Event("ended"));
+      },
+      tick() {
+        element.dispatchEvent(new Event("timeupdate"));
+      }
+    };
+  }
+
+  async function slideshow(assets: AlbumAsset[], settings: Partial<AppSettings> = {}) {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+    const logger = { info: vi.fn() };
+    const f = fixture(
+      assets,
+      { autoplayVideos: true, slideshowIntervalSeconds: 5, ...settings },
+      undefined,
+      logger
+    );
+    const media = playable(f);
+
+    viewer!.open(0);
+    f.press(remoteKeys.mediaPlay);
+    await vi.advanceTimersByTimeAsync(0);
+
+    return { f, logger, media };
+  }
+
+  it("plays a video to its end with sound, then moves on; photos keep the interval", async () => {
+    const { f, media } = await slideshow([asset("a"), video("v"), asset("b")]);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+    expect(f.play).toHaveBeenCalledTimes(1);
+    expect(media.element.muted).not.toBe(true);
+
+    // Longer than the interval: still on the video while it plays.
+    for (let second = 0; second < 15; second += 1) {
+      await vi.advanceTimersByTimeAsync(1000);
+      media.tick();
+    }
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+
+    media.end();
+    expect(f.collection.select).toHaveBeenLastCalledWith(2);
+    expect(state(f)).toBe("playing");
+  });
+
+  it("keeps Live Photos as stills on the interval", async () => {
+    const { f } = await slideshow([
+      asset("a"),
+      asset("live", { livePhotoVideoId: "m" }),
+      asset("b")
+    ]);
+
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(2);
+    expect(f.play).not.toHaveBeenCalled();
+  });
+
+  it("pauses and resumes the video with the slideshow, continuing where it was", async () => {
+    const { f, media } = await slideshow([video("v"), asset("b")]);
+
+    expect(f.play).toHaveBeenCalledTimes(1);
+    const source = media.element.src;
+
+    f.press(remoteKeys.mediaPause);
+    expect(state(f)).toBe("paused");
+    expect(f.pause).toHaveBeenCalled();
+    expect(media.element.paused).toBe(true);
+
+    f.press(remoteKeys.mediaPlay);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(state(f)).toBe("playing");
+    expect(f.play).toHaveBeenCalledTimes(2);
+    expect(media.element.src).toBe(source);
+    expect(media.element.paused).toBe(false);
+  });
+
+  it("pauses the slideshow with Play on the video, and then Left moves as usual", async () => {
+    // The buttons stay, so the first OK acts.
+    const { f } = await slideshow([asset("a"), video("v"), asset("b")], {
+      playbackButtonsHide: "never"
+    });
+
+    await vi.advanceTimersByTimeAsync(5000);
+    f.elements.assetViewerPlay.focus();
+    f.press(remoteKeys.enter);
+    expect(state(f)).toBe("paused");
+    expect(f.elements.assetViewerVideo.paused).toBe(true);
+
+    f.press(remoteKeys.left);
+    expect(f.collection.select).toHaveBeenLastCalledWith(0);
+  });
+
+  it("skips a video that doesn't start after the interval, logging once", async () => {
+    const { f, logger } = await slideshow([asset("a"), video("v"), asset("b")]);
+
+    f.play.mockRejectedValueOnce(new Error("not supported"));
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f.collection.select).toHaveBeenLastCalledWith(2);
+    expect(logger.info).toHaveBeenCalledTimes(1);
+    expect(logger.info).toHaveBeenCalledWith("Slideshow skipped a video.", {
+      assetId: "v",
+      reason: "did not start"
+    });
+  });
+
+  it("skips a video that reports an error after the interval", async () => {
+    const { f, logger, media } = await slideshow([video("v"), asset("b")]);
+
+    media.element.dispatchEvent(new Event("error"));
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+    expect(logger.info).toHaveBeenCalledWith("Slideshow skipped a video.", {
+      assetId: "v",
+      reason: "error"
+    });
+  });
+
+  it("skips a video that stops making progress for the stall limit", async () => {
+    const { f, logger, media } = await slideshow([video("v"), asset("b")]);
+
+    await vi.advanceTimersByTimeAsync(10000);
+    media.tick();
+    await vi.advanceTimersByTimeAsync(slideshowVideoStallMs - 1);
+    expect(f.collection.select).not.toHaveBeenCalledWith(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+    expect(logger.info).toHaveBeenCalledWith("Slideshow skipped a video.", {
+      assetId: "v",
+      reason: "stalled"
+    });
+  });
+
+  it("with autoplay off, shows a video's poster for the interval as before", async () => {
+    const { f } = await slideshow([asset("a"), video("v"), asset("b")], { autoplayVideos: false });
+
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(2);
+    expect(f.play).not.toHaveBeenCalled();
+  });
+
+  it("holds the TV screensaver off without a gap, and pauses at the end of the collection", async () => {
+    const { f, media } = await slideshow([asset("a"), video("v")]);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    media.tick();
+    media.end();
+    expect(f.screensaver()).toEqual([0, 1]);
+    expect(state(f)).toBe("paused");
+    expect(f.collection.loadMore).toHaveBeenCalled();
+  });
+
+  it("keeps preloading to the viewer's window while a video plays", async () => {
+    const assets = [asset("a"), video("v"), asset("b"), asset("c"), asset("d"), asset("e")];
+    const { f } = await slideshow(assets);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    const loaded = f.service.loadAssetViewerStillUrl.mock.calls.map(([item]) => item.id);
+    expect(new Set(loaded)).toEqual(new Set(["a", "v", "b"]));
   });
 });
 

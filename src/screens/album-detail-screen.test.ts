@@ -37,7 +37,7 @@ describe("album detail viewer", () => {
     vi.useRealTimers();
   });
 
-  it("does not restart video autoplay when slideshow starts over a cached video poster", async () => {
+  it("continues an autoplayed video, without reloading it, when a slideshow starts over it", async () => {
     const documentRef = new TestDocument();
     const loadAssetPlaybackUrl = vi.fn(() => "blob:video");
     const video = documentRef.getElementById("asset-viewer-video");
@@ -86,8 +86,11 @@ describe("album detail viewer", () => {
     expect(
       documentRef.getElementById("asset-viewer-slideshow").getAttribute("data-slideshow-state")
     ).toBe("playing");
+    // The slideshow plays the video in full (ADR 0006): same stream, resumed.
     expect(loadAssetPlaybackUrl).toHaveBeenCalledTimes(1);
-    expect(play).toHaveBeenCalledTimes(1);
+    expect(video.getAttribute("src") || (video as unknown as HTMLVideoElement).src).toBe(
+      "blob:video"
+    );
     controller.destroy();
   });
 });

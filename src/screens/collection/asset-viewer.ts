@@ -1,8 +1,14 @@
 import type { AlbumService } from "../../app/album-service";
 import type { AlbumAsset } from "../../domain/album";
-import type { AppSettings } from "../../domain/app-settings";
+import { readPlaybackButtonsHideMs, type AppSettings } from "../../domain/app-settings";
 import type { ViewingSource } from "../../domain/viewing-history";
-import { getKeyCode, isMediaPlayPauseKey, remoteKeys } from "../../platform/tizen/keys";
+import type { Logger } from "../../logging/logger";
+import {
+  getKeyCode,
+  isMediaPlayPauseKey,
+  readSkipDirection,
+  remoteKeys
+} from "../../platform/tizen/keys";
 import { noPassiveViewing, type PassiveViewing } from "../../platform/tizen/screensaver";
 import type { AppSettingsStore } from "../../storage/app-settings-store";
 import {
@@ -15,27 +21,31 @@ import {
   shouldAutoplayViewerVideo
 } from "../asset-viewer-window";
 import { clearStill, showStill } from "../media-elements";
-import { isLivePhotoAsset, isViewerPlayableAsset, readAssetTypeLabel } from "./asset-presentation";
+import { isViewerPlayableAsset, readAssetTypeLabel } from "./asset-presentation";
 import {
   createAssetViewerPlaybackState,
   handleLivePhotoPlaybackBoundary,
   handleViewerPlaybackEndedEvent,
   hideViewerPlayer,
-  pauseViewerPlayback,
-  playViewerVideoElement,
   renderViewerPlayControl,
   resetViewerPlayback,
-  setViewerPlayControlState,
   setViewerPlayerStatus,
   showIdleVideoPlayer,
   showViewerLoading,
   showViewerMessage,
-  showViewerPlayer,
-  updateViewerPlayerProgress
+  startViewerMedia,
+  suspendViewerPlayback,
+  toggleViewerPlayback,
+  updateViewerPlayerProgress,
+  type ViewerMediaContext
 } from "./viewer-playback";
 import { createViewerControlsAutoHide } from "./viewer-autohide";
 import { createViewerFaces, type ViewerFaces } from "./viewer-faces";
+import { createViewerSeek, type ViewerSeek } from "./viewer-seek";
 import {
+  handleSlideshowVideoEnded,
+  handleSlideshowVideoError,
+  handleSlideshowVideoProgress,
   handleViewerSlideshowMediaKey,
   pauseViewerSlideshow,
   renderViewerSlideshowControl,
@@ -57,6 +67,7 @@ export type ViewerService = Pick<
 type AssetViewerOptions = {
   collection: ViewerCollection;
   elements: ViewerElements;
+  logger?: Pick<Logger, "info">;
   onAssetViewed?(asset: AlbumAsset, source: ViewingSource): void;
   // Told when the viewer's buttons hide during passive viewing and show
   // again, so the screen around the viewer can step aside too.
@@ -92,9 +103,11 @@ export type AssetViewerController = {
 };
 
 type ViewerContext = AssetViewerOptions &
-  SlideshowContext & {
+  SlideshowContext &
+  ViewerMediaContext & {
     faces: ViewerFaces;
     isOpen(): boolean;
+    seek: ViewerSeek;
     // Re-reads whether anything is passively playing and tells the TV.
     syncPassiveViewing(): void;
   };
@@ -103,6 +116,7 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
   const { collection, elements } = options;
   const passiveHold = (options.passiveViewing || noPassiveViewing).createHold();
   const controlsAutoHide = createViewerControlsAutoHide({
+    hideAfterMs: () => readPlaybackButtonsHideMs(options.settingsStore.load()),
     onHiddenChange(hidden) {
       if (hidden) {
         elements.assetPlaceholder.setAttribute("data-controls", "hidden");
@@ -132,7 +146,24 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       settingsStore: options.settingsStore
     }),
     isOpen: () => collection.isOpen(),
+    pauseSlideshow: () => pauseViewerSlideshow(context),
+    async playSlideVideo() {
+      const assetId = state.selectedAsset?.asset.id;
+
+      await startViewerMedia(context);
+      return state.viewerPlayback.assetId === assetId && !elements.assetViewerVideo.paused;
+    },
     renderCurrent: () => renderAssetViewer(context, collection.index()),
+    seek: createViewerSeek({
+      currentVideoId() {
+        const asset = state.selectedAsset?.asset;
+
+        return collection.isOpen() && asset?.type === "video" && !elements.assetViewerPlayer.hidden
+          ? asset.id
+          : null;
+      },
+      elements
+    }),
     showSlide(index) {
       collection.select(index);
       resetViewerPlayback(elements, state);
@@ -149,7 +180,7 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       viewerImages: createAssetViewerImageState(),
       viewerPlayFocusPending: false,
       viewerPlayback: createAssetViewerPlaybackState(),
-      viewerSlideshow: { playing: false, timerId: null }
+      viewerSlideshow: { playing: false, stallTimerId: null, timerId: null, videoAssetId: null }
     },
     syncPassiveViewing() {
       const video = elements.assetViewerVideo;
@@ -215,11 +246,22 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
   const handleViewerPlaybackEnded = () => {
     handleViewerPlaybackEndedEvent(context);
     context.faces.sync();
+    handleSlideshowVideoEnded(context);
     context.syncPassiveViewing();
   };
   const handleViewerPlaybackProgress = () => {
-    updateViewerPlayerProgress(elements);
+    // A seek's target shows until it is committed.
+    if (!context.seek.isPending()) {
+      updateViewerPlayerProgress(elements);
+    }
     handleLivePhotoPlaybackBoundary(context);
+  };
+  const handleViewerPlaybackTimeUpdate = () => {
+    handleViewerPlaybackProgress();
+    handleSlideshowVideoProgress(context);
+  };
+  const handleViewerPlaybackError = () => {
+    handleSlideshowVideoError(context);
   };
   const handleViewerPlaybackStateChange = () => {
     handleLivePhotoPlaybackBoundary(context);
@@ -264,7 +306,8 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
     [elements.assetViewerVideo, "pause", handleViewerPlaybackStateChange],
     [elements.assetViewerVideo, "playing", handleViewerPlaybackStateChange],
     [elements.assetViewerVideo, "progress", handleViewerPlaybackProgress],
-    [elements.assetViewerVideo, "timeupdate", handleViewerPlaybackProgress],
+    [elements.assetViewerVideo, "error", handleViewerPlaybackError],
+    [elements.assetViewerVideo, "timeupdate", handleViewerPlaybackTimeUpdate],
     [elements.assetViewerVideo, "waiting", handleViewerPlaybackWaiting]
   ];
 
@@ -284,10 +327,12 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       elements.assetPlaceholder.hidden = true;
       resetViewerPlayback(elements, state);
       resetViewerImages(context);
+      context.seek.cancel();
       passiveHold.set(false);
       controlsAutoHide.setPassive(false);
     },
     destroy() {
+      context.seek.cancel();
       passiveHold.set(false);
       controlsAutoHide.destroy();
       listeners.forEach(([target, type, listener, capture]) =>
@@ -308,7 +353,8 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
         collection.isOpen() &&
         controlsAutoHide.wake() &&
         keyCode !== remoteKeys.back &&
-        !isMediaPlayPauseKey(keyCode)
+        !isMediaPlayPauseKey(keyCode) &&
+        readSkipDirection(keyCode) === null
       ) {
         event.preventDefault();
         stopEvent(event);
@@ -318,6 +364,8 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       handleAssetViewerKeydown(event, keyCode, context);
     },
     handleKeyup(event) {
+      context.seek.release(getKeyCode(event));
+
       if (!collection.isOpen() || getKeyCode(event) !== remoteKeys.enter) {
         return;
       }
@@ -390,6 +438,21 @@ function handleAssetViewerKeydown(
     return;
   }
 
+  // Rewind and fast forward skip while a video shows, wherever focus is.
+  const skip = readSkipDirection(keyCode);
+
+  if (skip !== null) {
+    if (context.seek.isAvailable()) {
+      event.preventDefault();
+      context.seek.skip(skip, String(keyCode), event.repeat);
+    }
+    return;
+  }
+
+  if (context.seek.isFocused() && handleSeekBarKey(event, keyCode, context)) {
+    return;
+  }
+
   if (keyCode === remoteKeys.left || keyCode === remoteKeys.right) {
     event.preventDefault();
     pauseViewerSlideshow(context);
@@ -400,6 +463,17 @@ function handleAssetViewerKeydown(
   if (keyCode === remoteKeys.up || keyCode === remoteKeys.down) {
     event.preventDefault();
     state.viewerPlayFocusPending = false;
+
+    // Up from Play, the top button, reaches a video's progress bar.
+    if (
+      keyCode === remoteKeys.up &&
+      activeElementOf(elements) === elements.assetViewerPlay &&
+      context.seek.isAvailable()
+    ) {
+      context.seek.focus();
+      return;
+    }
+
     moveViewerControlFocus(keyCode, elements);
     return;
   }
@@ -443,6 +517,38 @@ function handleAssetViewerKeydown(
 
     state.viewerPlayFocusPending = false;
   }
+}
+
+// The focused progress bar: Left/Right skip, OK plays or pauses, Up or Down
+// returns to Play (viewer-seek.ts). Back keeps its usual meaning.
+function handleSeekBarKey(event: KeyboardEvent, keyCode: number, context: ViewerContext): boolean {
+  const { elements, seek } = context;
+
+  if (!seek.isAvailable()) {
+    focusViewerDefaultControl(context);
+    return keyCode !== remoteKeys.back;
+  }
+
+  if (keyCode === remoteKeys.left || keyCode === remoteKeys.right) {
+    event.preventDefault();
+    seek.skip(keyCode === remoteKeys.left ? -1 : 1, String(keyCode), event.repeat);
+    return true;
+  }
+
+  if (keyCode === remoteKeys.enter) {
+    event.preventDefault();
+    stopEvent(event);
+    void toggleViewerPlayback(context);
+    return true;
+  }
+
+  if (keyCode === remoteKeys.up || keyCode === remoteKeys.down) {
+    event.preventDefault();
+    elements.assetViewerPlay.focus();
+    return true;
+  }
+
+  return false;
 }
 
 function moveViewerControlFocus(keyCode: number, elements: ViewerElements): void {
@@ -672,121 +778,6 @@ function focusViewerDefaultControl(context: ViewerContext): void {
 
   state.viewerPlayFocusPending = false;
   elements.assetViewerSlideshow.focus();
-}
-
-async function toggleViewerPlayback(context: ViewerContext): Promise<void> {
-  const { collection, elements, state } = context;
-  const asset = state.selectedAsset?.asset;
-
-  if (!asset || !isViewerPlayableAsset(asset)) {
-    return;
-  }
-
-  pauseViewerSlideshow(context);
-
-  if (
-    state.viewerPlayback.assetId === asset.id &&
-    elements.assetViewerPlay.getAttribute("data-play-state") === "playing"
-  ) {
-    pauseViewerPlayback(elements, state, asset);
-    return;
-  }
-
-  if (state.viewerPlayback.assetId === asset.id && state.viewerPlayback.url) {
-    await playViewerVideoElement(context, asset, state.viewerPlayback.url);
-    return;
-  }
-
-  resetViewerPlayback(elements, state);
-  state.viewerPlayback.assetId = asset.id;
-  state.viewerPlayback.mediaKind = isLivePhotoAsset(asset) ? "live-photo" : "video";
-  state.viewerPlayback.requestId += 1;
-  const requestId = state.viewerPlayback.requestId;
-
-  setViewerPlayControlState(elements, asset, "loading");
-
-  if (asset.type === "video") {
-    showViewerPlayer(elements, "Loading");
-    showViewerLoading(elements);
-  }
-
-  try {
-    const url = context.service.loadAssetPlaybackUrl(asset);
-
-    if (!url) {
-      setViewerPlayControlState(elements, asset, "idle");
-      return;
-    }
-
-    if (
-      !collection.isOpen() ||
-      state.selectedAsset?.asset.id !== asset.id ||
-      state.viewerPlayback.requestId !== requestId ||
-      collection.isHidden()
-    ) {
-      return;
-    }
-
-    state.viewerPlayback.url = url;
-    await playViewerVideoElement(context, asset, url);
-  } catch {
-    if (
-      state.viewerPlayback.requestId !== requestId ||
-      state.selectedAsset?.asset.id !== asset.id
-    ) {
-      return;
-    }
-
-    resetViewerPlayback(elements, state);
-    renderViewerPlayControl(
-      elements,
-      asset,
-      asset.type === "video" || Boolean(state.viewerImages.imageUrls[asset.id])
-    );
-    showViewerMessage(
-      elements,
-      asset.type === "video" ? "Could not play this video." : "Could not play this live photo."
-    );
-  }
-}
-
-function suspendViewerPlayback(context: ViewerContext): void {
-  const { collection, elements, state } = context;
-
-  if (state.viewerSlideshow.playing) {
-    pauseViewerSlideshow(context);
-  }
-
-  const asset = state.selectedAsset?.asset;
-
-  if (!collection.isOpen() || !asset || state.viewerPlayback.assetId !== asset.id) {
-    return;
-  }
-
-  const playState = elements.assetViewerPlay.getAttribute("data-play-state");
-
-  if (playState === "playing") {
-    pauseViewerPlayback(elements, state, asset);
-    return;
-  }
-
-  if (playState === "loading") {
-    // A pending start would otherwise begin playing after the app returns.
-    const stillUrl = state.viewerImages.imageUrls[asset.id];
-
-    resetViewerPlayback(elements, state);
-    renderViewerPlayControl(elements, asset, asset.type === "video" || Boolean(stillUrl));
-
-    // Restore the still directly: re-rendering it would re-run video autoplay.
-    if (stillUrl) {
-      elements.assetViewerImage.src = stillUrl;
-      elements.assetViewerImage.hidden = false;
-      elements.assetViewerPlaceholder.hidden = true;
-      if (asset.type === "video") {
-        showIdleVideoPlayer(elements);
-      }
-    }
-  }
 }
 
 function loadViewerImagesNearFocus(context: ViewerContext): void {

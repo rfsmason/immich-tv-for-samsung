@@ -109,14 +109,17 @@ async function fixture() {
     "window",
     // main.ts waits for the splash to be drawn; run those callbacks at once.
     Object.assign(new EventTarget(), {
-      localStorage: {},
+      localStorage: { getItem: () => null, setItem() {} },
       fetch,
       requestAnimationFrame: (callback: () => void) => callback(),
       scrollTo: vi.fn(),
       setTimeout: (callback: () => void) => callback()
     })
   );
-  vi.stubGlobal("document", { body: { scrollTop: 0 }, documentElement: { scrollTop: 0 } });
+  vi.stubGlobal("document", {
+    body: { scrollTop: 0 },
+    documentElement: { removeAttribute: vi.fn(), scrollTop: 0, setAttribute: vi.fn() }
+  });
   let active: TopLevelDestinationId | null = null;
   mocks.mountShell.mockImplementation((raw) => {
     const options = raw as Parameters<typeof mountApplicationShell>[0];

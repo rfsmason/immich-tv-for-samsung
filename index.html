@@ -213,7 +213,17 @@
               </span>
               <span id="asset-viewer-duration">0:00</span>
             </div>
-            <div class="asset-viewer-progress" aria-hidden="true">
+            <div
+              id="asset-viewer-seek"
+              class="asset-viewer-progress"
+              tabindex="-1"
+              role="slider"
+              aria-label="Video position"
+              aria-valuemin="0"
+              aria-valuemax="0"
+              aria-valuenow="0"
+              aria-valuetext="Video position, 0:00 of 0:00"
+            >
               <span id="asset-viewer-buffered" class="asset-viewer-buffered"></span>
               <span id="asset-viewer-progress-fill" class="asset-viewer-progress-fill"></span>
             </div>
@@ -518,6 +528,14 @@
                 hidden
               >
                 <label class="field choice-field">
+                  <input id="high-contrast" class="focusable" name="highContrast" type="checkbox">
+                  <span>
+                    <span class="field-label">High contrast</span>
+                    <span class="field-hint">White text on solid black, with stronger edges and focus.</span>
+                  </span>
+                </label>
+
+                <label class="field choice-field">
                   <input id="autoplay-videos" class="focusable" name="autoplayVideos" type="checkbox">
                   <span>
                     <span class="field-label">Autoplay videos</span>
@@ -552,6 +570,11 @@
                 <div class="field dropdown-field">
                   <span class="field-label">Slideshow interval</span>
                   <button id="slideshow-interval" class="focusable dropdown-control" type="button" data-value="8"></button>
+                </div>
+
+                <div class="field dropdown-field">
+                  <span class="field-label">Hide playback buttons</span>
+                  <button id="playback-buttons-hide" class="focusable dropdown-control" type="button" data-value="5"></button>
                 </div>
               </section>
 

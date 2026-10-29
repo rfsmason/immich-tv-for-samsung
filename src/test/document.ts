@@ -28,7 +28,21 @@ export class TestElement extends EventTarget {
   src = "";
   title = "";
   clientWidth = 0;
-  style = { opacity: "", width: "", setProperty() {}, removeProperty() {} };
+  // Custom properties are kept, so tests can read what the app set.
+  style = {
+    opacity: "",
+    properties: {} as Record<string, string>,
+    width: "",
+    getPropertyValue(name: string): string {
+      return this.properties[name] ?? "";
+    },
+    removeProperty(name: string): void {
+      delete this.properties[name];
+    },
+    setProperty(name: string, value: string): void {
+      this.properties[name] = value;
+    }
+  };
   pause(): void {}
   load(): void {}
   removeAttribute(name: string): void {

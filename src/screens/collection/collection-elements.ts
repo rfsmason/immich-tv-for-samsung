@@ -27,6 +27,7 @@ export function readCollectionElements(documentRef: Document): AlbumDetailElemen
     assetViewerPlayerDuration: requireElement(documentRef, "asset-viewer-duration"),
     assetViewerPlayerElapsed: requireElement(documentRef, "asset-viewer-elapsed"),
     assetViewerPlayerProgress: requireElement(documentRef, "asset-viewer-progress-fill"),
+    assetViewerPlayerSeek: requireElement(documentRef, "asset-viewer-seek"),
     assetViewerPlayerStatus: requireElement(documentRef, "asset-viewer-status"),
     assetViewerPlayerStatusText: requireElement(documentRef, "asset-viewer-status-text"),
     assetViewerPlay: requireElement<HTMLButtonElement>(documentRef, "asset-viewer-play"),

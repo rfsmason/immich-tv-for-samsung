@@ -22,7 +22,7 @@ Manual Left or Right navigation pauses slideshow before moving. Back exits the v
 
 Slideshow has the same bounded memory behavior as manual full-screen viewing: preview resources stay limited to the previous/current/next viewer window.
 
-The first slideshow version is intentionally still-image oriented. Future video-specific slideshow behavior can be designed separately after physical-TV playback behavior is better understood.
+The first slideshow version was still-image oriented. Since Milestone 18.5, with "Autoplay videos" on, a slideshow plays each video in full and then moves on (see the update below and [ADR 0020](0020-viewing-and-accessibility.md)); with it off, a video still shows its poster for the interval.
 
 If the viewer reaches the loaded asset edge while more assets are being fetched, slideshow waits for the existing pagination path. If there are no more loaded assets to advance to, slideshow pauses rather than wrapping or inventing a second pagination mechanism.
 
@@ -42,3 +42,9 @@ See [ADR 0019](0019-ambient-mode.md).
 - **The same passive-viewing state drives both** the TV screensaver hold and the countdown, in `src/screens/collection/viewer-autohide.ts`. The viewer marks itself `data-controls="hidden"`, and the shell hides its rail through `setRailHidden`, so the viewer never reaches into the shell.
 - **Opacity only,** with no layout change, so focus and the remote's moves are unaffected.
 - **Confirmed on the Q950R** on 28 October 2026 (user confirmation), together with the Settings and viewer button restyling.
+
+## Update: when the buttons fade, and videos in full (Milestone 18.5, 28 October 2026)
+
+- **Hide playback buttons.** The fixed four seconds became a choice under Settings → Display: 3, 5 (default), 10 or 15 seconds, or Never. Common TV players hide their controls after about 3-5 seconds; 15 seconds covers people who need longer to find and read a control; Never meets WCAG 2.2.1's "turn off". `viewer-autohide.ts` reads the choice whenever playing starts or a key is pressed; with Never nothing hides, so no key is spent showing the buttons.
+- **Videos in full.** With "Autoplay videos" on, a slideshow plays each video to its end through the viewer's own playback, with sound, then moves on; photos and Live Photos (stills) keep the interval. Play/Pause pauses the video and the slideshow together, and resuming continues the video. A video that doesn't start or reports an error is skipped after the interval, and one that makes no progress for 20 s (`slideshowVideoStallMs`) is skipped at once, each with one log line. The screensaver hold, the hiding buttons, the bounded preview window and the pause at the end are unchanged, and a video that ends while more items load waits an interval instead of replaying.
+- **Skipping.** A video's progress bar is focusable (Up from Play) and seeks with Left/Right; rewind and fast forward skip wherever focus is ([ADR 0020](0020-viewing-and-accessibility.md)). Seeking to the end of a slideshow's video ends it, and the slideshow moves on.

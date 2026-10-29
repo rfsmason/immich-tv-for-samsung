@@ -20,6 +20,7 @@ import {
   invalidateAsyncGeneration,
   isCurrentGeneration
 } from "./async-generation";
+import type { Logger } from "../logging/logger";
 import type { PassiveViewing } from "../platform/tizen/screensaver";
 import { createAssetViewer } from "./collection/asset-viewer";
 import {
@@ -73,6 +74,7 @@ type AlbumDetailScreenOptions = {
   // The viewer's buttons hid during passive viewing, or showed again.
   onViewerControlsHiddenChange?(hidden: boolean): void;
   onAssetViewed?(asset: AlbumAsset, source: ViewingSource): void;
+  logger?: Pick<Logger, "info">;
   // Loads one page of a paged Home collection.
   loadFeedPage(feed: CollectionFeed, page: AlbumAssetPageToken): Promise<AlbumAssetPage>;
   // The date rail's clock and frame scheduling; tests replace them.
@@ -214,6 +216,7 @@ export function mountAlbumDetailScreen(
       viewingSource: () => readViewingSource(model)
     },
     elements,
+    logger: options.logger,
     onAssetViewed: options.onAssetViewed,
     onControlsHiddenChange: options.onViewerControlsHiddenChange,
     passiveViewing: options.passiveViewing,

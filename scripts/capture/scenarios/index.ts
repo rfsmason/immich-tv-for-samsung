@@ -12,6 +12,7 @@ import { recentlyAdded } from "./recently-added";
 import { search } from "./search";
 import { searchAlbumPicker, searchPlacePicker, searchV2Panel } from "./search-v2";
 import { ambientClock, settingsAmbient } from "./ambient";
+import { homeHighContrast, settingsDisplay, viewerHighContrast, viewerSeek } from "./accessibility";
 import { settingsHome } from "./settings-home";
 import { viewerFaces } from "./viewer-faces";
 import { tour } from "./tour";
@@ -42,6 +43,10 @@ export const scenarios = [
   settingsAmbient,
   ambientClock,
   viewerFaces,
+  settingsDisplay,
+  homeHighContrast,
+  viewerHighContrast,
+  viewerSeek,
   tour,
   peopleTour,
   photosTour,

@@ -7,7 +7,7 @@ The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It 
 ## Current Status
 
 - Target device: Samsung QE55Q950RBTXXU, 2019, Tizen 5.0 / Chromium M63. Application ID `imchTV0001.ImmichTV`.
-- Milestones 1-16 are complete on `main`, and physical-TV acceptance of Milestones 12-16 passed on 26 October 2026. They include:
+- Milestones 1-16 and 18 are complete on `main`, and physical-TV acceptance of Milestones 12-16 passed on 26 October 2026 (Milestone 18 on 27 October 2026). They include:
   - Home: bounded rails (Recently Added, Favourites, Videos, People, Recently Viewed, Albums and Memories).
   - Photos: the main timeline, with date sections and a timeline rail.
   - Albums: an album grid and album detail.
@@ -27,8 +27,15 @@ The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It 
 - Milestone 15, Personalisation and Navigation: held Up/Down on the Photos date rail speed up from months to years, CH ▲/▼ jump a year, Settings can turn each Home rail on or off, collections can be reversed between newest and oldest first, the viewer can show face tags, and every screen sits on one standard background. See [ADR 0017](docs/architecture/0017-personalisation-and-navigation.md).
 - Milestone 16, Search v2: Search also finds photos by type (Photos, Live Photos or Videos), one place chosen from country down to city, and any of up to ten albums, each picked with the remote. See [ADR 0018](docs/architecture/0018-search-v2.md).
 - Milestone 17, Shared Content, is parked (deferred, not cancelled).
-- Milestone 18, Ambient / Screensaver Mode: slideshows and playback now keep the TV's own screensaver away, as Samsung requires, and Settings → Ambient starts a full-screen photo mode (All photos, your own Favourites, Recent, an album or Memories) now, or after an idle time. Any key returns to where you were. Physical-TV acceptance passed on 27 October 2026. See [ADR 0019](docs/architecture/0019-ambient-mode.md).
+- Milestone 18, Ambient / Screensaver Mode, is complete on `main`: slideshows and playback now keep the TV's own screensaver away, as Samsung requires, and Settings → Ambient starts a full-screen photo mode (All photos, your own Favourites, Recent, an album or Memories) now, or after an idle time. Any key returns to where you were. Physical-TV acceptance passed on 27 October 2026. See [ADR 0019](docs/architecture/0019-ambient-mode.md).
+- Milestone 18.5, Viewing and Accessibility Polish, is implemented: a high-contrast option, a choice of when the playback buttons fade, slideshows that play videos in full when Autoplay videos is on, and skipping through a video from its progress bar or with rewind and fast forward. It takes priority over Milestones 17, 19 and 20. Physical-TV acceptance is pending. See [ADR 0020](docs/architecture/0020-viewing-and-accessibility.md).
 - Requires Immich v3.2.0 or later (see [Immich Configuration](#immich-configuration)).
+
+## Accessibility
+
+- **High contrast** (Settings → Display) shows white text on solid black, hides the background picture, gives every control a visible edge, and uses a white-and-black focus ring that shows on any background, including photos. Text over photos sits on a solid plate. The light-blue look stays the default. `npm run lint` measures both themes' colour contrast (ADR 0020).
+- **Hide playback buttons** (Settings → Display) chooses when the viewer's buttons fade during a slideshow or video: 3, 5, 10 or 15 seconds, or Never.
+- Everything works with the arrows, OK and Back; Play/Pause, rewind, fast forward and the channel keys are shortcuts.
 
 ## Project Layout
 
@@ -73,7 +80,7 @@ npm run check
 npm run stage:tizen
 ```
 
-- `npm run lint` runs ESLint (including `eslint-plugin-compat` for the `chrome 63` browserslist target) and the project's CSS and DOM-member Chromium 63 compatibility checks.
+- `npm run lint` runs ESLint (including `eslint-plugin-compat` for the `chrome 63` browserslist target), the project's CSS and DOM-member Chromium 63 compatibility checks, and the theme contrast check (`scripts/check-contrast.mjs`).
 - `npm run format` applies Prettier and ESLint fixes; `npm run format:check` verifies formatting.
 - `npm run test:coverage` runs the tests with V8 coverage and enforced minimums for `src/screens` and `src/app`.
 - `npm run build` bundles `src/app/main.ts` for Tizen 5.0 / Chromium M63 into a minified `dist/`. `npm run build:debug` produces an unminified bundle for on-TV diagnosis.

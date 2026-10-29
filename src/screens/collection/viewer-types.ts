@@ -19,6 +19,8 @@ export type ViewerElements = {
   assetViewerPlayerDuration: HTMLElement;
   assetViewerPlayerElapsed: HTMLElement;
   assetViewerPlayerProgress: HTMLElement;
+  // The progress bar, a focusable slider while a video shows (viewer-seek.ts).
+  assetViewerPlayerSeek: HTMLElement;
   assetViewerPlayerStatus: HTMLElement;
   assetViewerPlayerStatusText: HTMLElement;
   assetViewerSlideshow: HTMLButtonElement;
@@ -46,7 +48,12 @@ export type ViewerState = {
   };
   viewerSlideshow: {
     playing: boolean;
+    // A slideshow stall check while it plays a video in full (ADR 0006).
+    stallTimerId: number | null;
     timerId: number | null;
+    // The video the slideshow is playing in full, kept while paused so
+    // resuming continues it.
+    videoAssetId: string | null;
   };
 };
 

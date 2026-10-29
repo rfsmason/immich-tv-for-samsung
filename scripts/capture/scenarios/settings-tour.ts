@@ -55,7 +55,8 @@ async function connection({ remote, guide }: ScenarioContext): Promise<void> {
 
 async function display({ remote, guide }: ScenarioContext): Promise<void> {
   await remote.down("#settings-section-display");
-  await remote.right("#autoplay-videos");
+  await remote.right("#high-contrast");
+  await remote.down("#autoplay-videos");
   await remote.down("#show-viewer-date");
   await remote.down("#show-viewer-time");
   await remote.down("#show-viewer-exif");

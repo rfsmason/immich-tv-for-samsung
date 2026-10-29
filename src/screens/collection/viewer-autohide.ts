@@ -1,13 +1,14 @@
 // The viewer's buttons step aside during passive viewing (ADR 0006): while a
-// slideshow runs or a video or Live Photo plays, they hide a few seconds
-// after the last remote key, and the next key shows them again. A key that
-// only shows them does nothing else, so a press can't act on a button the
-// viewer couldn't see; Back and the media keys still act as well.
-
-// How long the buttons stay after passive viewing starts or a key is pressed.
-export const viewerControlsHideMs = 4000;
+// slideshow runs or a video or Live Photo plays, they hide some seconds
+// after the last remote key (Settings → Display → Hide playback buttons),
+// and the next key shows them again. A key that only shows them does
+// nothing else, so a press can't act on a button the viewer couldn't see;
+// Back and the media keys still act as well. With "Never" they stay.
 
 type ViewerControlsAutoHideOptions = {
+  // How long the buttons stay after passive viewing starts or a key is
+  // pressed, read each time; null keeps them.
+  hideAfterMs(): number | null;
   // Shows or hides the buttons.
   onHiddenChange(hidden: boolean): void;
   windowRef?: Pick<Window, "clearTimeout" | "setTimeout">;
@@ -51,11 +52,18 @@ export function createViewerControlsAutoHide(
   }
 
   function restart(): void {
+    const delay = options.hideAfterMs();
+
     clearTimer();
+
+    if (delay === null) {
+      return;
+    }
+
     timerId = timers.setTimeout(() => {
       timerId = null;
       setHidden(true);
-    }, viewerControlsHideMs);
+    }, delay);
   }
 
   return {

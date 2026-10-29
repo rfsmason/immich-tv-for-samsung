@@ -7,7 +7,7 @@ import { remoteKeys } from "../../platform/tizen/keys";
 import { createPassiveViewing } from "../../platform/tizen/screensaver";
 import { TestDocument, type TestElement } from "../../test/document";
 import { createAssetViewer, type AssetViewerController } from "./asset-viewer";
-import { viewerControlsHideMs } from "./viewer-autohide";
+import { slideshowVideoStallMs } from "./viewer-slideshow";
 import type { ViewerCollection, ViewerElements } from "./viewer-types";
 
 // The viewer driven by a fake ordered collection, as People, Search or
@@ -43,6 +43,7 @@ const elementIds: Record<keyof ViewerElements, string> = {
   assetViewerPlayerDuration: "asset-viewer-duration",
   assetViewerPlayerElapsed: "asset-viewer-elapsed",
   assetViewerPlayerProgress: "asset-viewer-progress-fill",
+  assetViewerPlayerSeek: "asset-viewer-seek",
   assetViewerPlayerStatus: "asset-viewer-status",
   assetViewerPlayerStatusText: "asset-viewer-status-text",
   assetViewerSlideshow: "asset-viewer-slideshow",
@@ -57,7 +58,8 @@ let viewer: AssetViewerController | null = null;
 function fixture(
   assets: AlbumAsset[],
   settings: Partial<AppSettings> = {},
-  loadAssetFaces: (assetId: string) => Promise<AssetFace[]> = async () => []
+  loadAssetFaces: (assetId: string) => Promise<AssetFace[]> = async () => [],
+  logger?: { info(message: string, details?: unknown): void }
 ) {
   const documentRef = new TestDocument();
   let storedSettings: AppSettings = { ...defaultAppSettings, ...settings };
@@ -113,6 +115,7 @@ function fixture(
   viewer = createAssetViewer({
     collection,
     elements,
+    logger,
     onAssetViewed,
     onControlsHiddenChange,
     passiveViewing: createPassiveViewing({
@@ -382,6 +385,404 @@ describe("asset viewer over any ordered collection", () => {
   });
 });
 
+describe("slideshow videos in full", () => {
+  const video = (id: string) => asset(id, { durationMs: 30000, type: "video" });
+  const state = (f: ReturnType<typeof fixture>) =>
+    f.elements.assetViewerSlideshow.getAttribute("data-slideshow-state");
+
+  // The video element starts and stops as a browser's would.
+  function playable(f: ReturnType<typeof fixture>) {
+    const element = f.elements.assetViewerVideo;
+
+    f.play.mockImplementation(async () => {
+      Object.assign(element, { ended: false, paused: false });
+    });
+    f.pause.mockImplementation(() => {
+      Object.assign(element, { paused: true });
+    });
+
+    return {
+      element,
+      end() {
+        Object.assign(element, { ended: true, paused: true });
+        element.dispatchEvent(new Event("ended"));
+      },
+      tick() {
+        element.dispatchEvent(new Event("timeupdate"));
+      }
+    };
+  }
+
+  async function slideshow(assets: AlbumAsset[], settings: Partial<AppSettings> = {}) {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+    const logger = { info: vi.fn() };
+    const f = fixture(
+      assets,
+      { autoplayVideos: true, slideshowIntervalSeconds: 5, ...settings },
+      undefined,
+      logger
+    );
+    const media = playable(f);
+
+    viewer!.open(0);
+    f.press(remoteKeys.mediaPlay);
+    await vi.advanceTimersByTimeAsync(0);
+
+    return { f, logger, media };
+  }
+
+  it("plays a video to its end with sound, then moves on; photos keep the interval", async () => {
+    const { f, media } = await slideshow([asset("a"), video("v"), asset("b")]);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+    expect(f.play).toHaveBeenCalledTimes(1);
+    expect(media.element.muted).not.toBe(true);
+
+    // Longer than the interval: still on the video while it plays.
+    for (let second = 0; second < 15; second += 1) {
+      await vi.advanceTimersByTimeAsync(1000);
+      media.tick();
+    }
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+
+    media.end();
+    expect(f.collection.select).toHaveBeenLastCalledWith(2);
+    expect(state(f)).toBe("playing");
+  });
+
+  it("shows the video playing on the Slideshow button only, its bar following the video", async () => {
+    const { f, media } = await slideshow([asset("a"), video("v"), asset("b")]);
+    const slideshowButton = f.elements.assetViewerSlideshow;
+    const remaining = () =>
+      slideshowButton.style.getPropertyValue("--asset-viewer-slideshow-remaining");
+
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(state(f)).toBe("playing");
+    expect(f.elements.assetViewerPlay.getAttribute("data-play-state")).toBe("idle");
+    expect(f.elements.assetViewerPlay.getAttribute("aria-label")).toBe("Play video");
+    expect(slideshowButton.getAttribute("data-slideshow-progress")).toBe("video");
+    expect(remaining()).toBe("1");
+
+    Object.assign(media.element, { currentTime: 7.5, duration: 30 });
+    media.tick();
+    expect(remaining()).toBe("0.75");
+
+    // The next photo counts down its interval instead.
+    media.end();
+    expect(slideshowButton.getAttribute("data-slideshow-progress")).toBe("running");
+    expect(remaining()).toBe("");
+    expect(state(f)).toBe("playing");
+    f.press(remoteKeys.mediaPause);
+    f.press(remoteKeys.left);
+    await vi.advanceTimersByTimeAsync(0);
+    f.press(remoteKeys.mediaPlay);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(remaining()).not.toBe("");
+
+    // Paused, the bar stops, as it does for a photo.
+    f.press(remoteKeys.mediaPause);
+    expect(slideshowButton.getAttribute("data-slideshow-progress")).toBeNull();
+    expect(remaining()).toBe("");
+  });
+
+  it("still shows Pause on the Play button when a video is played on its own", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+    const f = fixture([video("v"), asset("b")]);
+
+    viewer!.open(0);
+    f.press(remoteKeys.enter);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.elements.assetViewerPlay.getAttribute("data-play-state")).toBe("playing");
+    expect(state(f)).toBe("paused");
+  });
+
+  it("keeps Live Photos as stills on the interval", async () => {
+    const { f } = await slideshow([
+      asset("a"),
+      asset("live", { livePhotoVideoId: "m" }),
+      asset("b")
+    ]);
+
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(2);
+    expect(f.play).not.toHaveBeenCalled();
+  });
+
+  it("pauses and resumes the video with the slideshow, continuing where it was", async () => {
+    const { f, media } = await slideshow([video("v"), asset("b")]);
+
+    expect(f.play).toHaveBeenCalledTimes(1);
+    const source = media.element.src;
+
+    f.press(remoteKeys.mediaPause);
+    expect(state(f)).toBe("paused");
+    expect(f.pause).toHaveBeenCalled();
+    expect(media.element.paused).toBe(true);
+
+    f.press(remoteKeys.mediaPlay);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(state(f)).toBe("playing");
+    expect(f.play).toHaveBeenCalledTimes(2);
+    expect(media.element.src).toBe(source);
+    expect(media.element.paused).toBe(false);
+  });
+
+  it("pauses the slideshow with Play on the video, and then Left moves as usual", async () => {
+    // The buttons stay, so the first OK acts.
+    const { f } = await slideshow([asset("a"), video("v"), asset("b")], {
+      playbackButtonsHide: "never"
+    });
+
+    await vi.advanceTimersByTimeAsync(5000);
+    f.elements.assetViewerPlay.focus();
+    f.press(remoteKeys.enter);
+    expect(state(f)).toBe("paused");
+    expect(f.elements.assetViewerVideo.paused).toBe(true);
+
+    f.press(remoteKeys.left);
+    expect(f.collection.select).toHaveBeenLastCalledWith(0);
+  });
+
+  it("skips a video that doesn't start after the interval, logging once", async () => {
+    const { f, logger } = await slideshow([asset("a"), video("v"), asset("b")]);
+
+    f.play.mockRejectedValueOnce(new Error("not supported"));
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f.collection.select).toHaveBeenLastCalledWith(2);
+    expect(logger.info).toHaveBeenCalledTimes(1);
+    expect(logger.info).toHaveBeenCalledWith("Slideshow skipped a video.", {
+      assetId: "v",
+      reason: "did not start"
+    });
+  });
+
+  it("skips a video that reports an error after the interval", async () => {
+    const { f, logger, media } = await slideshow([video("v"), asset("b")]);
+
+    media.element.dispatchEvent(new Event("error"));
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+    expect(logger.info).toHaveBeenCalledWith("Slideshow skipped a video.", {
+      assetId: "v",
+      reason: "error"
+    });
+  });
+
+  it("skips a video that stops making progress for the stall limit", async () => {
+    const { f, logger, media } = await slideshow([video("v"), asset("b")]);
+
+    await vi.advanceTimersByTimeAsync(10000);
+    media.tick();
+    await vi.advanceTimersByTimeAsync(slideshowVideoStallMs - 1);
+    expect(f.collection.select).not.toHaveBeenCalledWith(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+    expect(logger.info).toHaveBeenCalledWith("Slideshow skipped a video.", {
+      assetId: "v",
+      reason: "stalled"
+    });
+  });
+
+  it("with autoplay off, shows a video's poster for the interval as before", async () => {
+    const { f } = await slideshow([asset("a"), video("v"), asset("b")], { autoplayVideos: false });
+
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(2);
+    expect(f.play).not.toHaveBeenCalled();
+  });
+
+  it("holds the TV screensaver off without a gap, and pauses at the end of the collection", async () => {
+    const { f, media } = await slideshow([asset("a"), video("v")]);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    media.tick();
+    media.end();
+    expect(f.screensaver()).toEqual([0, 1]);
+    expect(state(f)).toBe("paused");
+    expect(f.collection.loadMore).toHaveBeenCalled();
+  });
+
+  it("keeps preloading to the viewer's window while a video plays", async () => {
+    const assets = [asset("a"), video("v"), asset("b"), asset("c"), asset("d"), asset("e")];
+    const { f } = await slideshow(assets);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    const loaded = f.service.loadAssetViewerStillUrl.mock.calls.map(([item]) => item.id);
+    expect(new Set(loaded)).toEqual(new Set(["a", "v", "b"]));
+  });
+});
+
+describe("skipping through a video", () => {
+  const longVideo = (id: string) => asset(id, { durationMs: 600000, type: "video" });
+
+  function videoFixture(assets: AlbumAsset[], settings: Partial<AppSettings> = {}) {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+    const f = fixture(assets, { playbackButtonsHide: "never", ...settings });
+    const element = f.elements.assetViewerVideo;
+    const sets: number[] = [];
+    let time = 100;
+
+    Object.assign(element, { duration: 600 });
+    Object.defineProperty(element, "currentTime", {
+      configurable: true,
+      get: () => time,
+      set: (value: number) => {
+        sets.push(value);
+        time = value;
+      }
+    });
+    const release = (keyCode: number) => {
+      const event = new Event("keyup", { cancelable: true }) as KeyboardEvent;
+      Object.defineProperty(event, "keyCode", { value: keyCode });
+      viewer!.handleKeyup(event);
+    };
+
+    return { ...f, release, sets };
+  }
+
+  it("reaches the progress bar with Up from Play, and returns to Play", () => {
+    const f = videoFixture([longVideo("v"), asset("b")]);
+    const bar = f.elements.assetViewerPlayerSeek;
+
+    viewer!.open(0);
+    expect(f.documentRef.activeElement).toBe(f.elements.assetViewerPlay);
+    f.press(remoteKeys.up);
+    expect(f.documentRef.activeElement).toBe(bar);
+    expect(bar.getAttribute("aria-valuetext")).toBe("Video position, 0:00 of 0:00");
+
+    // Down and Up both return to Play.
+    f.press(remoteKeys.down);
+    expect(f.documentRef.activeElement).toBe(f.elements.assetViewerPlay);
+    f.press(remoteKeys.up);
+    f.press(remoteKeys.up);
+    expect(f.documentRef.activeElement).toBe(f.elements.assetViewerPlay);
+  });
+
+  it("skips with Left/Right on the bar, committing once, instead of moving between items", () => {
+    const f = videoFixture([longVideo("v"), asset("b")]);
+
+    viewer!.open(0);
+    f.press(remoteKeys.up);
+    f.collection.select.mockClear();
+    f.press(remoteKeys.right);
+    f.press(remoteKeys.right);
+    expect(f.elements.assetViewerPlayerElapsed.textContent).toBe("2:00");
+    expect(f.elements.assetViewerPlayerSeek.getAttribute("aria-valuemax")).toBe("600");
+    f.release(remoteKeys.right);
+    expect(f.sets).toEqual([120]);
+    expect(f.collection.select).not.toHaveBeenCalled();
+  });
+
+  it("plays and pauses with OK on the bar", async () => {
+    const f = videoFixture([longVideo("v"), asset("b")]);
+
+    viewer!.open(0);
+    f.press(remoteKeys.up);
+    f.press(remoteKeys.enter);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.play).toHaveBeenCalledTimes(1);
+    expect(f.elements.assetViewerPlay.getAttribute("data-play-state")).toBe("playing");
+    f.press(remoteKeys.enter);
+    expect(f.elements.assetViewerPlay.getAttribute("data-play-state")).toBe("idle");
+  });
+
+  it("keeps Left/Right on the buttons moving between items", () => {
+    const f = videoFixture([longVideo("v"), asset("b")]);
+
+    viewer!.open(0);
+    f.collection.select.mockClear();
+    f.press(remoteKeys.right);
+    expect(f.collection.select).toHaveBeenCalledWith(1);
+    expect(f.sets).toEqual([]);
+  });
+
+  it("skips with rewind and fast forward wherever focus is, while a video shows", () => {
+    const f = videoFixture([longVideo("v"), asset("b")], { playbackButtonsHide: 3 });
+
+    viewer!.open(0);
+    f.elements.assetViewerSlideshow.focus();
+    const event = f.press(remoteKeys.mediaFastForward);
+    expect(event.defaultPrevented).toBe(true);
+    f.release(remoteKeys.mediaFastForward);
+    f.press(remoteKeys.mediaRewind);
+    f.press(remoteKeys.mediaRewind);
+    f.release(remoteKeys.mediaRewind);
+    expect(f.sets).toEqual([110, 90]);
+  });
+
+  it("does nothing with rewind and fast forward on a photo, and offers no bar on a Live Photo", async () => {
+    const f = videoFixture([asset("a"), asset("live", { livePhotoVideoId: "m" })]);
+
+    viewer!.open(0);
+    const event = f.press(remoteKeys.mediaFastForward);
+    expect(event.defaultPrevented).toBe(false);
+    expect(f.sets).toEqual([]);
+
+    f.press(remoteKeys.right);
+    await vi.advanceTimersByTimeAsync(0);
+    f.elements.assetViewerPlay.focus();
+    f.press(remoteKeys.up);
+    expect(f.documentRef.activeElement).not.toBe(f.elements.assetViewerPlayerSeek);
+  });
+
+  it("only shows hidden buttons on the first Left/Right, while fast forward acts at once", async () => {
+    const f = videoFixture([longVideo("v"), asset("b")], { playbackButtonsHide: 3 });
+    const element = f.elements.assetViewerVideo;
+
+    f.play.mockImplementation(async () => {
+      Object.assign(element, { paused: false });
+    });
+    viewer!.open(0);
+    f.press(remoteKeys.up);
+    f.press(remoteKeys.enter);
+    await vi.advanceTimersByTimeAsync(0);
+    element.dispatchEvent(new Event("playing"));
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(f.elements.assetPlaceholder.getAttribute("data-controls")).toBe("hidden");
+
+    f.press(remoteKeys.right);
+    f.release(remoteKeys.right);
+    expect(f.sets).toEqual([]);
+
+    await vi.advanceTimersByTimeAsync(3000);
+    f.press(remoteKeys.mediaFastForward);
+    f.release(remoteKeys.mediaFastForward);
+    expect(f.sets).toEqual([110]);
+  });
+
+  it("seeking to the end of a slideshow's video ends it, and the slideshow moves on", async () => {
+    const f = videoFixture([asset("a"), longVideo("v"), asset("b")], {
+      autoplayVideos: true,
+      slideshowIntervalSeconds: 5
+    });
+    const element = f.elements.assetViewerVideo;
+
+    f.play.mockImplementation(async () => {
+      Object.assign(element, { ended: false, paused: false });
+    });
+    viewer!.open(0);
+    f.press(remoteKeys.mediaPlay);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+
+    for (let press = 0; press < 60; press += 1) f.press(remoteKeys.mediaFastForward);
+    f.release(remoteKeys.mediaFastForward);
+    expect(f.sets[f.sets.length - 1]).toBe(599.5);
+
+    Object.assign(element, { ended: true, paused: true });
+    element.dispatchEvent(new Event("ended"));
+    expect(f.collection.select).toHaveBeenLastCalledWith(2);
+  });
+});
+
 describe("viewer and the TV screensaver", () => {
   it("keeps the TV screensaver off while a slideshow runs", () => {
     vi.useFakeTimers();
@@ -472,6 +873,9 @@ describe("viewer and the TV screensaver", () => {
 });
 
 describe("viewer buttons during passive viewing", () => {
+  // The default Hide playback buttons choice.
+  const viewerControlsHideMs = 5000;
+
   const hidden = (f: ReturnType<typeof fixture>) =>
     f.elements.assetPlaceholder.getAttribute("data-controls") === "hidden";
 
@@ -522,6 +926,31 @@ describe("viewer buttons during passive viewing", () => {
     expect(hidden(f)).toBe(true);
     f.press(remoteKeys.back);
     expect(f.collection.exit).toHaveBeenCalled();
+  });
+
+  it("follows Hide playback buttons, and with Never keeps them so every key acts", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+    const f = fixture([asset("a"), asset("b"), asset("c")], {
+      playbackButtonsHide: 10,
+      slideshowIntervalSeconds: 60
+    });
+
+    viewer!.open(0);
+    f.press(remoteKeys.mediaPlay);
+    vi.advanceTimersByTime(9999);
+    expect(hidden(f)).toBe(false);
+    vi.advanceTimersByTime(1);
+    expect(hidden(f)).toBe(true);
+    f.press(remoteKeys.mediaPause);
+
+    f.settings().playbackButtonsHide = "never";
+    f.press(remoteKeys.mediaPlay);
+    vi.advanceTimersByTime(60000 - 1);
+    expect(hidden(f)).toBe(false);
+    f.collection.select.mockClear();
+    f.press(remoteKeys.right);
+    expect(f.collection.select).toHaveBeenCalledWith(1);
   });
 
   it("keeps the buttons while nothing plays, and shows them when playing stops or the viewer closes", async () => {

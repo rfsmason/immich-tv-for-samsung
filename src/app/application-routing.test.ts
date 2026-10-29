@@ -1070,6 +1070,27 @@ describe("application routing", () => {
     await vi.waitFor(() => expect(albumService.loadAlbums).toHaveBeenCalled());
   });
 
+  it("switches to high contrast as soon as Settings are saved, and back again", async () => {
+    await start({ connected: false });
+    const highContrast = byId<HTMLInputElement>("high-contrast");
+    const save = () => {
+      highContrast.dispatchEvent(new Event("change", { bubbles: true }));
+      byId("settings-save").focus();
+      pressKey(remoteKeys.enter);
+    };
+
+    expect(document.documentElement.hasAttribute("data-contrast")).toBe(false);
+    highContrast.checked = true;
+    save();
+    expect(document.documentElement.getAttribute("data-contrast")).toBe("high");
+
+    rail("settings").focus();
+    pressKey(remoteKeys.enter);
+    byId<HTMLInputElement>("high-contrast").checked = false;
+    save();
+    expect(document.documentElement.hasAttribute("data-contrast")).toBe(false);
+  });
+
   it("reports a startup failure on the splash and logs it without credentials", async () => {
     const failure = new Error("Storage unavailable");
     const services = await start({

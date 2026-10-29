@@ -3,10 +3,20 @@ import { describe, expect, it, vi } from "vitest";
 import type { Remote } from "../remote";
 import { enterTimelineRail, photosTour } from "./photos-tour";
 import { ambientClock, settingsAmbient } from "./ambient";
+import { homeHighContrast, settingsDisplay, viewerHighContrast, viewerSeek } from "./accessibility";
 import { searchTour } from "./search-tour";
 import { searchAlbumPicker, searchPlacePicker, searchV2Panel } from "./search-v2";
 import { settingsTour } from "./settings-tour";
 import type { ScenarioContext } from "./shared";
+
+// Reaching a Home rail or an album has its own tests (shared.test.ts); these
+// tours' tests start from there.
+vi.mock("./shared", async (original) => ({
+  ...(await original<typeof import("./shared")>()),
+  homeRail: vi.fn(async () => undefined),
+  secondAlbum: vi.fn(async () => undefined),
+  viewer: vi.fn(async () => undefined)
+}));
 
 type Action = { key: string; focus: string };
 
@@ -211,6 +221,52 @@ describe("ambient mode stills", () => {
     );
     expect(context.capture.still).toHaveBeenCalledWith("ambient-clock");
     expect(actions[actions.length - 1]).toEqual({ key: "back", focus: "#ambient-start" });
+  });
+});
+
+describe("accessibility stills", () => {
+  it("opens Settings → Display on High contrast with the fields masked", async () => {
+    const { context, actions, addStyleTag } = fixture();
+    await settingsDisplay.run(context);
+
+    expect(addStyleTag).toHaveBeenCalled();
+    expect(actions[actions.length - 1]).toEqual({ key: "right", focus: "#high-contrast" });
+    expect(context.capture.still).toHaveBeenCalledWith("settings-display");
+  });
+
+  it("turns High contrast on with the remote and saves before capturing Home and the viewer", async () => {
+    for (const [scenario, still] of [
+      [homeHighContrast, "home-high-contrast"],
+      [viewerHighContrast, "viewer-high-contrast"]
+    ] as const) {
+      const { context, actions } = fixture();
+      await scenario.run(context);
+      const index = (key: string, focus: string) =>
+        actions.findIndex((action) => action.key === key && action.focus === focus);
+
+      expect(index("ok", "#high-contrast:checked")).toBeGreaterThan(-1);
+      expect(index("ok", "#settings-save")).toBeGreaterThan(index("ok", "#high-contrast:checked"));
+      expect(index("up", '[data-destination="home"]')).toBeGreaterThan(
+        index("ok", "#settings-save")
+      );
+      expect(context.capture.still).toHaveBeenCalledWith(still);
+    }
+  });
+
+  it("plays a video, pauses on its progress bar and skips ahead before capturing", async () => {
+    const { context, actions } = fixture();
+    (context.page as unknown as { waitForFunction: () => Promise<void> }).waitForFunction = vi
+      .fn()
+      .mockResolvedValue(undefined);
+    await viewerSeek.run(context);
+
+    expect(actions.slice(-4)).toEqual([
+      { key: "up", focus: "#asset-viewer-seek" },
+      { key: "ok", focus: "#asset-viewer-seek" },
+      { key: "right", focus: "#asset-viewer-seek" },
+      { key: "right", focus: "#asset-viewer-seek" }
+    ]);
+    expect(context.capture.still).toHaveBeenCalledWith("viewer-seek");
   });
 });
 

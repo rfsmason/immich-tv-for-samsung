@@ -45,3 +45,9 @@ The viewer's bottom-right controls gain **Faces** (between Slideshow and Back) f
 - **The slideshow** moved to `src/screens/collection/viewer-slideshow.ts`.
 
 `asset-viewer.ts` is now 864 lines, and every existing test passed unchanged. While open, the viewer also holds the TV's screensaver off during slideshows and playback ([ADR 0006](0006-slideshow-mode.md) update, [ADR 0019](0019-ambient-mode.md)).
+
+## Update: a focusable progress bar (Milestone 18.5, 28 October 2026)
+
+- **The progress bar is a slider while a video shows** (not a Live Photo): Up from Play, the top button, reaches it, and Up or Down returns to Play. Left/Right on it skip 10 s, growing to 30 s and 60 s steps when held; OK plays or pauses; Back keeps its meaning. Left/Right on the picture or the buttons still move between items. See `src/screens/collection/viewer-seek.ts` and [ADR 0020](0020-viewing-and-accessibility.md).
+- **The target shows at once and the seek is committed once per burst** (on release, or after 300 ms without a key). The bounded previous/current/next window is unchanged.
+- **The Play toggle and suspension moved** from `asset-viewer.ts` into `viewer-playback.ts` (a pure move), so the viewer stays at 886 lines with seeking and slideshow videos added.

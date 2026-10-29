@@ -16,10 +16,21 @@ const savedSortOrderKinds: SavedSortOrderKind[] = [
   "videos"
 ];
 
+// How long the viewer's buttons stay during a slideshow or video before they
+// fade, in seconds, or never (ADR 0006, ADR 0020).
+export type PlaybackButtonsHide = 3 | 5 | 10 | 15 | "never";
+
+export const playbackButtonsHideOptions: PlaybackButtonsHide[] = [3, 5, 10, 15, "never"];
+
+export const defaultPlaybackButtonsHide: PlaybackButtonsHide = 5;
+
 export type AppSettings = {
   ambient: AmbientSettings;
   autoplayVideos: boolean;
+  // White text on solid dark, with stronger edges and focus (ADR 0020).
+  highContrast: boolean;
   homeRails: HomeRailVisibility;
+  playbackButtonsHide: PlaybackButtonsHide;
   // Face tags over photos in the viewer (the viewer's Faces button).
   showFaceTags: boolean;
   showViewerDate: boolean;
@@ -34,7 +45,9 @@ export const defaultSlideshowIntervalSeconds = 8;
 export const defaultAppSettings: AppSettings = {
   ambient: defaultAmbientSettings,
   autoplayVideos: false,
+  highContrast: false,
   homeRails: normalizeHomeRailVisibility(null),
+  playbackButtonsHide: defaultPlaybackButtonsHide,
   showFaceTags: false,
   showViewerDate: true,
   showViewerExif: true,
@@ -47,7 +60,9 @@ export function normalizeAppSettings(settings: Partial<AppSettings> | null): App
   return {
     ambient: normalizeAmbientSettings(settings?.ambient),
     autoplayVideos: settings?.autoplayVideos === true,
+    highContrast: settings?.highContrast === true,
     homeRails: normalizeHomeRailVisibility(settings?.homeRails),
+    playbackButtonsHide: normalizePlaybackButtonsHide(settings?.playbackButtonsHide),
     showFaceTags: settings?.showFaceTags === true,
     showViewerDate: settings?.showViewerDate !== false,
     showViewerExif: settings?.showViewerExif !== false,
@@ -69,6 +84,19 @@ export function normalizeSlideshowIntervalSeconds(value: unknown): number {
   }
 
   return roundedValue;
+}
+
+export function normalizePlaybackButtonsHide(value: unknown): PlaybackButtonsHide {
+  return (
+    playbackButtonsHideOptions.find((option) => option === value) ?? defaultPlaybackButtonsHide
+  );
+}
+
+// Milliseconds before the buttons fade, or null to keep them.
+export function readPlaybackButtonsHideMs(settings: AppSettings): number | null {
+  const hide = settings.playbackButtonsHide;
+
+  return hide === "never" ? null : hide * 1000;
 }
 
 // Keeps only known rails; a rail missing from stored settings, for example

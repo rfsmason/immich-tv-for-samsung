@@ -67,6 +67,12 @@ export function renderViewerPlayControl(
   elements.assetViewerPlay.title = label;
 }
 
+// A video the slideshow is playing in full: the Slideshow button shows that
+// it plays, and Play keeps offering to play the video on its own.
+function isSlideshowVideo(state: ViewerState, asset: AlbumAsset): boolean {
+  return state.viewerSlideshow.playing && state.viewerSlideshow.videoAssetId === asset.id;
+}
+
 export function setViewerPlayControlState(
   elements: ViewerElements,
   asset: AlbumAsset,
@@ -294,7 +300,9 @@ export async function playViewerVideoElement(
     video.style.opacity = "1";
   }
 
-  setViewerPlayControlState(elements, asset, "playing");
+  if (!isSlideshowVideo(state, asset)) {
+    setViewerPlayControlState(elements, asset, "playing");
+  }
   setViewerPlayerStatus(elements, "Playing");
   updateViewerPlayerProgress(elements);
 }
@@ -433,8 +441,7 @@ export async function toggleViewerPlayback(context: ViewerMediaContext): Promise
   }
 
   // A video the slideshow plays in full pauses with the slideshow.
-  const slideshowVideo =
-    state.viewerSlideshow.playing && state.viewerSlideshow.videoAssetId === asset.id;
+  const slideshowVideo = isSlideshowVideo(state, asset);
 
   context.pauseSlideshow();
 
@@ -474,7 +481,9 @@ export async function startViewerMedia(context: ViewerMediaContext): Promise<voi
   state.viewerPlayback.requestId += 1;
   const requestId = state.viewerPlayback.requestId;
 
-  setViewerPlayControlState(elements, asset, "loading");
+  if (!isSlideshowVideo(state, asset)) {
+    setViewerPlayControlState(elements, asset, "loading");
+  }
 
   if (asset.type === "video") {
     showViewerPlayer(elements, "Loading");

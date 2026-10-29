@@ -1894,13 +1894,22 @@ button.asset-viewer-slideshow::after {
 }
 
 button.asset-viewer-slideshow[data-slideshow-progress="running"]::before,
-button.asset-viewer-slideshow[data-slideshow-progress="running"]::after {
+button.asset-viewer-slideshow[data-slideshow-progress="running"]::after,
+button.asset-viewer-slideshow[data-slideshow-progress="video"]::before,
+button.asset-viewer-slideshow[data-slideshow-progress="video"]::after {
   opacity: 1;
 }
 
 button.asset-viewer-slideshow[data-slideshow-progress="running"]::after {
   animation: asset-viewer-slideshow-progress var(--asset-viewer-slideshow-duration, 8000ms) linear
     forwards;
+}
+
+/* A slideshow video: the bar follows the video, eased between its progress
+   updates (a few a second). */
+button.asset-viewer-slideshow[data-slideshow-progress="video"]::after {
+  transform: scaleX(var(--asset-viewer-slideshow-remaining, 1));
+  transition: transform 300ms linear;
 }
 
 @keyframes asset-viewer-slideshow-progress {

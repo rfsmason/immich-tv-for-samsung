@@ -58,6 +58,7 @@ function startViewerSlideshowProgress(elements: ViewerElements, intervalSeconds:
     "--asset-viewer-slideshow-duration",
     `${intervalSeconds * 1000}ms`
   );
+  elements.assetViewerSlideshow.style.removeProperty("--asset-viewer-slideshow-remaining");
   elements.assetViewerSlideshow.removeAttribute("data-slideshow-progress");
   void elements.assetViewerSlideshow.offsetWidth;
   elements.assetViewerSlideshow.setAttribute("data-slideshow-progress", "running");
@@ -66,6 +67,21 @@ function startViewerSlideshowProgress(elements: ViewerElements, intervalSeconds:
 function stopViewerSlideshowProgress(elements: ViewerElements): void {
   elements.assetViewerSlideshow.removeAttribute("data-slideshow-progress");
   elements.assetViewerSlideshow.style.removeProperty("--asset-viewer-slideshow-duration");
+  elements.assetViewerSlideshow.style.removeProperty("--asset-viewer-slideshow-remaining");
+}
+
+// While the slideshow plays a video, its bar shows how much of the video is
+// left, as it shows the interval left for a photo.
+function renderSlideshowVideoProgress(elements: ViewerElements): void {
+  const video = elements.assetViewerVideo;
+  const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+  const remaining = duration > 0 ? Math.max(0, Math.min(1, 1 - video.currentTime / duration)) : 1;
+
+  elements.assetViewerSlideshow.setAttribute("data-slideshow-progress", "video");
+  elements.assetViewerSlideshow.style.setProperty(
+    "--asset-viewer-slideshow-remaining",
+    String(Math.round(remaining * 1000) / 1000)
+  );
 }
 
 export function toggleViewerSlideshow(context: SlideshowContext): void {
@@ -213,6 +229,7 @@ function playSlideshowVideo(context: SlideshowContext): void {
 
   state.viewerSlideshow.videoAssetId = assetId;
   stopViewerSlideshowProgress(elements);
+  renderSlideshowVideoProgress(elements);
   armSlideshowVideoStall(context);
   void context.playSlideVideo().then((playing) => {
     const asset = state.selectedAsset?.asset;
@@ -272,6 +289,7 @@ function armSlideshowVideoStall(context: SlideshowContext): void {
 export function handleSlideshowVideoProgress(context: SlideshowContext): void {
   if (isSlideshowVideo(context) && context.state.viewerSlideshow.timerId === null) {
     armSlideshowVideoStall(context);
+    renderSlideshowVideoProgress(context.elements);
   }
 }
 

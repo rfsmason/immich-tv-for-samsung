@@ -452,6 +452,53 @@ describe("slideshow videos in full", () => {
     expect(state(f)).toBe("playing");
   });
 
+  it("shows the video playing on the Slideshow button only, its bar following the video", async () => {
+    const { f, media } = await slideshow([asset("a"), video("v"), asset("b")]);
+    const slideshowButton = f.elements.assetViewerSlideshow;
+    const remaining = () =>
+      slideshowButton.style.getPropertyValue("--asset-viewer-slideshow-remaining");
+
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(state(f)).toBe("playing");
+    expect(f.elements.assetViewerPlay.getAttribute("data-play-state")).toBe("idle");
+    expect(f.elements.assetViewerPlay.getAttribute("aria-label")).toBe("Play video");
+    expect(slideshowButton.getAttribute("data-slideshow-progress")).toBe("video");
+    expect(remaining()).toBe("1");
+
+    Object.assign(media.element, { currentTime: 7.5, duration: 30 });
+    media.tick();
+    expect(remaining()).toBe("0.75");
+
+    // The next photo counts down its interval instead.
+    media.end();
+    expect(slideshowButton.getAttribute("data-slideshow-progress")).toBe("running");
+    expect(remaining()).toBe("");
+    expect(state(f)).toBe("playing");
+    f.press(remoteKeys.mediaPause);
+    f.press(remoteKeys.left);
+    await vi.advanceTimersByTimeAsync(0);
+    f.press(remoteKeys.mediaPlay);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(remaining()).not.toBe("");
+
+    // Paused, the bar stops, as it does for a photo.
+    f.press(remoteKeys.mediaPause);
+    expect(slideshowButton.getAttribute("data-slideshow-progress")).toBeNull();
+    expect(remaining()).toBe("");
+  });
+
+  it("still shows Pause on the Play button when a video is played on its own", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+    const f = fixture([video("v"), asset("b")]);
+
+    viewer!.open(0);
+    f.press(remoteKeys.enter);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.elements.assetViewerPlay.getAttribute("data-play-state")).toBe("playing");
+    expect(state(f)).toBe("paused");
+  });
+
   it("keeps Live Photos as stills on the interval", async () => {
     const { f } = await slideshow([
       asset("a"),

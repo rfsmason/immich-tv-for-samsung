@@ -84,7 +84,7 @@ npm run stage:tizen
 - `npm run format` applies Prettier and ESLint fixes; `npm run format:check` verifies formatting.
 - `npm run test:coverage` runs the tests with V8 coverage and enforced minimums for `src/screens` and `src/app`.
 - `npm run build` bundles `src/app/main.ts` for Tizen 5.0 / Chromium M63 into a minified `dist/`. `npm run build:debug` produces an unminified bundle for on-TV diagnosis.
-- `npm run check` verifies the runtime files and manifest, that no source, tooling or source maps reach `dist/`, and that the built bundle uses no Chrome 64+ DOM members.
+- `npm run check` verifies the runtime files and manifest, that no source, tooling or source maps reach `dist/`, that the built bundle uses no Chrome 64+ DOM members, and (offline) that the website's demo video tiles match `website/demo-videos.json` (see [website/README.md](website/README.md#demo-videos)).
 - `npm run stage:tizen` builds and stages exactly the runtime files that are packaged into the widget.
 
 CI runs all of these on every pull request.

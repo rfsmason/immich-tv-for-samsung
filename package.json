@@ -8,7 +8,7 @@
   "scripts": {
     "build": "node scripts/build-app.mjs",
     "build:debug": "node scripts/build-app.mjs --debug",
-    "check": "node scripts/check-static-app.mjs && node scripts/check-js-compat.mjs --bundle",
+    "check": "node scripts/check-static-app.mjs && node scripts/check-js-compat.mjs --bundle && npm run website:videos:check",
     "format": "prettier --write . && eslint . --fix",
     "format:check": "prettier --check .",
     "lint": "eslint . && npm run lint:compat",
@@ -22,7 +22,9 @@
     "tizen:devices": "sdb devices",
     "tizen:package": "npm run build && node scripts/package-tizen.mjs",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.capture.json",
-    "capture": "node scripts/capture.mjs"
+    "capture": "node scripts/capture.mjs",
+    "website:videos": "node scripts/website-videos.mjs",
+    "website:videos:check": "node scripts/website-videos.mjs --check"
   },
   "engines": {
     "node": ">=22.22.0 <23",

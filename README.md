@@ -7,7 +7,7 @@ The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It 
 ## Current Status
 
 - Target device: Samsung QE55Q950RBTXXU, 2019, Tizen 5.0 / Chromium M63. Application ID `imchTV0001.ImmichTV`.
-- Milestones 1-16 and 18 are complete on `main`, and physical-TV acceptance of Milestones 12-16 passed on 26 October 2026 (Milestone 18 on 27 October 2026). They include:
+- Milestones 1-16, 18 and 18.5 are complete on `main`, and physical-TV acceptance of Milestones 12-16 passed on 26 October 2026 (Milestone 18 on 27 October 2026, Milestone 18.5 confirmed on 30 October 2026). They include:
   - Home: bounded rails (Recently Added, Favourites, Videos, People, Recently Viewed, Albums and Memories).
   - Photos: the main timeline, with date sections and a timeline rail.
   - Albums: an album grid and album detail.
@@ -28,7 +28,7 @@ The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It 
 - Milestone 16, Search v2: Search also finds photos by type (Photos, Live Photos or Videos), one place chosen from country down to city, and any of up to ten albums, each picked with the remote. See [ADR 0018](docs/architecture/0018-search-v2.md).
 - Milestone 17, Shared Content, is parked (deferred, not cancelled).
 - Milestone 18, Ambient / Screensaver Mode, is complete on `main`: slideshows and playback now keep the TV's own screensaver away, as Samsung requires, and Settings → Ambient starts a full-screen photo mode (All photos, your own Favourites, Recent, an album or Memories) now, or after an idle time. Any key returns to where you were. Physical-TV acceptance passed on 27 October 2026. See [ADR 0019](docs/architecture/0019-ambient-mode.md).
-- Milestone 18.5, Viewing and Accessibility Polish, is implemented: a high-contrast option, a choice of when the playback buttons fade, slideshows that play videos in full when Autoplay videos is on, and skipping through a video from its progress bar or with rewind and fast forward. It takes priority over Milestones 17, 19 and 20. Physical-TV acceptance is pending. See [ADR 0020](docs/architecture/0020-viewing-and-accessibility.md).
+- Milestone 18.5, Viewing and Accessibility Polish, is complete on `main`: a high-contrast option, a choice of when the playback buttons fade, slideshows that play videos in full when Autoplay videos is on, and skipping through a video from its progress bar or with rewind and fast forward. It took priority over Milestones 17, 19 and 20. Physical-TV acceptance passed (user confirmation, 30 October 2026). See [ADR 0020](docs/architecture/0020-viewing-and-accessibility.md).
 - Requires Immich v3.2.0 or later (see [Immich Configuration](#immich-configuration)).
 
 ## Accessibility
@@ -84,7 +84,7 @@ npm run stage:tizen
 - `npm run format` applies Prettier and ESLint fixes; `npm run format:check` verifies formatting.
 - `npm run test:coverage` runs the tests with V8 coverage and enforced minimums for `src/screens` and `src/app`.
 - `npm run build` bundles `src/app/main.ts` for Tizen 5.0 / Chromium M63 into a minified `dist/`. `npm run build:debug` produces an unminified bundle for on-TV diagnosis.
-- `npm run check` verifies the runtime files and manifest, that no source, tooling or source maps reach `dist/`, and that the built bundle uses no Chrome 64+ DOM members.
+- `npm run check` verifies the runtime files and manifest, that no source, tooling or source maps reach `dist/`, that the built bundle uses no Chrome 64+ DOM members, and (offline) that the website's demo video tiles match `website/demo-videos.json` (see [website/README.md](website/README.md#demo-videos)).
 - `npm run stage:tizen` builds and stages exactly the runtime files that are packaged into the widget.
 
 CI runs all of these on every pull request.

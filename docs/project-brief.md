@@ -85,7 +85,7 @@ Milestone 17, Shared Content, is parked by the user's decision (26 October 2026)
 
 Milestone 18, Ambient / Screensaver Mode, is complete on `main` (PR #5, see [ADR 0019](architecture/0019-ambient-mode.md)); physical Q950R acceptance passed on 27 October 2026 (user confirmation), covering every item on PR #5's checklist, including the overnight soak test, and the later button restyling and auto-hiding viewer buttons were confirmed on 28 October 2026. Slideshows, playback and ambient mode now hold the TV's own screensaver off as Samsung requires, and an in-app ambient mode plays All photos, your own Favourites, Recent, an album or Memories, started from Settings → Ambient or after an idle time. The roadmap continues after it with Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 19 and 20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
 
-Milestone 18.5, Viewing and Accessibility Polish, is implemented (see [ADR 0020](architecture/0020-viewing-and-accessibility.md)); physical Q950R acceptance is pending. By the user's decision (28 October 2026) it takes priority over Milestones 17 (parked), 19 and 20; it is numbered 18.5, following Milestone 11.5, so nothing is renumbered.
+Milestone 18.5, Viewing and Accessibility Polish, is complete on `main` (PR #6, see [ADR 0020](architecture/0020-viewing-and-accessibility.md)); physical Q950R acceptance passed (user confirmation, 30 October 2026). By the user's decision (28 October 2026) it took priority over Milestones 17 (parked), 19 and 20; it is numbered 18.5, following Milestone 11.5, so nothing is renumbered.
 
 ## Post-MVP Product Roadmap
 
@@ -519,7 +519,7 @@ Success criterion: the television can reliably display Immich content for an ext
 - **Settings → Ambient:** source, album, order, interval, include videos, show clock, show photo details, start after idle, stop after, and Start now, persisted in `AppSettings` with a schema bump.
 - No new Home rail and no new left-rail destination.
 
-### Milestone 18.5 - Viewing and Accessibility Polish
+### Milestone 18.5 - Viewing and Accessibility Polish - complete; physical-TV acceptance passed
 
 Four improvements to viewing and accessibility, chosen by the user, which take priority over Milestones 17 (parked), 19 and 20 (user decision, 28 October 2026):
 
@@ -532,7 +532,7 @@ Constraints: ADR 0012's patterns (Samsung APIs under `src/platform/tizen/`, Sett
 
 Success criterion: on the physical Q950R, high contrast is readable and its focus unmistakable from the sofa, the buttons fade when chosen, a slideshow plays its videos through, and a video can be skipped through with the remote.
 
-**Status:** implemented on 28 October 2026 ([ADR 0020](architecture/0020-viewing-and-accessibility.md)); physical Q950R acceptance pending.
+**Status:** complete on `main` (PR #6, [ADR 0020](architecture/0020-viewing-and-accessibility.md)); physical Q950R acceptance passed (user confirmation, 30 October 2026).
 
 ### Milestone 19 - Consumer-Friendly Pairing and Authentication
 

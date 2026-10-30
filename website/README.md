@@ -69,7 +69,49 @@ Real application screenshots should be added only after they can be captured fro
 
 The "See it in action" section (`#demos`) lists the YouTube demo walkthroughs as tiles. Each tile is a normal link to the video on YouTube, with its 11-character video ID in `data-video-id` and its title in `data-video-title`. `videos.js` turns a click into a centred player using YouTube's privacy-enhanced embed (`youtube-nocookie.com`). The player iframe is created only when a video is chosen and removed when the player closes, so playback always stops. Without JavaScript, or in a browser without `<dialog>`, tiles open the video on YouTube.
 
-To add a video, copy a `<li>` in the grid and change the ID, title, description and thumbnail URL (`https://i.ytimg.com/vi/<id>/hqdefault.jpg`). The first tile is shown as the wide featured tile. Preview images are loaded from YouTube's image server; self-host them under `assets/` if that matters.
+### How the gallery is generated
+
+The tiles are plain HTML in `index.html`, between the `demo-videos:start` and `demo-videos:end` comments. Don't edit them by hand: they are written by `npm run website:videos` (`scripts/website-videos.mjs`, with its modules and tests in `scripts/website-videos/`) from `demo-videos.json` in this folder, and the result is committed. The site still has no build step and makes no extra requests at runtime.
+
+`demo-videos.json` lists the videos in display order. The first is the wide featured tile. Each entry is a YouTube link, either `https://youtu.be/<id>` or `https://www.youtube.com/watch?v=<id>`. Playlist links aren't accepted. An entry can instead be an object whose own `title` or `description` replaces YouTube's:
+
+```json
+[
+  "https://youtu.be/uFJbepHNbZ8",
+  { "url": "https://youtu.be/1v8Ug3xoChE", "title": "Photos & Timeline" }
+]
+```
+
+The generator reads each video's title, description, privacy and embedding settings from the YouTube Data API v3 in one request. A tile's title is the YouTube title up to its first " – " or " - ", so `People – Immich TV for Samsung` becomes `People`. Its description is the first paragraph of the YouTube description, up to the first blank line. The generator stops and leaves `index.html` unchanged if a video is missing, private or can't be embedded, if a tile would have no title or description or two tiles would share a title, or if a description is over 160 characters. It never shortens text itself.
+
+`npm run check` runs `npm run website:videos:check`, which works offline and never contacts YouTube. It confirms that `demo-videos.json` is valid, that the tiles hold its videos in order, that each tile uses one ID throughout, and that tiles match any overrides.
+
+### API key
+
+The generator needs a YouTube Data API v3 key, which it reads from `YOUTUBE_API_KEY` in the environment or from `.env.website` at the repository root (copy `.env.website.example`). The file is ignored by git. Never commit the key, and never put the file in `website/`: everything in this folder is deployed, and the generator refuses to run if it finds an `.env` file here.
+
+To create a key, in the Google Cloud console create or choose a project, enable **YouTube Data API v3** under APIs & Services → Library, and create an API key under APIs & Services → Credentials. Under the key's API restrictions, restrict it to YouTube Data API v3. A run costs 1 unit of the API's daily quota.
+
+### Replacing the videos
+
+1. Upload the new videos to YouTube, following the conventions below.
+2. Swap them into the project's YouTube playlist in place of the old ones.
+3. Set the old videos to **Unlisted** rather than deleting them, so existing links keep working.
+4. Edit `demo-videos.json`: replace the links, in display order. Drop any `title` or `description` override that the new video's own text should replace.
+5. Run `npm run website:videos`. It lists what changed, for example a new video ID or a description now from YouTube.
+6. Review the diff of `index.html`, and preview the site.
+7. Open a pull request.
+
+### Upload conventions
+
+- **Title:** `Feature – Immich TV for Samsung`, for example `Albums – Immich TV for Samsung`. The tile shows the part before the dash.
+- **Description:** the first paragraph is one plain UK-English sentence under 160 characters that describes only what the app actually does. It becomes the tile's description. Put links and anything else after a blank line.
+- **Embedding:** allowed.
+- **Visibility:** Public or Unlisted.
+
+YouTube's text is copied into the site, so the site's own rules apply to it: describe only features the app has, and include no private server addresses, API keys, device identifiers, real names or personal photos.
+
+Preview images are loaded from YouTube's image server (`https://i.ytimg.com/vi/<id>/hqdefault.jpg`); self-host them under `assets/` if that matters.
 
 ## Registration Update and Feedback
 

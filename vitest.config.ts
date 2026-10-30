@@ -17,6 +17,11 @@ export default defineConfig({
       }
     },
     environment: "node",
-    include: ["src/**/*.test.ts", "scripts/*.test.mjs", "scripts/capture/**/*.test.{ts,mjs}"]
+    include: [
+      "src/**/*.test.ts",
+      "scripts/*.test.mjs",
+      "scripts/capture/**/*.test.{ts,mjs}",
+      "scripts/website-videos/*.test.mjs"
+    ]
   }
 });

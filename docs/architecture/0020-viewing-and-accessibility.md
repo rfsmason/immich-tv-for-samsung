@@ -68,7 +68,7 @@ Milestone 17 is parked, so this ADR takes number 0020; Milestone 17 takes the ne
 - High contrast costs no component CSS: it is about 90 token values, and the check keeps it honest as screens change.
 - Settings schema version 4 (High contrast at 3, Hide playback buttons at 4); older files load with high contrast off and the 5-second default.
 - `asset-viewer.ts` is 886 lines (895 before the milestone), with the Play toggle moved to `viewer-playback.ts` (527) and seeking in `viewer-seek.ts` (133).
-- No framework, dependency or preprocessor; the CSS, contrast and JS compatibility checks pass. Physical Q950R acceptance is pending.
+- No framework, dependency or preprocessor; the CSS, contrast and JS compatibility checks pass. Physical Q950R acceptance passed (user confirmation, 30 October 2026).
 
 ## Later
 

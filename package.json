@@ -8,6 +8,7 @@
   "scripts": {
     "build": "node scripts/build-app.mjs",
     "build:debug": "node scripts/build-app.mjs --debug",
+    "build:store": "node scripts/build-app.mjs --store",
     "check": "node scripts/check-static-app.mjs && node scripts/check-js-compat.mjs --bundle",
     "format": "prettier --write . && eslint . --fix",
     "format:check": "prettier --check .",

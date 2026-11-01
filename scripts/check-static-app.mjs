@@ -1,5 +1,6 @@
 import { access, readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import { readDistribution, tipLinkPattern } from "./build-options.mjs";
 
 const requiredFiles = [
   "config.xml",
@@ -107,6 +108,35 @@ if (/playwright|CAPTURE_IMMICH_|scripts\/capture|captures\//i.test(bundle)) {
   failures.push("Capture tooling must not be bundled into the Tizen application.");
 }
 
+// A store build carries no tip link (ADR 0021): nothing in dist, or in the
+// package staging that stage:tizen and tizen:package create, may mention it.
+// Run as `IMMICH_TV_DISTRIBUTION=store npm run check` (or this script with --store).
+async function findTipLinks(directory, prefix) {
+  let entries;
+
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    const relative = `${prefix}/${entry.name}`;
+    const path = resolve(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      await findTipLinks(path, relative);
+    } else if (tipLinkPattern.test(await readFile(path, "latin1"))) {
+      failures.push(`A store build must not mention the tip page: ${relative}`);
+    }
+  }
+}
+
+if (readDistribution() === "store") {
+  await findTipLinks(runtimeRoot, "dist");
+  await findTipLinks(resolve(process.cwd(), ".tizen", "package-src"), ".tizen/package-src");
+}
+
 if (failures.length > 0) {
   for (const failure of failures) {
     console.error(failure);
@@ -115,4 +145,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("Static Tizen app checks passed.");
+console.log(`Static Tizen app checks passed (${readDistribution()} build).`);

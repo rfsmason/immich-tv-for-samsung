@@ -412,7 +412,8 @@ h3 {
 }
 
 .availability,
-.feedback {
+.feedback,
+.support {
   border-top: 1px solid var(--line);
 }
 
@@ -430,24 +431,8 @@ h3 {
   margin-top: 0;
 }
 
-.feedback-form {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  height: 900px;
-  border: 0;
-  border-radius: 4px;
-  background: var(--bg-soft);
-}
-
-.feedback-form-link {
-  color: var(--accent);
-  text-underline-offset: 3px;
-}
-
-.feedback-form-link:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 3px;
+.feedback-action {
+  margin: 1.4rem 0 0.9rem;
 }
 
 .feedback-card .feedback-note {
@@ -707,6 +692,169 @@ h3 {
   outline-offset: 2px;
 }
 
+/* The feedback form opens in a dialog (feedback.js). The form's iframe
+   scrolls inside it, so the page never scrolls sideways. */
+.feedback-dialog {
+  width: min(960px, 92vw);
+  height: min(860px, 88vh);
+  max-width: none;
+  max-height: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 0;
+  overflow: hidden;
+  box-shadow: var(--shadow-strong);
+}
+
+.feedback-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: dialog-in 160ms ease-out;
+}
+
+.feedback-dialog::backdrop {
+  background: rgba(6, 18, 37, 0.78);
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.feedback-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.75rem 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.feedback-dialog-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.feedback-dialog-close {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.feedback-dialog-close:hover,
+.feedback-dialog-close:focus-visible {
+  background: var(--bg-soft);
+}
+
+.feedback-dialog-close:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.feedback-dialog-close svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  fill: currentColor;
+}
+
+.feedback-frame {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  background: var(--bg-soft);
+}
+
+.feedback-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.feedback-loading {
+  margin: 0;
+  padding: 2rem 1.25rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.feedback-dialog-footer {
+  margin: 0;
+  padding: 0.7rem 1.25rem 0.85rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+.feedback-dialog-footer a {
+  color: var(--accent);
+}
+
+.feedback-dialog-footer a:focus-visible {
+  border-radius: 2px;
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Support: the tips and the Ko-fi button, with a QR code beside them for
+   phones to scan from a computer's screen. On a phone the button is enough,
+   so the QR code is hidden there. */
+.support {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3rem;
+  align-items: center;
+}
+
+.support-copy {
+  max-width: 760px;
+}
+
+.support p:not(.eyebrow),
+.support-tips {
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.support-tips {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+}
+
+.support-tips strong {
+  color: var(--text);
+}
+
+.support-action {
+  margin: 1.4rem 0 0.9rem;
+}
+
+.support .support-note {
+  margin-bottom: 0;
+  color: var(--quiet);
+  font-size: 0.9rem;
+}
+
+.support-qr {
+  display: block;
+  width: 200px;
+  height: 200px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  image-rendering: pixelated;
+}
+
 @media (max-width: 880px) {
   html {
     scroll-padding-top: 7.5rem;
@@ -723,6 +871,10 @@ h3 {
   .privacy,
   .availability {
     grid-template-columns: 1fr;
+  }
+
+  .support {
+    gap: 2rem;
   }
 
   .feature-grid,
@@ -784,6 +936,19 @@ h3 {
   .button {
     width: 100%;
   }
+
+  .support {
+    grid-template-columns: 1fr;
+  }
+
+  .support-qr {
+    display: none;
+  }
+
+  .feedback-dialog {
+    width: calc(100vw - 16px);
+    height: calc(100vh - 16px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -795,6 +960,10 @@ h3 {
   .video-tile,
   .video-play {
     transition: none;
+  }
+
+  .feedback-dialog[open] {
+    animation: none;
   }
 
   .video-tile:hover,

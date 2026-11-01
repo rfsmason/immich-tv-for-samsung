@@ -42,8 +42,11 @@ The page never loads the source images directly. It uses copies sized for each u
 | `logo-32.png`, `logo-16.png` | 32 and 16 px, transparent | Favicons (`<link rel="icon">`) |
 | `../favicon.ico` | 16, 32 and 48 px, transparent | Default `/favicon.ico` for browsers and tools that request it |
 | `logo-180.png` | 180 px, **opaque** | Apple touch icon |
+| `support-qr.svg` | 33 × 33 modules, shown at 200 px | QR code in `#support` linking to `https://ko-fi.com/immichtv` |
 
 If the source images change, regenerate the copies at the same sizes and names. Any image tool will do, and no build step is needed. Keep `width` and `height` on every `<img>` matching the file's aspect ratio. The banner and social image were made with a headless Chromium canvas (high-quality resampling, WebP at about 82% quality, JPEG at about 84%).
+
+The Support QR code encodes exactly `https://ko-fi.com/immichtv` at error correction M, with a four-module quiet zone. It is the same code as the TV app's Settings › Support Us, generated with macOS Core Image's `CIQRCodeGenerator` and written as one SVG path of black modules on a white square, with `shape-rendering="crispEdges"`. If the address changes, regenerate it with any QR encoder at M or higher, and check that a phone and a decoder both read back exactly the new address.
 
 ### Transparent logo icons
 
@@ -73,9 +76,18 @@ To add a video, copy a `<li>` in the grid and change the ID, title, description 
 
 ## Registration Update and Feedback
 
-The `#feedback` section explains the Samsung partner-registration work and invites feedback and expressions of interest. Its Microsoft Forms iframe loads lazily as visitors approach the section. Responses go to Microsoft Forms; this static site does not store them or need a backend. The separate form link also works without JavaScript or if the embed cannot load.
+The `#feedback` section explains the Samsung partner-registration work and invites feedback and expressions of interest. Its "Share your feedback" button is a normal link to the Microsoft Forms response page, opening in a new tab. `feedback.js` turns a plain click into a centred dialog. Modified clicks (Ctrl, ⌘, Shift or middle-click) still open the form in a new tab. The dialog's iframe (the same URL with `&embed=true`) is created on the first open only, so nothing from Microsoft loads with the page. It shows "Loading form…" until the iframe has loaded, and it is kept when the dialog closes, so answers in progress survive.
+- The close button, Escape and a click on the backdrop all close the dialog, and focus returns to the button.
+- While focus is inside the form, Escape belongs to the form's own frame, so Shift+Tab back to the close button first.
+- Without JavaScript, or in a browser without `<dialog>`, the button and the dialog's "Open form separately" link open the form in a new tab.
 
-To replace the form, update both the iframe `src` (with `embed=true`) and the separate response link in `index.html`. Use a public response URL, not an editing or collaboration link. Keep the form set to **Anyone can respond**, and manage questions, email validation and response access in Microsoft Forms. The iframe has an accessible title and sits below the introduction at full section width, so Microsoft Forms can use its desktop rating table rather than its compact layout. It still fits the viewport on mobile; its height is set in `.feedback-form` in `styles.css`.
+Responses go to Microsoft Forms; this static site does not store them or need a backend.
+
+To replace the form, update the button's `href`, the dialog's `data-form-src` (with `&embed=true`) and its "Open form separately" link in `index.html`. Use a public response URL, not an editing or collaboration link. Keep the form set to **Anyone can respond**, and manage questions, email validation and response access in Microsoft Forms. The dialog is about `min(960px, 92vw)` × `min(860px, 88vh)`, nearly full-screen on phones, and the form scrolls inside it.
+
+## Support
+
+The `#support` section lists the suggested tips and links to the project's Ko-fi page, `https://ko-fi.com/immichtv`, with a plain link and a QR code (`assets/support-qr.svg`), hidden at phone widths. There is no Ko-fi widget, iframe or script, so nothing loads from Ko-fi until a visitor follows the link. Tips are optional and unlock nothing.
 
 ## Deployment
 

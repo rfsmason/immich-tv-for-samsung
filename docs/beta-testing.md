@@ -35,7 +35,9 @@ Developer Mode can stay on during normal use.
 
 ### Option A: Apps2Samsung (easiest)
 
-[Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung) is a community installer for Samsung TVs. It isn't part of this project. It can install your own `.wgt` file, and on the first install for a TV it creates a signing certificate, which needs a Samsung account sign-in in a browser.
+[Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung) is a community installer for Samsung TVs. It isn't part of this project. It can install your own `.wgt` file, and on the first install for a TV it creates a signing certificate, which needs a Samsung account sign-in in a browser. The unsigned beta has been installed this way on the 2019 Q950R, with Apps2Samsung 3.1.0 on macOS.
+
+If an older copy of Immich TV is already on the TV, for example one you installed with Tizen Studio, remove it first: a copy signed with a different certificate may not be replaced.
 
 1. Install Apps2Samsung by following its README.
 2. Choose to install a custom `.wgt`, and pick the file you downloaded.

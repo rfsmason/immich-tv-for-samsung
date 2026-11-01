@@ -20,6 +20,8 @@ import { mountAlbumPicker } from "../screens/search/album-picker-screen";
 import { mountPeoplePicker } from "../screens/search/people-picker-screen";
 import { mountPlacePicker } from "../screens/search/place-picker-screen";
 import { mountSearchScreen } from "../screens/search/search-screen";
+import type { SupportPage } from "../screens/settings/support-qr";
+import { showSplashSupport } from "../screens/splash-support";
 import { applyContrastTheme } from "../screens/theme";
 import type { AppSettingsStore } from "../storage/app-settings-store";
 import { readEnabledHomeRails } from "../domain/app-settings";
@@ -68,6 +70,9 @@ export type ApplicationDependencies = {
   // The TV's own screensaver, held off during passive viewing (ADR 0019).
   passiveViewing: PassiveViewing;
   settingsStore: AppSettingsStore;
+  // The tip page for Settings › Support Us and the splash's support line, or
+  // null (the default) for a store build (ADR 0021).
+  supportPage?: SupportPage | null;
   viewingHistory: ViewingHistoryService;
 };
 
@@ -225,7 +230,10 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
       shell.focusActiveDestinationNav();
     },
     onAppSettingsSaved() {
-      applyContrastTheme(documentRef, settingsStore.load().highContrast);
+      const saved = settingsStore.load();
+
+      applyContrastTheme(documentRef, saved.highContrast);
+      showSplashSupport(documentRef, Boolean(dependencies.supportPage), saved.supporter);
       ambient.refresh();
     },
     onChooseAmbientAlbum(album) {
@@ -247,7 +255,8 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
       homeScreen.refresh();
     },
     service: connectionService,
-    settingsStore
+    settingsStore,
+    supportPage: dependencies.supportPage
   });
   const albumsScreen = mountAlbumsScreen({
     documentRef,

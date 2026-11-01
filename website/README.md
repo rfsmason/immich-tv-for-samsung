@@ -42,8 +42,11 @@ The page never loads the source images directly. It uses copies sized for each u
 | `logo-32.png`, `logo-16.png` | 32 and 16 px, transparent | Favicons (`<link rel="icon">`) |
 | `../favicon.ico` | 16, 32 and 48 px, transparent | Default `/favicon.ico` for browsers and tools that request it |
 | `logo-180.png` | 180 px, **opaque** | Apple touch icon |
+| `support-qr.svg` | 33 × 33 modules, shown at 200 px | QR code in `#support` linking to `https://ko-fi.com/immichtv` |
 
 If the source images change, regenerate the copies at the same sizes and names. Any image tool will do, and no build step is needed. Keep `width` and `height` on every `<img>` matching the file's aspect ratio. The banner and social image were made with a headless Chromium canvas (high-quality resampling, WebP at about 82% quality, JPEG at about 84%).
+
+The Support QR code encodes exactly `https://ko-fi.com/immichtv` at error correction M, with a four-module quiet zone. It is the same code as the TV app's Settings › Support Us, generated with macOS Core Image's `CIQRCodeGenerator` and written as one SVG path of black modules on a white square, with `shape-rendering="crispEdges"`. If the address changes, regenerate it with any QR encoder at M or higher, and check that a phone and a decoder both read back exactly the new address.
 
 ### Transparent logo icons
 
@@ -69,13 +72,64 @@ Real application screenshots should be added only after they can be captured fro
 
 The "See it in action" section (`#demos`) lists the YouTube demo walkthroughs as tiles. Each tile is a normal link to the video on YouTube, with its 11-character video ID in `data-video-id` and its title in `data-video-title`. `videos.js` turns a click into a centred player using YouTube's privacy-enhanced embed (`youtube-nocookie.com`). The player iframe is created only when a video is chosen and removed when the player closes, so playback always stops. Without JavaScript, or in a browser without `<dialog>`, tiles open the video on YouTube.
 
-To add a video, copy a `<li>` in the grid and change the ID, title, description and thumbnail URL (`https://i.ytimg.com/vi/<id>/hqdefault.jpg`). The first tile is shown as the wide featured tile. Preview images are loaded from YouTube's image server; self-host them under `assets/` if that matters.
+### How the gallery is generated
+
+The tiles are plain HTML in `index.html`, between the `demo-videos:start` and `demo-videos:end` comments. Don't edit them by hand: they are written by `npm run website:videos` (`scripts/website-videos.mjs`, with its modules and tests in `scripts/website-videos/`) from `demo-videos.json` in this folder, and the result is committed. The site still has no build step and makes no extra requests at runtime.
+
+`demo-videos.json` lists the videos in display order. The first is the wide featured tile. Each entry is a YouTube link, either `https://youtu.be/<id>` or `https://www.youtube.com/watch?v=<id>`. Playlist links aren't accepted. An entry can instead be an object whose own `title` or `description` replaces YouTube's:
+
+```json
+[
+  "https://youtu.be/uFJbepHNbZ8",
+  { "url": "https://youtu.be/1v8Ug3xoChE", "title": "Photos & Timeline" }
+]
+```
+
+The generator reads each video's title, description, privacy and embedding settings from the YouTube Data API v3 in one request. A tile's title is the YouTube title up to its first " – " or " - ", so `People – Immich TV for Samsung` becomes `People`. Its description is the first paragraph of the YouTube description, up to the first blank line. The generator stops and leaves `index.html` unchanged if a video is missing, private or can't be embedded, if a tile would have no title or description or two tiles would share a title, or if a description is over 160 characters. It never shortens text itself.
+
+`npm run check` runs `npm run website:videos:check`, which works offline and never contacts YouTube. It confirms that `demo-videos.json` is valid, that the tiles hold its videos in order, that each tile uses one ID throughout, and that tiles match any overrides.
+
+### API key
+
+The generator needs a YouTube Data API v3 key, which it reads from `YOUTUBE_API_KEY` in the environment or from `.env.website` at the repository root (copy `.env.website.example`). The file is ignored by git. Never commit the key, and never put the file in `website/`: everything in this folder is deployed, and the generator refuses to run if it finds an `.env` file here.
+
+To create a key, in the Google Cloud console create or choose a project, enable **YouTube Data API v3** under APIs & Services → Library, and create an API key under APIs & Services → Credentials. Under the key's API restrictions, restrict it to YouTube Data API v3. A run costs 1 unit of the API's daily quota.
+
+### Replacing the videos
+
+1. Upload the new videos to YouTube, following the conventions below.
+2. Swap them into the project's YouTube playlist in place of the old ones.
+3. Set the old videos to **Unlisted** rather than deleting them, so existing links keep working.
+4. Edit `demo-videos.json`: replace the links, in display order. Drop any `title` or `description` override that the new video's own text should replace.
+5. Run `npm run website:videos`. It lists what changed, for example a new video ID or a description now from YouTube.
+6. Review the diff of `index.html`, and preview the site.
+7. Open a pull request.
+
+### Upload conventions
+
+- **Title:** `Feature – Immich TV for Samsung`, for example `Albums – Immich TV for Samsung`. The tile shows the part before the dash.
+- **Description:** the first paragraph is one plain UK-English sentence under 160 characters that describes only what the app actually does. It becomes the tile's description. Put links and anything else after a blank line.
+- **Embedding:** allowed.
+- **Visibility:** Public or Unlisted.
+
+YouTube's text is copied into the site, so the site's own rules apply to it: describe only features the app has, and include no private server addresses, API keys, device identifiers, real names or personal photos.
+
+Preview images are loaded from YouTube's image server (`https://i.ytimg.com/vi/<id>/hqdefault.jpg`); self-host them under `assets/` if that matters.
 
 ## Registration Update and Feedback
 
-The `#feedback` section explains the Samsung partner-registration work and invites feedback and expressions of interest. Its Microsoft Forms iframe loads lazily as visitors approach the section. Responses go to Microsoft Forms; this static site does not store them or need a backend. The separate form link also works without JavaScript or if the embed cannot load.
+The `#feedback` section explains the Samsung partner-registration work and invites feedback and expressions of interest. Its "Share your feedback" button is a normal link to the Microsoft Forms response page, opening in a new tab. `feedback.js` turns a plain click into a centred dialog. Modified clicks (Ctrl, ⌘, Shift or middle-click) still open the form in a new tab. The dialog's iframe (the same URL with `&embed=true`) is created on the first open only, so nothing from Microsoft loads with the page. It shows "Loading form…" until the iframe has loaded, and it is kept when the dialog closes, so answers in progress survive.
+- The close button, Escape and a click on the backdrop all close the dialog, and focus returns to the button.
+- While focus is inside the form, Escape belongs to the form's own frame, so Shift+Tab back to the close button first.
+- Without JavaScript, or in a browser without `<dialog>`, the button and the dialog's "Open form separately" link open the form in a new tab.
 
-To replace the form, update both the iframe `src` (with `embed=true`) and the separate response link in `index.html`. Use a public response URL, not an editing or collaboration link. Keep the form set to **Anyone can respond**, and manage questions, email validation and response access in Microsoft Forms. The iframe has an accessible title and sits below the introduction at full section width, so Microsoft Forms can use its desktop rating table rather than its compact layout. It still fits the viewport on mobile; its height is set in `.feedback-form` in `styles.css`.
+Responses go to Microsoft Forms; this static site does not store them or need a backend.
+
+To replace the form, update the button's `href`, the dialog's `data-form-src` (with `&embed=true`) and its "Open form separately" link in `index.html`. Use a public response URL, not an editing or collaboration link. Keep the form set to **Anyone can respond**, and manage questions, email validation and response access in Microsoft Forms. The dialog is about `min(960px, 92vw)` × `min(860px, 88vh)`, nearly full-screen on phones, and the form scrolls inside it.
+
+## Support
+
+The `#support` section lists the suggested tips and links to the project's Ko-fi page, `https://ko-fi.com/immichtv`, with a plain link and a QR code (`assets/support-qr.svg`), hidden at phone widths. There is no Ko-fi widget, iframe or script, so nothing loads from Ko-fi until a visitor follows the link. Tips are optional and unlock nothing.
 
 ## Deployment
 

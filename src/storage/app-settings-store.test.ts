@@ -49,7 +49,8 @@ describe("app settings store", () => {
         photos: "newest-first",
         search: "newest-first",
         videos: "newest-first"
-      }
+      },
+      supporter: false
     });
   });
 
@@ -87,7 +88,8 @@ describe("app settings store", () => {
       showViewerExif: true,
       showViewerTime: false,
       slideshowIntervalSeconds: 12,
-      sortOrders: { ...defaultAppSettings.sortOrders, photos: "oldest-first" as const }
+      sortOrders: { ...defaultAppSettings.sortOrders, photos: "oldest-first" as const },
+      supporter: true
     };
 
     expect(store.save(settings)).toEqual(settings);
@@ -123,7 +125,8 @@ describe("app settings store", () => {
         photos: "newest-first",
         search: "newest-first",
         videos: "newest-first"
-      }
+      },
+      supporter: false
     });
   });
 
@@ -176,9 +179,46 @@ describe("app settings store", () => {
       })
     );
 
-    expect(appSettingsSchemaVersion).toBe(4);
     expect(store.load()).toEqual({ ...defaultAppSettings, highContrast: true });
     expect(store.load().playbackButtonsHide).toBe(5);
+  });
+
+  it("migrates version 4 settings to version 5 unchanged, with the supporter toggle off", () => {
+    // Version 4 had every current setting except the supporter toggle.
+    const version4: Partial<typeof defaultAppSettings> = {
+      ...defaultAppSettings,
+      autoplayVideos: true,
+      highContrast: true,
+      playbackButtonsHide: 10,
+      slideshowIntervalSeconds: 20
+    };
+    delete version4.supporter;
+    const storage = createMemoryStorage({
+      "immich-tv.app-settings": JSON.stringify({ ...version4, schemaVersion: 4 })
+    });
+    const store = createLocalAppSettingsStore(storage);
+
+    expect(appSettingsSchemaVersion).toBe(5);
+    expect(store.load()).toEqual({ ...version4, supporter: false });
+
+    store.save({ ...store.load(), supporter: true });
+
+    expect(JSON.parse(storage.values["immich-tv.app-settings"]!)).toMatchObject({
+      schemaVersion: 5,
+      supporter: true
+    });
+    expect(store.load()).toEqual({ ...version4, supporter: true });
+  });
+
+  it("counts as a supporter only when the toggle was explicitly turned on", () => {
+    const load = (value: unknown) =>
+      createLocalAppSettingsStore(
+        createMemoryStorage({
+          "immich-tv.app-settings": JSON.stringify({ schemaVersion: 5, supporter: value })
+        })
+      ).load().supporter;
+
+    expect([true, false, "true", 1, null].map(load)).toEqual([true, false, false, false, false]);
   });
 
   it("keeps each Hide playback buttons choice, and defaults anything else to 5 seconds", () => {

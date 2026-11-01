@@ -289,13 +289,18 @@ describe("Settings recording privacy and navigation", () => {
       actions.findIndex((action) => action.key === key && action.focus === focus);
     const steps = [
       index("ok", "#server-url"),
+      index("ok", '#settings-panel-connection [data-action="test-connection"]'),
       index("ok", "#slideshow-interval"),
       index("ok", "#home-rail-recently-viewed:not(:checked)"),
       index("ok", "#ambient-source"),
       index("ok", "#ambient-album"),
+      index("ok", "#ambient-order"),
       index("ok", "#ambient-interval"),
+      index("ok", "#ambient-idle"),
+      index("ok", "#ambient-stop"),
       index("ok", "#ambient-screen"),
       index("back", "#ambient-start"),
+      index("right", "#support-supporter"),
       index("ok", "#settings-save")
     ];
 

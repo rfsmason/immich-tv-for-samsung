@@ -73,7 +73,7 @@ Every source has one interface, `next(): Promise<AlbumAsset | null>`, and holds 
 | **All photos** (default) | Random draws of 20 from the timeline (not trashed, timeline visibility): photos only (`type` IMAGE), or photos and videos. |
 | **Favourites**, your own only | Lists your favourite timeline buckets once. Each time, picks a bucket weighted by its count, loads only that bucket, and picks within it. All favourites are never loaded. |
 | **Recent** | Random draws limited to `takenAt` in the last 90 days. |
-| **An album** | Shuffled: random draws with `albumIds.any`. In order: the album's paged feed, oldest first, starting again after the last page. |
+| **Album** | Shuffled: random draws with `albumIds.any`. In order: the album's paged feed, oldest first, starting again after the last page. |
 | **Memories** | Today's Memories, as Home shows them. In order: Memory by Memory. Shuffled: a random Memory, then a random picture in it. Only the Memory being shown keeps its assets. |
 
 - **Repeat avoidance.** A ring of the last 200 shown asset ids (`createRecentRing`) is skipped when drawing. A draw is retried up to three times. A small source (a draw smaller than asked for, or a bucket or Memory with nothing new) repeats rather than stopping, and an empty source answers null.
@@ -128,7 +128,7 @@ Every source has one interface, `next(): Promise<AlbumAsset | null>`, and holds 
 ### Settings → Ambient (`src/screens/settings/ambient-section.ts`)
 
 - **Controls:**
-  - Source, Album (shown for An album) and Order (Shuffle or In order, shown for an album and Memories);
+  - Source, Album (shown for Album) and Order (Shuffle or In order, shown for an album and Memories);
   - Interval, Start after idle and Stop after, using the shared drop-down (which opens on OK);
   - Include videos, Show clock and Show photo details, using the existing On/Off pattern;
   - Start now.

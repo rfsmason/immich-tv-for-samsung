@@ -3,7 +3,7 @@ import type { AmbientSettings, AmbientSource } from "../domain/ambient";
 // Household-facing words for ambient mode (ADR 0019).
 
 export const ambientSourceLabels: Record<AmbientSource, string> = {
-  album: "An album",
+  album: "Album",
   all: "All photos",
   favorites: "Favourites",
   memories: "Memories",

@@ -85,3 +85,14 @@ IMMICH_TV_DEBUG_BUILD=1 npm run tizen:deploy
 ```
 
 `npm run build:debug` produces the same unminified `dist/` locally. Redeploy with plain `npm run tizen:deploy` afterwards so the TV runs the production bundle.
+
+## Store Build
+
+Deployment builds a sideload build by default, which includes Settings › Support Us and the splash's support line. A store build, for Samsung's app store, leaves out the tip link entirely (ADR 0021) and must be asked for:
+
+```sh
+IMMICH_TV_DISTRIBUTION=store npm run tizen:package
+IMMICH_TV_DISTRIBUTION=store npm run check
+```
+
+The second command fails if `dist/` or the staged package mentions the tip page. `npm run build:store` makes the same store `dist/` without packaging. Plain `npm run tizen:deploy` goes back to a sideload build.

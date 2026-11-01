@@ -1,0 +1,42 @@
+[
+  {
+    "url": "https://youtu.be/G-G9YJ0tNm4",
+    "title": "First Look & Slideshow",
+    "description": "A tour of the app, recorded from the TV interface: Home, browsing with the Smart Remote and a full-screen slideshow."
+  },
+  {
+    "url": "https://youtu.be/gZc2eWPIwiA",
+    "title": "Photos & Timeline",
+    "description": "Scroll your whole library by date, jump to any month, hold Up or Down to speed through the years, or press CH ▲/▼ to jump a year."
+  },
+  {
+    "url": "https://youtu.be/N0MNC4CtSvs",
+    "title": "Albums",
+    "description": "Open an album, browse its photos and videos, and view them full screen."
+  },
+  {
+    "url": "https://youtu.be/v_V667xgutM",
+    "title": "Memories",
+    "description": "Relive Immich’s “On this day” Memories from the sofa."
+  },
+  {
+    "url": "https://youtu.be/IZqezz6tM8I",
+    "title": "People",
+    "description": "Pick a person and see every photo and video they appear in."
+  },
+  {
+    "url": "https://youtu.be/t51eRpxmHHw",
+    "title": "Search",
+    "description": "Find photos by people, dates, type, place and album, choosing everything with the remote."
+  },
+  {
+    "url": "https://youtu.be/1Dqz1C1GxGA",
+    "title": "Video & Live Photos",
+    "description": "Play videos and bring Live Photos to life on the big screen."
+  },
+  {
+    "url": "https://youtu.be/5ZWjkQTIEmw",
+    "title": "Settings",
+    "description": "Connect to your Immich server, then choose display, Home and ambient mode settings, all with the remote."
+  }
+]

@@ -85,7 +85,7 @@ Milestone 17, Shared Content, is parked by the user's decision (26 October 2026)
 
 Milestone 18, Ambient / Screensaver Mode, is complete on `main` (PR #5, see [ADR 0019](architecture/0019-ambient-mode.md)); physical Q950R acceptance passed on 27 October 2026 (user confirmation), covering every item on PR #5's checklist, including the overnight soak test, and the later button restyling and auto-hiding viewer buttons were confirmed on 28 October 2026. Slideshows, playback and ambient mode now hold the TV's own screensaver off as Samsung requires, and an in-app ambient mode plays All photos, your own Favourites, Recent, an album or Memories, started from Settings → Ambient or after an idle time. The roadmap continues after it with Consumer-Friendly Pairing and Authentication, and Product Hardening and Samsung Release Readiness (Milestones 19 and 20; renumbered on 23 October 2026 when Milestones 15 and 16 were added).
 
-Milestone 18.5, Viewing and Accessibility Polish, is implemented (see [ADR 0020](architecture/0020-viewing-and-accessibility.md)); physical Q950R acceptance is pending. By the user's decision (28 October 2026) it takes priority over Milestones 17 (parked), 19 and 20; it is numbered 18.5, following Milestone 11.5, so nothing is renumbered.
+Milestone 18.5, Viewing and Accessibility Polish, is complete on `main` (PR #6, see [ADR 0020](architecture/0020-viewing-and-accessibility.md)); physical Q950R acceptance passed (user confirmation, 30 October 2026). By the user's decision (28 October 2026) it took priority over Milestones 17 (parked), 19 and 20; it is numbered 18.5, following Milestone 11.5, so nothing is renumbered.
 
 ## Post-MVP Product Roadmap
 
@@ -122,7 +122,9 @@ If the application can determine that the user has previously made a voluntary s
 
 This acknowledgement should remain subtle and must not affect startup timing. The intent is to create a gentle visual reminder during an already-existing startup state, not to introduce an additional monetisation screen.
 
-The actual donation/support flow belongs in Settings / Support Development and should be implemented separately from the splash presentation. Until Settings has a Support Development area, the splash uses "Free to use. Supported by people who enjoy it.", which does not point to it.
+The actual donation/support flow belongs in Settings / Support Development and should be implemented separately from the splash presentation.
+
+**Settings › Support Us (1 November 2026, [ADR 0021](architecture/0021-support-us.md)).** The support area is Settings › Support Us, after Ambient. It shows the tip page `https://ko-fi.com/immichtv` as a QR code and the short address `ko-fi.com/immichtv`, the suggested tips (£5 a coffee, £10 lunch, £20 dinner; any amount is appreciated) and an honour-based toggle, "I've already supported Immich TV". The TV never pays or contacts Ko-fi, and tipping unlocks nothing. The splash now reads "Free to use. You can support development in Settings.", or "Thank you for supporting Immich TV." once the toggle is on, set from the restored settings before the first paint. Support Us and the splash line exist only in sideload builds; a store build shows neither (see Milestone 18's distribution note).
 
 Establish top-level navigation for the intended primary destinations:
 
@@ -519,7 +521,11 @@ Success criterion: the television can reliably display Immich content for an ext
 - **Settings → Ambient:** source, album, order, interval, include videos, show clock, show photo details, start after idle, stop after, and Start now, persisted in `AppSettings` with a schema bump.
 - No new Home rail and no new left-rail destination.
 
-### Milestone 18.5 - Viewing and Accessibility Polish
+#### Store distribution note (1 November 2026)
+
+Builds are `sideload` (the default) or `store`, chosen with `--store` or `IMMICH_TV_DISTRIBUTION=store` ([ADR 0021](architecture/0021-support-us.md)). A store build contains no Ko-fi link, QR code, Support Us section or splash support line, and the check fails if one does. Any future store tipping goes through Samsung Checkout. Packaging and deployment defaults stay sideload.
+
+### Milestone 18.5 - Viewing and Accessibility Polish - complete; physical-TV acceptance passed
 
 Four improvements to viewing and accessibility, chosen by the user, which take priority over Milestones 17 (parked), 19 and 20 (user decision, 28 October 2026):
 
@@ -532,7 +538,7 @@ Constraints: ADR 0012's patterns (Samsung APIs under `src/platform/tizen/`, Sett
 
 Success criterion: on the physical Q950R, high contrast is readable and its focus unmistakable from the sofa, the buttons fade when chosen, a slideshow plays its videos through, and a video can be skipped through with the remote.
 
-**Status:** implemented on 28 October 2026 ([ADR 0020](architecture/0020-viewing-and-accessibility.md)); physical Q950R acceptance pending.
+**Status:** complete on `main` (PR #6, [ADR 0020](architecture/0020-viewing-and-accessibility.md)); physical Q950R acceptance passed (user confirmation, 30 October 2026).
 
 ### Milestone 19 - Consumer-Friendly Pairing and Authentication
 

@@ -1160,7 +1160,7 @@ describe("application routing", () => {
     it("chooses one album in the album picker and returns to the unsaved Settings", async () => {
       await start({ overrides: stills });
       await openAmbientSettings();
-      // Source: An album, which shows the album field.
+      // Source: Album, which shows the album field.
       pressKey(remoteKeys.enter);
       for (let step = 0; step < 3; step += 1) pressKey(remoteKeys.down);
       pressKey(remoteKeys.enter);
@@ -1180,7 +1180,7 @@ describe("application routing", () => {
       expect(byId("connection-screen").hidden).toBe(false);
       expect(active()).toBe(byId("ambient-album"));
       expect(byId("ambient-album").textContent).not.toBe("Choose an album");
-      expect(byId("ambient-source").textContent).toContain("An album");
+      expect(byId("ambient-source").textContent).toContain("Album");
       expect(chosen).toBeTruthy();
     });
 

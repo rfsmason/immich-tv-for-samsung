@@ -38,6 +38,9 @@ export type AppSettings = {
   showViewerTime: boolean;
   slideshowIntervalSeconds: number;
   sortOrders: SavedSortOrders;
+  // The user says they have tipped (Settings › Support Us, ADR 0021). It is
+  // taken on trust, changes only the splash's line and unlocks nothing.
+  supporter: boolean;
 };
 
 export const defaultSlideshowIntervalSeconds = 8;
@@ -53,7 +56,8 @@ export const defaultAppSettings: AppSettings = {
   showViewerExif: true,
   showViewerTime: true,
   slideshowIntervalSeconds: defaultSlideshowIntervalSeconds,
-  sortOrders: normalizeSavedSortOrders(null)
+  sortOrders: normalizeSavedSortOrders(null),
+  supporter: false
 };
 
 export function normalizeAppSettings(settings: Partial<AppSettings> | null): AppSettings {
@@ -68,7 +72,8 @@ export function normalizeAppSettings(settings: Partial<AppSettings> | null): App
     showViewerExif: settings?.showViewerExif !== false,
     showViewerTime: settings?.showViewerTime !== false,
     slideshowIntervalSeconds: normalizeSlideshowIntervalSeconds(settings?.slideshowIntervalSeconds),
-    sortOrders: normalizeSavedSortOrders(settings?.sortOrders)
+    sortOrders: normalizeSavedSortOrders(settings?.sortOrders),
+    supporter: settings?.supporter === true
   };
 }
 

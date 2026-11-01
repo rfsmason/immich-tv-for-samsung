@@ -1,0 +1,37 @@
+[
+  {
+    "url": "https://youtu.be/uFJbepHNbZ8",
+    "title": "First Look & Slideshow",
+    "description": "A tour of the app, recorded from the TV interface: Home, browsing with the Smart Remote and a full-screen slideshow."
+  },
+  {
+    "url": "https://youtu.be/1v8Ug3xoChE",
+    "title": "Photos & Timeline",
+    "description": "Scroll your whole library by date and jump straight to any month."
+  },
+  {
+    "url": "https://youtu.be/eE3Ncej2mTc",
+    "title": "Albums",
+    "description": "Open an album, browse its photos and videos, and view them full screen."
+  },
+  {
+    "url": "https://youtu.be/20XD48TcXJQ",
+    "title": "Memories",
+    "description": "Relive Immich’s “On this day” Memories from the sofa."
+  },
+  {
+    "url": "https://youtu.be/0fvvx6qAzoo",
+    "title": "People",
+    "description": "Pick a person and see every photo and video they appear in."
+  },
+  {
+    "url": "https://youtu.be/7h32ceBChKY",
+    "title": "Video & Live Photos",
+    "description": "Play videos and bring Live Photos to life on the big screen."
+  },
+  {
+    "url": "https://youtu.be/gctU6KizgTE",
+    "title": "Settings",
+    "description": "Connect to your Immich server and set display and slideshow preferences."
+  }
+]

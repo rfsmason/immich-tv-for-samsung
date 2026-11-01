@@ -122,7 +122,9 @@ If the application can determine that the user has previously made a voluntary s
 
 This acknowledgement should remain subtle and must not affect startup timing. The intent is to create a gentle visual reminder during an already-existing startup state, not to introduce an additional monetisation screen.
 
-The actual donation/support flow belongs in Settings / Support Development and should be implemented separately from the splash presentation. Until Settings has a Support Development area, the splash uses "Free to use. Supported by people who enjoy it.", which does not point to it.
+The actual donation/support flow belongs in Settings / Support Development and should be implemented separately from the splash presentation.
+
+**Settings › Support Us (1 November 2026, [ADR 0021](architecture/0021-support-us.md)).** The support area is Settings › Support Us, after Ambient. It shows the tip page `https://ko-fi.com/immichtv` as a QR code and the short address `ko-fi.com/immichtv`, the suggested tips (£5 a coffee, £10 lunch, £20 dinner; any amount is appreciated) and an honour-based toggle, "I've already supported Immich TV". The TV never pays or contacts Ko-fi, and tipping unlocks nothing. The splash now reads "Free to use. You can support development in Settings.", or "Thank you for supporting Immich TV." once the toggle is on, set from the restored settings before the first paint. Support Us and the splash line exist only in sideload builds; a store build shows neither (see Milestone 18's distribution note).
 
 Establish top-level navigation for the intended primary destinations:
 
@@ -518,6 +520,10 @@ Success criterion: the television can reliably display Immich content for an ext
 - **Long runs:** failed assets are skipped (bounded); an unreachable server shows a calm message and retries with capped backoff; no unbounded arrays, listeners, timers or object URLs.
 - **Settings → Ambient:** source, album, order, interval, include videos, show clock, show photo details, start after idle, stop after, and Start now, persisted in `AppSettings` with a schema bump.
 - No new Home rail and no new left-rail destination.
+
+#### Store distribution note (1 November 2026)
+
+Builds are `sideload` (the default) or `store`, chosen with `--store` or `IMMICH_TV_DISTRIBUTION=store` ([ADR 0021](architecture/0021-support-us.md)). A store build contains no Ko-fi link, QR code, Support Us section or splash support line, and the check fails if one does. Any future store tipping goes through Samsung Checkout. Packaging and deployment defaults stay sideload.
 
 ### Milestone 18.5 - Viewing and Accessibility Polish
 

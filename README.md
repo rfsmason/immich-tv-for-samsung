@@ -33,6 +33,7 @@ The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It 
 
 ## Accessibility
 
+- **Support Us** (Settings → Support Us, sideload builds only) shows a QR code and the short address of the project's Ko-fi tip page, with suggested tips. Tips are optional and unlock nothing; the TV never pays or contacts Ko-fi. An honour-based "I've already supported Immich TV" toggle turns the splash's line into a thank-you. See [ADR 0021](docs/architecture/0021-support-us.md).
 - **High contrast** (Settings → Display) shows white text on solid black, hides the background picture, gives every control a visible edge, and uses a white-and-black focus ring that shows on any background, including photos. Text over photos sits on a solid plate. The light-blue look stays the default. `npm run lint` measures both themes' colour contrast (ADR 0020).
 - **Hide playback buttons** (Settings → Display) chooses when the viewer's buttons fade during a slideshow or video: 3, 5, 10 or 15 seconds, or Never.
 - Everything works with the arrows, OK and Back; Play/Pause, rewind, fast forward and the channel keys are shortcuts.
@@ -83,7 +84,7 @@ npm run stage:tizen
 - `npm run lint` runs ESLint (including `eslint-plugin-compat` for the `chrome 63` browserslist target), the project's CSS and DOM-member Chromium 63 compatibility checks, and the theme contrast check (`scripts/check-contrast.mjs`).
 - `npm run format` applies Prettier and ESLint fixes; `npm run format:check` verifies formatting.
 - `npm run test:coverage` runs the tests with V8 coverage and enforced minimums for `src/screens` and `src/app`.
-- `npm run build` bundles `src/app/main.ts` for Tizen 5.0 / Chromium M63 into a minified `dist/`. `npm run build:debug` produces an unminified bundle for on-TV diagnosis.
+- `npm run build` bundles `src/app/main.ts` for Tizen 5.0 / Chromium M63 into a minified `dist/`. `npm run build:debug` produces an unminified bundle for on-TV diagnosis. Builds are sideload builds, with Settings › Support Us, unless `npm run build:store` (or `IMMICH_TV_DISTRIBUTION=store` with any build, package or deploy command) asks for a store build, which contains no tip link at all; `IMMICH_TV_DISTRIBUTION=store npm run check` confirms it (ADR 0021).
 - `npm run check` verifies the runtime files and manifest, that no source, tooling or source maps reach `dist/`, and that the built bundle uses no Chrome 64+ DOM members.
 - `npm run stage:tizen` builds and stages exactly the runtime files that are packaged into the widget.
 

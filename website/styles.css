@@ -402,6 +402,13 @@ h3 {
   margin-top: 1.75rem;
 }
 
+.availability-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin: 1.5rem 0 0;
+}
+
 .requirements {
   display: grid;
   gap: 0.55rem;

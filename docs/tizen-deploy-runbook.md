@@ -96,3 +96,25 @@ IMMICH_TV_DISTRIBUTION=store npm run check
 ```
 
 The second command fails if `dist/` or the staged package mentions the tip page. `npm run build:store` makes the same store `dist/` without packaging. Plain `npm run tizen:deploy` goes back to a sideload build.
+
+## Beta Release Package
+
+Beta testers get an **unsigned** package and sign it for their own TV as they install it, with Apps2Samsung or Tizen Studio ([beta-testing.md](beta-testing.md)). Don't publish the package `npm run tizen:package` makes: its `signature1.xml` holds your distributor certificate, which contains your email address and your TVs' DUIDs, and it only installs on those TVs.
+
+1. Start from an up-to-date `main` that has passed CI, and set the version in `config.xml` (`x.y.z`, the format Tizen requires) and `package.json`.
+2. Build the sideload package:
+
+   ```sh
+   npm run tizen:package:unsigned
+   ```
+
+   It writes `.tizen/release/ImmichTV-<version>-unsigned.wgt`: the same 7 runtime files as the signed package, without signature files.
+3. Inspect it and take its checksum:
+
+   ```sh
+   unzip -l .tizen/release/ImmichTV-<version>-unsigned.wgt
+   shasum -a 256 .tizen/release/ImmichTV-<version>-unsigned.wgt
+   ```
+
+4. Install it once through Apps2Samsung or Tizen Studio as a tester would, before announcing it.
+5. Publish a GitHub release tagged `v<version>-beta.<n>`, marked as a pre-release, with the `.wgt` attached and its SHA-256 and a link to `docs/beta-testing.md` in the notes.

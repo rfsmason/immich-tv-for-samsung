@@ -31,6 +31,10 @@ The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It 
 - Milestone 18.5, Viewing and Accessibility Polish, is complete on `main`: a high-contrast option, a choice of when the playback buttons fade, slideshows that play videos in full when Autoplay videos is on, and skipping through a video from its progress bar or with rewind and fast forward. It took priority over Milestones 17, 19 and 20. Physical-TV acceptance passed (user confirmation, 30 October 2026). See [ADR 0020](docs/architecture/0020-viewing-and-accessibility.md).
 - Requires Immich v3.2.0 or later (see [Immich Configuration](#immich-configuration)).
 
+## Beta Testing
+
+Beta builds are published as unsigned `.wgt` packages on [GitHub Releases](https://github.com/rfsmason/immich-tv-for-samsung/releases), marked as pre-releases. Testers sign and install them for their own TV with Apps2Samsung or Tizen Studio: see [docs/beta-testing.md](docs/beta-testing.md). `npm run tizen:package:unsigned` builds the package; the release steps are in the [deploy runbook](docs/tizen-deploy-runbook.md#beta-release-package).
+
 ## Accessibility
 
 - **Support Us** (Settings → Support Us, sideload builds only) shows a QR code and the short address of the project's Ko-fi tip page, with suggested tips. Tips are optional and unlock nothing; the TV never pays or contacts Ko-fi. An honour-based "I've already supported Immich TV" toggle turns the splash's line into a thank-you. See [ADR 0021](docs/architecture/0021-support-us.md).

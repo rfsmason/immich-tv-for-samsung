@@ -8,9 +8,9 @@ import {
   type ScenarioContext
 } from "./shared";
 
-// Every Settings section in turn: Connection (masked), Display, Home's rails
-// and Ambient, which plays the demo library's album before Save
-// (docs/capture.md). It changes only the fresh capture context's local
+// Every Settings section in turn: Connection (masked, then tested), Display,
+// Home's rails, Ambient, which plays the demo library's album, and Support
+// Us, before Save (docs/capture.md). It changes only the fresh capture context's local
 // preferences, never server data.
 
 const ambientAlbum = "Mallorca";
@@ -19,6 +19,7 @@ const option = (panel: string, index: number) =>
   `#settings-panel-${panel} .dropdown-option:nth-child(${index + 1})`;
 const selected = (panel: string) =>
   `#settings-panel-${panel} .dropdown-option[aria-selected="true"]`;
+const testConnection = '#settings-panel-connection [data-action="test-connection"]';
 
 // How long the tour waits for ambient mode's first crossfade: the
 // 10-second interval, plus loading and the fade.
@@ -50,6 +51,16 @@ async function connection({ remote, guide }: ScenarioContext): Promise<void> {
   await guide?.highlight("#server-url", "Connection details masked for this recording");
   await remote.hold();
   await remote.down("#api-key");
+  // Up from the first field wraps to Test connection, so focus never rests
+  // on the API key's Show button.
+  await remote.up("#server-url");
+  await remote.up(testConnection);
+  await remote.ok(testConnection);
+  await remote.visible(
+    '#connection-status[data-state="success"], #connection-status[data-state="warning"]'
+  );
+  await guide?.highlight("#connection-status", "The server's Immich version and your user");
+  await remote.hold();
   await remote.left("#settings-section-connection");
 }
 
@@ -82,10 +93,35 @@ async function homeRails({ remote, guide }: ScenarioContext): Promise<void> {
   await remote.left("#settings-section-home");
 }
 
+// Moves down to a drop-down and opens its list to show the choices, then OK
+// keeps the one already chosen.
+async function showChoices(
+  { remote, guide }: ScenarioContext,
+  control: string,
+  callout: string
+): Promise<void> {
+  await remote.down(control);
+  await remote.ok(selected("ambient"));
+  await guide?.highlight("#settings-panel-ambient .dropdown-list", callout);
+  await remote.hold();
+  await remote.ok(control);
+}
+
+async function supportUs({ remote, guide }: ScenarioContext): Promise<void> {
+  await remote.down("#settings-section-support");
+  await remote.right("#support-supporter");
+  await guide?.highlight(
+    ".support-qr-figure",
+    "Scan to tip on Ko-fi; it's optional and unlocks nothing"
+  );
+  await remote.hold();
+  await remote.left("#settings-section-support");
+}
+
 async function ambient(context: ScenarioContext): Promise<void> {
   const { page, remote, guide } = context;
   await remote.down("#settings-section-ambient");
-  // Source: An album (the fourth choice), then the album itself.
+  // Source: Album (the fourth choice), then the album itself.
   await remote.right("#ambient-source");
   await remote.ok(selected("ambient"));
   await guide?.highlight(
@@ -106,15 +142,15 @@ async function ambient(context: ScenarioContext): Promise<void> {
   );
   await moveInGrid(remote, albumCard, 0, album, 6);
   await remote.ok("#ambient-album"); // A single choice returns at once.
+  await showChoices(context, "#ambient-order", "Shuffle, or the album in order");
   // Interval: 10 seconds, the first choice, so the recording sees it change.
-  await remote.down("#ambient-order");
   await remote.down("#ambient-interval");
   await remote.ok(selected("ambient"));
   for (let index = 1; index >= 0; index -= 1) await remote.up(option("ambient", index));
   await remote.ok("#ambient-interval");
+  await showChoices(context, "#ambient-idle", "Start by itself when the TV sits idle");
+  await showChoices(context, "#ambient-stop", "Stop after a while, or never");
   for (const control of [
-    "#ambient-idle",
-    "#ambient-stop",
     "#ambient-include-videos",
     "#ambient-show-clock",
     "#ambient-show-details"
@@ -145,6 +181,7 @@ export const settingsTour: Scenario = {
     await homeRails(context);
     await ambient(context);
     await remote.left("#settings-section-ambient");
+    await supportUs(context);
     await remote.down("#settings-save");
     await remote.ok("#settings-save");
     await remote.visible('#settings-summary[data-state="success"]');

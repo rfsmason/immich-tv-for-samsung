@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { access, copyFile, mkdir, readdir, rename, rm } from "node:fs/promises";
+import { access, copyFile, mkdir, readFile, readdir, rename, rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, resolve } from "node:path";
 import { loadTizenEnv, requireTizenEnv } from "./tizen-env.mjs";
@@ -20,6 +20,13 @@ const stageDir = resolve(root, ".tizen", "package-src");
 const buildResultDir = resolve(stageDir, ".buildResult");
 const packagePath = resolve(buildResultDir, "ImmichTV.wgt");
 const stageOnly = process.argv.includes("--stage-only");
+// An unsigned package for beta testers, who sign it for their own TV when
+// they install it (Apps2Samsung or Tizen Studio; docs/beta-testing.md). It
+// holds the same runtime files and no signature, so it carries no
+// certificate, email address or device ID:
+//   npm run tizen:package:unsigned
+const unsigned = process.argv.includes("--unsigned");
+const releaseDir = resolve(root, ".tizen", "release");
 const tizenCli =
   process.env.TIZEN_CLI || resolve(homedir(), "tizen-studio", "tools", "ide", "bin", "tizen");
 
@@ -37,10 +44,10 @@ async function stageRuntimeFiles() {
   console.log(`Staged ${runtimeFiles.length} runtime files in ${stageDir}`);
 }
 
-function run(command, args) {
+function run(command, args, { cwd = root } = {}) {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(command, args, {
-      cwd: root,
+      cwd,
       env: process.env,
       stdio: "inherit"
     });
@@ -75,10 +82,37 @@ async function normalizePackageFilename() {
   await access(packagePath);
 }
 
+async function readAppVersion() {
+  const configXml = await readFile(resolve(stageDir, "config.xml"), "utf8");
+  const version = /<widget[^>]*\sversion="(\d+\.\d+\.\d+)"/.exec(configXml);
+
+  if (!version) {
+    throw new Error("config.xml has no x.y.z widget version.");
+  }
+
+  return version[1];
+}
+
+async function packageUnsigned() {
+  const unsignedPath = resolve(releaseDir, `ImmichTV-${await readAppVersion()}-unsigned.wgt`);
+
+  await mkdir(releaseDir, { recursive: true });
+  await rm(unsignedPath, { force: true });
+  // -X leaves out extra file attributes; the list keeps the order fixed.
+  await run("zip", ["-X", "-q", unsignedPath, ...runtimeFiles], { cwd: stageDir });
+
+  console.log(`Unsigned package ready: ${unsignedPath}`);
+}
+
 async function main() {
   await stageRuntimeFiles();
 
   if (stageOnly) {
+    return;
+  }
+
+  if (unsigned) {
+    await packageUnsigned();
     return;
   }
 

@@ -22,6 +22,7 @@
     "tizen:deploy": "node scripts/deploy-tizen.mjs",
     "tizen:devices": "sdb devices",
     "tizen:package": "npm run build && node scripts/package-tizen.mjs",
+    "tizen:package:unsigned": "npm run build && node scripts/package-tizen.mjs --unsigned",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.capture.json",
     "capture": "node scripts/capture.mjs",
     "website:videos": "node scripts/website-videos.mjs",

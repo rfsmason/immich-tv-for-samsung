@@ -3247,3 +3247,90 @@ button.asset-viewer-faces[aria-pressed="true"]:focus {
 .ambient-start-actions > .field-hint {
   margin: 0 0 0 24px;
 }
+
+/* Settings > Support Us (ADR 0021, sideload builds only): the words on the
+   left, the QR code with its address on the right, and the supporter toggle
+   beneath both. */
+.support-panel {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-gap: 56px;
+  gap: 56px;
+  align-items: start;
+  max-width: 1240px;
+}
+
+.support-copy {
+  display: grid;
+  grid-gap: 24px;
+  gap: 24px;
+}
+
+h2.support-title {
+  font-size: 48px;
+}
+
+.support-intro,
+.support-any {
+  max-width: 720px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.support-tips {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.support-tips li {
+  color: var(--text-primary);
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+/* The toggle runs under both columns, so its label stays on one line. */
+.support-panel > .choice-field {
+  grid-column: 1 / -1;
+}
+
+.support-qr-figure {
+  display: grid;
+  grid-gap: 12px;
+  gap: 12px;
+  justify-items: center;
+  width: 360px;
+}
+
+/* The QR code is media, like a photo: black modules on a white tile in every
+   theme, with the code's own four-module quiet zone as the tile's margin, so
+   a phone reads it whatever the theme (scripts/contrast-rules.mjs lists both
+   rules as media-only). */
+.support-qr {
+  display: block;
+  width: 360px;
+  height: 360px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.support-qr path {
+  fill: #000000;
+}
+
+.support-scan {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.support-address {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 34px;
+  font-weight: 800;
+}

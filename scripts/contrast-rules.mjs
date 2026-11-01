@@ -255,7 +255,11 @@ export const mediaOnlySelectors = [
   ".asset-viewer-face-box",
   ".dropdown-list",
   ".ambient-screen",
-  ".ambient-video"
+  ".ambient-video",
+  // The Support Us QR code: black on white in every theme, like a photo, so
+  // phones can read it (ADR 0021).
+  ".support-qr",
+  ".support-qr path"
 ];
 
 // Raw colours outside the two token blocks and the media-only rules, so a new

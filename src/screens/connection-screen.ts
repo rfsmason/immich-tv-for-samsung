@@ -9,6 +9,8 @@ import type { AmbientSettings } from "../domain/ambient";
 import { createAmbientSection } from "./settings/ambient-section";
 import { createDisplaySection } from "./settings/display-section";
 import { createHomeSection } from "./settings/home-section";
+import { createSupportSection } from "./settings/support-section";
+import type { SupportPage } from "./settings/support-qr";
 import type { SettingsDropdown } from "./settings/settings-dropdown";
 import {
   requireElement,
@@ -47,6 +49,9 @@ type ConnectionScreenOptions = {
   onStartAmbient?(settings: AmbientSettings): void;
   settingsStore: AppSettingsStore;
   service: ConnectionService;
+  // The tip page for Settings › Support Us; without one (a store build)
+  // the section doesn't exist (ADR 0021).
+  supportPage?: SupportPage | null;
 };
 
 export type ConnectionScreenController = {
@@ -79,6 +84,11 @@ export function mountConnectionScreen(
     createHomeSection(documentRef),
     ambient
   ];
+
+  if (options.supportPage) {
+    sections.push(createSupportSection(documentRef, options.supportPage));
+  }
+
   const navigator = createFocusNavigator(
     () =>
       Array.prototype.slice

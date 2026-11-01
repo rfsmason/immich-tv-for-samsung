@@ -13,7 +13,7 @@ const storageKey = "immich-tv.app-settings";
 // differ only by missing settings, which normalising fills with defaults. A
 // change that cannot be read that way bumps the version and adds a step to
 // migrateStoredAppSettings.
-export const appSettingsSchemaVersion = 4;
+export const appSettingsSchemaVersion = 5;
 
 type StoredAppSettings = Partial<AppSettings> & { schemaVersion?: number };
 
@@ -53,6 +53,7 @@ function migrateStoredAppSettings(stored: StoredAppSettings): Partial<AppSetting
   // Version 3 to 4 added Hide playback buttons; before it the buttons hid
   // after 4 seconds, which isn't an option, so a missing value takes the
   // 5-second default.
+  // Version 4 to 5 added the supporter toggle (ADR 0021), off when missing.
   delete settings.schemaVersion;
 
   return settings;

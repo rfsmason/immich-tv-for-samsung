@@ -118,7 +118,8 @@ async function fixture() {
   );
   vi.stubGlobal("document", {
     body: { scrollTop: 0 },
-    documentElement: { removeAttribute: vi.fn(), scrollTop: 0, setAttribute: vi.fn() }
+    documentElement: { removeAttribute: vi.fn(), scrollTop: 0, setAttribute: vi.fn() },
+    getElementById: () => null
   });
   let active: TopLevelDestinationId | null = null;
   mocks.mountShell.mockImplementation((raw) => {

@@ -33,7 +33,7 @@ The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It 
 
 ## Beta Testing
 
-Beta builds are published as unsigned `.wgt` packages on [GitHub Releases](https://github.com/rfsmason/immich-tv-for-samsung/releases), marked as pre-releases. Testers sign and install them for their own TV with Apps2Samsung or Tizen Studio: see [docs/beta-testing.md](docs/beta-testing.md). `npm run tizen:package:unsigned` builds the package; the release steps are in the [deploy runbook](docs/tizen-deploy-runbook.md#beta-release-package).
+Beta builds are published as unsigned `.wgt` packages on [GitHub Releases](https://github.com/rfsmason/immich-tv-for-samsung/releases), marked as pre-releases. Testers sign and install them for their own TV with Apps2Samsung, whose [community catalogue](https://github.com/Apps2Samsung/tizen-community-packages) lists Immich TV, or Tizen Studio: see [docs/beta-testing.md](docs/beta-testing.md). `npm run tizen:package:unsigned` builds the package; the release steps are in the [deploy runbook](docs/tizen-deploy-runbook.md#beta-release-package).
 
 ## Accessibility
 

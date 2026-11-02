@@ -17,7 +17,7 @@ vi.mock("../platform/tizen/lifecycle", () => ({
 vi.mock("../platform/tizen/screensaver", () => ({ createPassiveViewing: () => ({}) }));
 vi.mock("../logging/logger", () => ({ consoleLogger: { error() {}, info() {}, warn() {} } }));
 
-async function start(stored: string | null) {
+async function start(stored: string | null, installPreset?: unknown) {
   vi.resetModules();
   const events: string[] = [];
   const pendingFrames: Array<() => void> = [];
@@ -41,9 +41,10 @@ async function start(stored: string | null) {
     "window",
     Object.assign(new EventTarget(), {
       fetch: vi.fn(),
+      IMMICH_TV_INSTALL_PRESET: installPreset,
       localStorage: {
         getItem: (key: string) => (key === "immich-tv.app-settings" ? stored : null),
-        setItem: vi.fn()
+        setItem: vi.fn((key: string) => events.push(`store ${key}`))
       },
       requestAnimationFrame: (callback: () => void) => {
         events.push("frame requested");
@@ -104,5 +105,28 @@ describe("startup support line", () => {
 
     expect(supportLines).toHaveLength(0);
     expect(events).toEqual(["remove data-contrast", "frame requested"]);
+  });
+});
+
+describe("startup install preset", () => {
+  it("saves the installer's connection details before the app starts", async () => {
+    const { events, paint } = await start(null, {
+      apiKey: "preset-key",
+      serverUrl: "https://photos.example.test"
+    });
+
+    paint();
+    expect(events.slice(-3)).toEqual([
+      "store immich-tv.connection",
+      "store immich-tv.install-preset",
+      "compose"
+    ]);
+  });
+
+  it("stores nothing when the package has no preset", async () => {
+    const { events, paint } = await start(null, { apiKey: "", serverUrl: "" });
+
+    paint();
+    expect(events.filter((event) => event.startsWith("store"))).toEqual([]);
   });
 });

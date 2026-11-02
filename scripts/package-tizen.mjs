@@ -11,6 +11,7 @@ const runtimeFiles = [
   "index.html",
   "icon.png",
   "styles/main.css",
+  "scripts/install-preset.js",
   "scripts/main.js"
 ];
 

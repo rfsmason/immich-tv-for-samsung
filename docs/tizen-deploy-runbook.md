@@ -108,7 +108,7 @@ Beta testers get an **unsigned** package and sign it for their own TV as they in
    npm run tizen:package:unsigned
    ```
 
-   It writes `.tizen/release/ImmichTV-<version>-unsigned.wgt`: the same 7 runtime files as the signed package, without signature files.
+   It writes `.tizen/release/ImmichTV-<version>-unsigned.wgt`: the same 8 runtime files as the signed package, without signature files.
 3. Inspect it and take its checksum:
 
    ```sh
@@ -120,3 +120,5 @@ Beta testers get an **unsigned** package and sign it for their own TV as they in
 5. Publish a GitHub release tagged `v<version>-beta.<n>`, marked as a pre-release, with the `.wgt` attached and its SHA-256 and a link to `docs/beta-testing.md` in the notes.
 
 Apps2Samsung's community catalogue lists the app from [`packages/rfsmason__immich-tv-for-samsung.json`](https://github.com/Apps2Samsung/tizen-community-packages/blob/main/packages/rfsmason__immich-tv-for-samsung.json) in its repository. Its scheduled sync copies the newest release: the latest stable release, or the newest pre-release while there is no stable one. From it, the sync takes the asset matching `^ImmichTV-.*-unsigned\.wgt$`. So keep that asset name, attach no second `.wgt` that matches it, and don't publish a signed package. Releases need no change in that repository; changing the name or description does.
+
+The entry's `user_settings` form fills in `scripts/install-preset.js` by finding `serverUrl: ""` and `apiKey: ""` (ADR 0022). `npm run check` fails if either is missing or repeated. If they ever have to change, publish the release first and update the entry straight after: the catalogue ships the newest release, and an install fails when its text is not found.

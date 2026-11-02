@@ -118,3 +118,5 @@ Beta testers get an **unsigned** package and sign it for their own TV as they in
 
 4. Install it once through Apps2Samsung or Tizen Studio as a tester would, before announcing it.
 5. Publish a GitHub release tagged `v<version>-beta.<n>`, marked as a pre-release, with the `.wgt` attached and its SHA-256 and a link to `docs/beta-testing.md` in the notes.
+
+Apps2Samsung's community catalogue lists the app from [`packages/rfsmason__immich-tv-for-samsung.json`](https://github.com/Apps2Samsung/tizen-community-packages/blob/main/packages/rfsmason__immich-tv-for-samsung.json) in its repository. Its scheduled sync copies the newest release: the latest stable release, or the newest pre-release while there is no stable one. From it, the sync takes the asset matching `^ImmichTV-.*-unsigned\.wgt$`. So keep that asset name, attach no second `.wgt` that matches it, and don't publish a signed package. Releases need no change in that repository; changing the name or description does.

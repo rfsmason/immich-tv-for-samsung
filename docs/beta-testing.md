@@ -14,7 +14,9 @@ The app only reads from your Immich server: it never uploads, edits or deletes a
 
 ## 1. Download the app
 
-From the project's [GitHub Releases](https://github.com/rfsmason/immich-tv-for-samsung/releases), download `ImmichTV-<version>-unsigned.wgt` from the latest beta. The release notes give its SHA-256 checksum, so you can check the download:
+If you install with Apps2Samsung from its community catalogue (option A below), skip this step: Apps2Samsung downloads the app for you.
+
+Otherwise, from the project's [GitHub Releases](https://github.com/rfsmason/immich-tv-for-samsung/releases), download `ImmichTV-<version>-unsigned.wgt` from the latest beta. The release notes give its SHA-256 checksum, so you can check the download:
 
 ```sh
 shasum -a 256 ImmichTV-<version>-unsigned.wgt
@@ -35,12 +37,14 @@ Developer Mode can stay on during normal use.
 
 ### Option A: Apps2Samsung (easiest)
 
-[Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung) is a community installer for Samsung TVs. It isn't part of this project. It can install your own `.wgt` file, and on the first install for a TV it creates a signing certificate, which needs a Samsung account sign-in in a browser. The unsigned beta has been installed this way on the 2019 Q950R, with Apps2Samsung 3.1.0 on macOS.
+[Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung) is a community installer for Samsung TVs. It isn't part of this project. On the first install for a TV it creates a signing certificate, which needs a Samsung account sign-in in a browser. The unsigned beta has been installed this way on the 2019 Q950R, with Apps2Samsung 3.1.0 on macOS.
+
+Immich TV is listed in Apps2Samsung's [community catalogue](https://github.com/Apps2Samsung/tizen-community-packages), under Media. The catalogue copies each new GitHub release of this project, so it offers the same package as the Releases page.
 
 If an older copy of Immich TV is already on the TV, for example one you installed with Tizen Studio, remove it first: a copy signed with a different certificate may not be replaced.
 
 1. Install Apps2Samsung by following its README.
-2. Choose to install a custom `.wgt`, and pick the file you downloaded.
+2. Choose **Immich TV** from its community catalogue. Or, if you downloaded the `.wgt` yourself, choose to install a custom `.wgt` and pick that file.
 3. Follow its prompts to find your TV, sign in to Samsung and install.
 
 ### Option B: Tizen Studio
@@ -74,7 +78,7 @@ Everything is driven by the Smart Remote: arrows, OK and Back reach everything. 
 
 ## Updating
 
-Install a newer beta the same way. It has the same app ID, so it replaces the one already on the TV.
+Install a newer beta the same way. It has the same app ID, so it replaces the one already on the TV. Apps2Samsung's catalogue picks up a new release shortly after it is published on GitHub.
 
 ## Feedback
 

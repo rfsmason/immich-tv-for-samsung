@@ -27,6 +27,13 @@ It escapes quotes and backslashes in text values, and the install fails if the t
 - **The catalogue entry.** `packages/rfsmason__immich-tv-for-samsung.json` in that repository adds two fields, Immich server URL and API key, with a `help_url` pointing to the README's API key permissions.
   - Its `find` strings must match `scripts/install-preset.js`, and that pull request is opened only after a release that contains the file. The catalogue always ships the newest release, so an entry that expected the text while the latest package lacked it would fail every install.
 
+Physical-TV acceptance passed on the 2019 Q950R on 2 November 2026 (user confirmation). The test installed a hand-filled package through Apps2Samsung's custom `.wgt` option and checked four things:
+
+- the first start opened connected;
+- a change made in Settings survived a restart and a reinstall with the same details;
+- a reinstall with new details replaced the connection;
+- an empty preset behaved as before.
+
 ## Consequences
 
 - Testers who install from the catalogue can start the app already connected, without typing a key on the TV.

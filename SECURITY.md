@@ -32,4 +32,4 @@ Out of scope:
 
 ## How credentials are handled
 
-The app stores the Immich server URL and API key in the TV's local storage. It sends the key only to the configured Immich server and never logs it. Anyone with access to the TV's app storage could recover it, so use an Immich API key with only the read access the app needs.
+The app stores the Immich server URL and API key in the TV's local storage. When you install from Apps2Samsung's catalogue and fill in its form, they are also written into your own copy of the package on the TV, and Apps2Samsung keeps them on your computer for updates. Release packages never contain them. The app sends the key only to the configured Immich server and never logs it. Anyone with access to the TV's app storage could recover it, so use an Immich API key with only the read access the app needs.

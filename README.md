@@ -134,7 +134,9 @@ The app requires **Immich v3.2.0 or later**. Album detail, Favourites and People
 
 The TV app stores the Immich server URL and API key in browser `localStorage` on the device. Use the on-screen setup form to enter them and test connectivity. `Test connection` validates and checks the settings without saving them; `Save` persists them explicitly. When saved settings exist, the app opens on Home; use **Settings** in the navigation rail to change the connection later.
 
-This is an intentional lightweight credential choice for the local TV app. The API key is not stored in source, not baked into the widget, not sent anywhere except the configured Immich server, and not logged by the app. Anyone with access to the TV runtime storage could potentially recover it, so use an Immich API key with only the access you are comfortable granting to the TV.
+Apps2Samsung's community catalogue can fill them in instead: its install form writes the server URL and API key into `scripts/install-preset.js` in the user's own package, and the app saves them on its first start ([ADR 0022](docs/architecture/0022-install-preset.md)). Release packages carry empty values.
+
+This is an intentional lightweight credential choice for the local TV app. The API key is not stored in source, not baked into release packages, not sent anywhere except the configured Immich server, and not logged by the app. Anyone with access to the TV runtime storage could potentially recover it, so use an Immich API key with only the access you are comfortable granting to the TV.
 
 `.env.example` remains only a development reference. Do not commit real API keys or private server details.
 

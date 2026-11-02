@@ -7,6 +7,7 @@ const requiredFiles = [
   "index.html",
   "icon.png",
   "styles/main.css",
+  "scripts/install-preset.js",
   "scripts/main.js"
 ];
 
@@ -54,6 +55,28 @@ if (webapisIndex < 0 || webapisIndex > indexHtml.indexOf('<script src="scripts/m
   failures.push("index.html should load $WEBAPIS/webapis/webapis.js before scripts/main.js.");
 }
 
+// The installer's connection details (ADR 0022) are read when the app starts,
+// so their script loads first. Apps2Samsung's catalogue entry
+// (packages/rfsmason__immich-tv-for-samsung.json in
+// Apps2Samsung/tizen-community-packages) fills them in by finding these exact
+// lines, and its installs fail if they are missing.
+const installPresetIndex = indexHtml.indexOf('<script src="scripts/install-preset.js"></script>');
+
+if (
+  installPresetIndex < 0 ||
+  installPresetIndex > indexHtml.indexOf('<script src="scripts/main.js">')
+) {
+  failures.push("index.html should load scripts/install-preset.js before scripts/main.js.");
+}
+
+const installPreset = await readFile(resolve(runtimeRoot, "scripts/install-preset.js"), "utf8");
+
+for (const placeholder of ['serverUrl: ""', 'apiKey: ""']) {
+  if (installPreset.split(placeholder).length !== 2) {
+    failures.push(`scripts/install-preset.js should contain ${placeholder} exactly once.`);
+  }
+}
+
 if (indexHtml.includes("scripts/dev-preview.js")) {
   failures.push("index.html must not load the desktop-only preview script.");
 }
@@ -85,7 +108,7 @@ try {
 // An explicit file allowlist rejects capture output, Playwright, credentials,
 // source files and any future tooling accidentally copied into dist. The
 // desktop preview script is the sole permitted development file; packaging
-// separately stages its seven-file production allowlist.
+// separately stages its eight-file production allowlist.
 const allowedFiles = new Set([
   ...requiredFiles,
   "assets/app-background.jpg",

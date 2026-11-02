@@ -556,6 +556,8 @@ TV displays short code and/or QR code
 
 Do not introduce an additional backend service unless investigation proves it is genuinely necessary.
 
+In the meantime, installs from Apps2Samsung's community catalogue can carry the server URL and API key, entered in Apps2Samsung's form on the computer and saved on the app's first start ([ADR 0022](architecture/0022-install-preset.md)).
+
 At this milestone revisit credential persistence, least-privilege permissions, logout/disconnect, server switching, API-key/query-string authentication currently required for HTML video playback, and whether current Immich authentication APIs provide a suitable pairing/device-authorisation mechanism.
 
 #### Authentication approach order

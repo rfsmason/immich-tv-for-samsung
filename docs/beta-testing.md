@@ -45,7 +45,8 @@ If an older copy of Immich TV is already on the TV, for example one you installe
 
 1. Install Apps2Samsung by following its README.
 2. Choose **Immich TV** from its community catalogue. Or, if you downloaded the `.wgt` yourself, choose to install a custom `.wgt` and pick that file.
-3. Follow its prompts to find your TV, sign in to Samsung and install.
+3. From the catalogue, starting with 0.1.0 beta 2, Apps2Samsung asks for your Immich server URL and API key before it installs. Fill them in and the app starts already connected, with no typing on the TV. You can leave them empty and enter them on the TV instead. Apps2Samsung remembers them for updates.
+4. Follow its prompts to find your TV, sign in to Samsung and install.
 
 ### Option B: Tizen Studio
 
@@ -72,7 +73,9 @@ If you already use Samsung's Tizen Studio with the TV extensions:
 
 ## 4. First run
 
-The app opens on Settings. Enter your Immich server URL (for example `http://<server-ip>:2283`, or your `https://` address) and API key, choose **Test connection**, then **Save**. Typing a long key with the remote is slow; pairing with your phone is planned.
+If you gave Apps2Samsung your server URL and API key, the app opens connected on Home. A connection you later change in Settings on the TV stays until you reinstall with different details in Apps2Samsung.
+
+Otherwise the app opens on Settings. Enter your Immich server URL (for example `http://<server-ip>:2283`, or your `https://` address) and API key, choose **Test connection**, then **Save**. Typing a long key with the remote is slow; pairing with your phone is planned.
 
 Everything is driven by the Smart Remote: arrows, OK and Back reach everything. Settings › Support Us explains how to tip if you enjoy the app. Tips are optional and unlock nothing.
 

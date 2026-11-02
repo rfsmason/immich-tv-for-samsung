@@ -11,6 +11,7 @@ import { createAlbumService } from "./album-service";
 import { composeApplication } from "./application";
 import { createConnectionService } from "./connection-service";
 import { supportLinksEnabled, supportPage } from "./distribution";
+import { applyInstallPreset } from "./install-preset";
 import { createViewingHistoryService } from "./viewing-history-service";
 
 // Entry point: creates the real services and platform adapters for the TV
@@ -34,6 +35,14 @@ afterNextPaint(() => {
   const lifecycle = createAppLifecycle({ logger: consoleLogger });
 
   registerOptionalRemoteKeys(window, consoleLogger);
+  // Before the app starts, so it opens connected when an installer provided
+  // the details (ADR 0022).
+  applyInstallPreset({
+    connections: store,
+    logger: consoleLogger,
+    preset: (window as InstallPresetWindow).IMMICH_TV_INSTALL_PRESET,
+    storage: window.localStorage
+  });
 
   const application = composeApplication({
     albumService: createAlbumService({ fetchImpl, logger: consoleLogger, store }),
@@ -58,6 +67,9 @@ afterNextPaint(() => {
     application.destroy();
   });
 });
+
+// Set by scripts/install-preset.js, which loads before this bundle.
+type InstallPresetWindow = Window & { IMMICH_TV_INSTALL_PRESET?: unknown };
 
 // A requestAnimationFrame callback runs just before a frame is drawn; the
 // timeout then runs after that frame, once the splash is on screen.

@@ -21,7 +21,8 @@ const copiedRuntimeFiles = [
   "index.html",
   "icon.png",
   "styles/main.css",
-  "scripts/dev-preview.js"
+  "scripts/dev-preview.js",
+  "scripts/install-preset.js"
 ];
 
 async function copyRuntimeFile(file) {

@@ -1,1 +1,3 @@
 `assets/app-background.jpg`: original composite by Rob Mason, made in Photoshop from freely licensed photos (the same set used for the demo library). Released with this project under the MIT licence.
+
+`assets/keep-awake.mp4`: 10 minutes of plain black (320×180, 1 frame a second, H.264, no audio) for the OLED keep-awake (ADR 0023), generated with ffmpeg 6.0: `ffmpeg -f lavfi -i "color=c=black:s=320x180:r=1:d=600" -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -g 30 -tune stillimage -an -map_metadata -1 -fflags +bitexact -flags:v +bitexact -movflags +faststart assets/keep-awake.mp4`. No third-party content.

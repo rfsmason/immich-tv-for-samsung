@@ -521,6 +521,10 @@ Success criterion: the television can reliably display Immich content for an ext
 - **Settings → Ambient:** source, album, order, interval, include videos, show clock, show photo details, start after idle, stop after, and Start now, persisted in `AppSettings` with a schema bump.
 - No new Home rail and no new left-rail destination.
 
+#### OLED screensaver note (3 November 2026)
+
+[Issue #15](https://github.com/rfsmason/immich-tv-for-samsung/issues/15): on a Samsung OLED TV (S90F), the TV's burn-in Screen Saver interrupts slideshows and ambient mode after about two minutes, although the app holds the screensaver off through AppCommon. Samsung says that Screen Saver can't be disabled and may not start during full-screen video. An opt-in Settings → Display → "Keep OLED screensaver away" plays a hidden black clip while photos show, and slideshows and ambient mode then show videos as stills ([ADR 0023](architecture/0023-oled-keep-awake.md)). It is unverified on an OLED TV until the reporter tests it.
+
 #### Store distribution note (1 November 2026)
 
 Builds are `sideload` (the default) or `store`, chosen with `--store` or `IMMICH_TV_DISTRIBUTION=store` ([ADR 0021](architecture/0021-support-us.md)). A store build contains no Ko-fi link, QR code, Support Us section or splash support line, and the check fails if one does. Any future store tipping goes through Samsung Checkout. Packaging and deployment defaults stay sideload.

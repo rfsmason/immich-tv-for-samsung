@@ -52,7 +52,7 @@ Milestone 18 asks for an ambient photo-frame or screensaver experience built on 
 - `index.html` carries Samsung's documented tag, `<script src="$WEBAPIS/webapis/webapis.js"></script>`, before `scripts/main.js`. The TV's web runtime resolves `$WEBAPIS`.
 - A desktop browser would request `/$WEBAPIS/webapis/webapis.js` and get a 404, so the desktop preview server (`scripts/serve-preview.mjs`) removes the tag when it serves `index.html`, as it already adds the preview-only script. The preview, the capture tooling and Playwright checks see no 404 and no console error.
 - `npm run check` fails if the tag is missing or comes after `scripts/main.js`.
-- **The staged widget still holds 7 runtime files**: `webapis.js` is provided by the TV, not packaged.
+- **The staged widget still holds 7 runtime files**: `webapis.js` is provided by the TV, not packaged. (Later additions brought it to 9; the OLED keep-awake clip is the ninth, ADR 0023.)
 
 ### Immich behaviour (verified on 26 October 2026, `main` at `f7b8ae5`)
 
@@ -150,6 +150,7 @@ Every source has one interface, `next(): Promise<AlbumAsset | null>`, and holds 
 ## Consequences
 
 - **Store readiness.** Slideshows and video playback now hold the TV's screensaver off and let it back when they pause or stop, as Samsung requires. Testing this on the TV needs "Auto Protection Time" on.
+- **Samsung OLED TVs** have a separate burn-in Screen Saver that this switch has been reported not to reach. An opt-in keep-awake answers that ([ADR 0023](0023-oled-keep-awake.md)).
 - **Single source of truth for media.** Ambient mode adds a presentation, not an engine: preview loading, retention and release are the viewer's.
 - **The viewer split.** It was needed to reuse this code. `asset-viewer.ts` went from 972 lines (998 after Phase 1) to 864 (ADR 0005 update).
 - **No framework, router, event bus, animation library or dependency.** The CSS uses opacity transitions only, and both compatibility checks pass.

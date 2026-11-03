@@ -18,6 +18,7 @@ const copiedRuntimeFiles = [
   "config.xml",
   "assets/app-background.jpg",
   "assets/immich-tv-logo.png",
+  "assets/keep-awake.mp4",
   "index.html",
   "icon.png",
   "styles/main.css",

@@ -240,7 +240,7 @@ describe("Settings remote navigation and actions", () => {
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);
     pressKey(remoteKeys.enter); // High contrast on.
-    for (let step = 0; step < 5; step += 1) pressKey(remoteKeys.down);
+    for (let step = 0; step < 6; step += 1) pressKey(remoteKeys.down);
     // Arriving only focuses the interval; OK opens its list on the current value.
     expect(document.activeElement).toBe(byId("slideshow-interval"));
     pressKey(remoteKeys.enter);
@@ -261,12 +261,31 @@ describe("Settings remote navigation and actions", () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 
+  it("turns the OLED keep-awake on from Display, below Autoplay videos, and saves it", () => {
+    const { settingsStore } = mount();
+    controller!.show({ allowBack: true });
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.right);
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.down);
+    expect(document.activeElement).toBe(byId("oled-keep-awake"));
+    expect(byId<HTMLInputElement>("oled-keep-awake").checked).toBe(false);
+    pressKey(remoteKeys.enter);
+    expect(byId<HTMLInputElement>("oled-keep-awake").checked).toBe(true);
+
+    byId("settings-save").focus();
+    pressKey(remoteKeys.enter);
+    expect(settingsStore.save).toHaveBeenCalledWith(
+      expect.objectContaining({ oledKeepAwake: true })
+    );
+  });
+
   it("chooses when the playback buttons fade, defaulting to 5 seconds, and saves Never", () => {
     const { settingsStore } = mount();
     controller!.show({ allowBack: true });
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);
-    for (let step = 0; step < 6; step += 1) pressKey(remoteKeys.down);
+    for (let step = 0; step < 7; step += 1) pressKey(remoteKeys.down);
     expect(document.activeElement).toBe(byId("playback-buttons-hide"));
     expect(byId("playback-buttons-hide").textContent).toContain("After 5 seconds");
 
@@ -290,7 +309,7 @@ describe("Settings remote navigation and actions", () => {
     controller!.show({ allowBack: true });
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);
-    for (let step = 0; step < 5; step += 1) pressKey(remoteKeys.down);
+    for (let step = 0; step < 6; step += 1) pressKey(remoteKeys.down);
     expect(document.activeElement).toBe(interval());
     expect(list()).toBeNull();
 

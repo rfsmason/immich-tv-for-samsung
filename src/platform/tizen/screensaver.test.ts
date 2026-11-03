@@ -101,6 +101,58 @@ describe("passive viewing and the TV screensaver", () => {
     expect(api.setScreenSaver.mock.calls.map(([state]) => state)).toEqual([0, 1]);
   });
 
+  it("logs the TV's answer to each switch", () => {
+    const api = appcommon();
+    api.setScreenSaver.mockImplementation((_state, onsuccess: () => void) => onsuccess());
+    const { logger, passive } = setup(api);
+    const hold = passive.createHold();
+
+    hold.set(true);
+    hold.set(false);
+    expect(logger.info.mock.calls.map(([message]) => message)).toEqual([
+      "TV screensaver held off.",
+      "TV screensaver allowed."
+    ]);
+  });
+
+  it("asks for the OLED keep-awake only while photos hold and nothing plays", () => {
+    const keepAwake = { set: vi.fn() };
+    const passive = createPassiveViewing({
+      keepAwake,
+      logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
+      windowRef: {}
+    });
+    const slideshow = passive.createHold("photos");
+    const ambient = passive.createHold("photos");
+    const video = passive.createHold();
+    const last = () => keepAwake.set.mock.calls[keepAwake.set.mock.calls.length - 1]![0];
+
+    slideshow.set(true);
+    expect(last()).toBe(true);
+    video.set(true);
+    expect(last()).toBe(false);
+    video.set(false);
+    expect(last()).toBe(true);
+    ambient.set(true);
+    slideshow.set(false);
+    expect(last()).toBe(true);
+    ambient.set(false);
+    expect(last()).toBe(false);
+    expect(passive.activeCount()).toBe(0);
+  });
+
+  it("never asks for the keep-awake for media holds alone", () => {
+    const keepAwake = { set: vi.fn() };
+    const passive = createPassiveViewing({
+      keepAwake,
+      logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
+      windowRef: {}
+    });
+
+    passive.createHold().set(true);
+    expect(keepAwake.set.mock.calls.every(([active]) => active === false)).toBe(true);
+  });
+
   it("offers a no-op for screens with nothing to tell the TV", () => {
     const hold = noPassiveViewing.createHold();
 

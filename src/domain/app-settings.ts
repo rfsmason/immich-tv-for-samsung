@@ -30,6 +30,10 @@ export type AppSettings = {
   // White text on solid dark, with stronger edges and focus (ADR 0020).
   highContrast: boolean;
   homeRails: HomeRailVisibility;
+  // Plays a hidden black video during slideshows and ambient mode, which
+  // keeps Samsung's OLED screensaver away, and shows videos there as stills
+  // (ADR 0023). Off unless the user turns it on.
+  oledKeepAwake: boolean;
   playbackButtonsHide: PlaybackButtonsHide;
   // Face tags over photos in the viewer (the viewer's Faces button).
   showFaceTags: boolean;
@@ -50,6 +54,7 @@ export const defaultAppSettings: AppSettings = {
   autoplayVideos: false,
   highContrast: false,
   homeRails: normalizeHomeRailVisibility(null),
+  oledKeepAwake: false,
   playbackButtonsHide: defaultPlaybackButtonsHide,
   showFaceTags: false,
   showViewerDate: true,
@@ -66,6 +71,7 @@ export function normalizeAppSettings(settings: Partial<AppSettings> | null): App
     autoplayVideos: settings?.autoplayVideos === true,
     highContrast: settings?.highContrast === true,
     homeRails: normalizeHomeRailVisibility(settings?.homeRails),
+    oledKeepAwake: settings?.oledKeepAwake === true,
     playbackButtonsHide: normalizePlaybackButtonsHide(settings?.playbackButtonsHide),
     showFaceTags: settings?.showFaceTags === true,
     showViewerDate: settings?.showViewerDate !== false,
@@ -102,6 +108,19 @@ export function readPlaybackButtonsHideMs(settings: AppSettings): number | null 
   const hide = settings.playbackButtonsHide;
 
   return hide === "never" ? null : hide * 1000;
+}
+
+// Whether a slideshow plays its videos in full. With the OLED keep-awake on,
+// it shows them as stills, so the hidden video never plays beside a real one
+// (ADR 0023).
+export function slideshowPlaysVideos(settings: AppSettings): boolean {
+  return settings.autoplayVideos && !settings.oledKeepAwake;
+}
+
+// Ambient mode's settings as they apply: with the OLED keep-awake on, it
+// shows photos only (ADR 0023).
+export function readEffectiveAmbientSettings(settings: AppSettings): AmbientSettings {
+  return settings.oledKeepAwake ? { ...settings.ambient, includeVideos: false } : settings.ambient;
 }
 
 // Keeps only known rails; a rail missing from stored settings, for example

@@ -1,4 +1,5 @@
 import { consoleLogger } from "../logging/logger";
+import { createKeepAwake } from "../platform/tizen/keep-awake";
 import { registerOptionalRemoteKeys } from "../platform/tizen/keys";
 import { createAppLifecycle } from "../platform/tizen/lifecycle";
 import { createPassiveViewing } from "../platform/tizen/screensaver";
@@ -49,7 +50,14 @@ afterNextPaint(() => {
     connectionService: createConnectionService({ fetchImpl, logger: consoleLogger, store }),
     lifecycle,
     logger: consoleLogger,
-    passiveViewing: createPassiveViewing({ logger: consoleLogger }),
+    passiveViewing: createPassiveViewing({
+      keepAwake: createKeepAwake({
+        documentRef: document,
+        enabled: () => settingsStore.load().oledKeepAwake,
+        logger: consoleLogger
+      }),
+      logger: consoleLogger
+    }),
     settingsStore,
     supportPage,
     viewingHistory: createViewingHistoryService({

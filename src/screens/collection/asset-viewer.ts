@@ -114,7 +114,11 @@ type ViewerContext = AssetViewerOptions &
 
 export function createAssetViewer(options: AssetViewerOptions): AssetViewerController {
   const { collection, elements } = options;
-  const passiveHold = (options.passiveViewing || noPassiveViewing).createHold();
+  const passiveViewing = options.passiveViewing || noPassiveViewing;
+  // A running slideshow shows photos; a playing video or Live Photo is media
+  // (ADR 0023).
+  const photosHold = passiveViewing.createHold("photos");
+  const mediaHold = passiveViewing.createHold("media");
   const controlsAutoHide = createViewerControlsAutoHide({
     hideAfterMs: () => readPlaybackButtonsHideMs(options.settingsStore.load()),
     onHiddenChange(hidden) {
@@ -184,12 +188,21 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
     },
     syncPassiveViewing() {
       const video = elements.assetViewerVideo;
-      const passive =
-        collection.isOpen() &&
-        (state.viewerSlideshow.playing || (!video.hidden && !video.paused && !video.ended));
+      const open = collection.isOpen();
+      const playing = open && !video.hidden && !video.paused && !video.ended;
+      const slideshow = open && state.viewerSlideshow.playing;
 
-      passiveHold.set(passive);
-      controlsAutoHide.setPassive(passive);
+      // The hold taking over is set first, so the TV's screensaver isn't let
+      // back for a moment in between.
+      if (playing) {
+        mediaHold.set(true);
+        photosHold.set(false);
+      } else {
+        photosHold.set(slideshow);
+        mediaHold.set(false);
+      }
+
+      controlsAutoHide.setPassive(slideshow || playing);
     }
   };
   const { state } = context;
@@ -328,12 +341,14 @@ export function createAssetViewer(options: AssetViewerOptions): AssetViewerContr
       resetViewerPlayback(elements, state);
       resetViewerImages(context);
       context.seek.cancel();
-      passiveHold.set(false);
+      photosHold.set(false);
+      mediaHold.set(false);
       controlsAutoHide.setPassive(false);
     },
     destroy() {
       context.seek.cancel();
-      passiveHold.set(false);
+      photosHold.set(false);
+      mediaHold.set(false);
       controlsAutoHide.destroy();
       listeners.forEach(([target, type, listener, capture]) =>
         target.removeEventListener(type, listener, capture)

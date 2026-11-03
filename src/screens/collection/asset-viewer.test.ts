@@ -111,6 +111,7 @@ function fixture(
   const onAssetViewed = vi.fn();
   const onControlsHiddenChange = vi.fn();
   const setScreenSaver = vi.fn();
+  const keepAwake = { set: vi.fn() };
 
   viewer = createAssetViewer({
     collection,
@@ -119,6 +120,7 @@ function fixture(
     onAssetViewed,
     onControlsHiddenChange,
     passiveViewing: createPassiveViewing({
+      keepAwake,
       logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
       windowRef: { webapis: { appcommon: { setScreenSaver } } }
     }),
@@ -163,6 +165,10 @@ function fixture(
     play,
     press,
     // The TV screensaver states sent so far: 0 off, 1 on.
+    // Whether the OLED keep-awake was last asked to play.
+    keepAwake: () =>
+      keepAwake.set.mock.calls.length > 0 &&
+      keepAwake.set.mock.calls[keepAwake.set.mock.calls.length - 1]![0] === true,
     screensaver: () => setScreenSaver.mock.calls.map(([state]) => state as number),
     service,
     settings: () => storedSettings
@@ -596,6 +602,34 @@ describe("slideshow videos in full", () => {
     await vi.advanceTimersByTimeAsync(10000);
     expect(f.collection.select).toHaveBeenLastCalledWith(2);
     expect(f.play).not.toHaveBeenCalled();
+  });
+
+  it("with the OLED keep-awake on, shows videos as stills even with autoplay on", async () => {
+    const { f } = await slideshow([asset("a"), video("v"), asset("b")], { oledKeepAwake: true });
+
+    expect(f.keepAwake()).toBe(true);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(1);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(f.collection.select).toHaveBeenLastCalledWith(2);
+    expect(f.play).not.toHaveBeenCalled();
+    expect(f.keepAwake()).toBe(true);
+
+    f.press(remoteKeys.mediaPause);
+    expect(f.keepAwake()).toBe(false);
+  });
+
+  it("asks for the keep-awake while photos show, never while a slideshow's video plays", async () => {
+    const { f, media } = await slideshow([asset("a"), video("v"), asset("b")]);
+
+    expect(f.keepAwake()).toBe(true);
+    await vi.advanceTimersByTimeAsync(5000);
+    media.element.dispatchEvent(new Event("playing"));
+    expect(f.keepAwake()).toBe(false);
+    media.tick();
+    media.end();
+    expect(f.keepAwake()).toBe(true);
+    expect(f.screensaver()).toEqual([0]);
   });
 
   it("holds the TV screensaver off without a gap, and pauses at the end of the collection", async () => {

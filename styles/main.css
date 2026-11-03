@@ -3334,3 +3334,16 @@ h2.support-title {
   font-size: 34px;
   font-weight: 800;
 }
+
+/* The OLED keep-awake clip (ADR 0023): full screen, behind everything. It
+   plays only while the viewer's slideshow or ambient mode covers it with an
+   opaque layer, and without a source it draws nothing. */
+.keep-awake-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}

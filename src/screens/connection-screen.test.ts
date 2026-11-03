@@ -429,6 +429,27 @@ describe("Settings remote navigation and actions", () => {
     expect(f.onAppSettingsSaved).toHaveBeenCalledTimes(1);
   });
 
+  it("leaves videos out of Start now while the OLED keep-awake is ticked, saved or not", () => {
+    const f = mount();
+    controller!.show({ allowBack: true });
+    const includeVideos = byId<HTMLInputElement>("ambient-include-videos");
+    if (!includeVideos.checked) includeVideos.click();
+
+    byId("ambient-start").focus();
+    pressKey(remoteKeys.enter);
+    expect(f.onStartAmbient).toHaveBeenLastCalledWith(
+      expect.objectContaining({ includeVideos: true })
+    );
+
+    byId<HTMLInputElement>("oled-keep-awake").click();
+    byId("ambient-start").focus();
+    pressKey(remoteKeys.enter);
+    expect(f.onStartAmbient).toHaveBeenLastCalledWith(
+      expect.objectContaining({ includeVideos: false })
+    );
+    expect(f.settingsStore.save).not.toHaveBeenCalled();
+  });
+
   it("comes back from the album picker with the album and unsaved choices kept", () => {
     mount();
     controller!.show({ allowBack: true });

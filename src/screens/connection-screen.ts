@@ -81,7 +81,9 @@ export function mountConnectionScreen(
   const ambient = createAmbientSection(documentRef);
   const sections: SettingsSection[] = [
     connection,
-    createDisplaySection(documentRef),
+    createDisplaySection(documentRef, {
+      onOledKeepAwakeChange: (on) => ambient.setVideosAllowed(!on)
+    }),
     createHomeSection(documentRef),
     ambient
   ];
@@ -374,7 +376,11 @@ export function mountConnectionScreen(
         connection.enableTextEntry(activeElement);
       } else if (isCheckboxInput(activeElement) && keyCode === remoteKeys.enter) {
         event.preventDefault();
-        activeElement.checked = !activeElement.checked;
+        // A locked checkbox stays reachable, so its hint can say why.
+        if (activeElement.getAttribute("aria-disabled") !== "true") {
+          activeElement.checked = !activeElement.checked;
+          activeElement.dispatchEvent(new Event("change", { bubbles: true }));
+        }
       } else if (keyCode === remoteKeys.left) {
         event.preventDefault();
         connection.disableTextEntry();

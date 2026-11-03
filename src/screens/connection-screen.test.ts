@@ -280,6 +280,63 @@ describe("Settings remote navigation and actions", () => {
     );
   });
 
+  it("turns ambient Include videos off and locks it while the OLED keep-awake is ticked", () => {
+    const { settingsStore } = mount({
+      appSettings: {
+        ...defaultAppSettings,
+        ambient: { ...defaultAppSettings.ambient, includeVideos: true }
+      }
+    });
+    controller!.show({ allowBack: true });
+    const includeVideos = byId<HTMLInputElement>("ambient-include-videos");
+    const hint = byId("ambient-include-videos-hint");
+    expect(includeVideos.checked).toBe(true);
+
+    byId("oled-keep-awake").focus();
+    pressKey(remoteKeys.enter);
+    expect(includeVideos.checked).toBe(false);
+    expect(includeVideos.getAttribute("aria-disabled")).toBe("true");
+    expect(hint.textContent).toBe("Off while Keep OLED screensaver away is on, in Display.");
+
+    // Still reachable, but neither Enter nor a click ticks it.
+    includeVideos.focus();
+    pressKey(remoteKeys.enter);
+    includeVideos.click();
+    expect(includeVideos.checked).toBe(false);
+
+    // Unticking the keep-awake before saving brings the choice back.
+    byId("oled-keep-awake").focus();
+    pressKey(remoteKeys.enter);
+    expect(includeVideos.checked).toBe(true);
+    expect(includeVideos.hasAttribute("aria-disabled")).toBe(false);
+    expect(hint.textContent).toBe("Videos play muted, for up to a minute each.");
+
+    pressKey(remoteKeys.enter);
+    byId("settings-save").focus();
+    pressKey(remoteKeys.enter);
+    expect(settingsStore.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ambient: expect.objectContaining({ includeVideos: false }),
+        oledKeepAwake: true
+      })
+    );
+  });
+
+  it("shows Include videos locked when the OLED keep-awake was saved on", () => {
+    mount({
+      appSettings: {
+        ...defaultAppSettings,
+        ambient: { ...defaultAppSettings.ambient, includeVideos: true },
+        oledKeepAwake: true
+      }
+    });
+    controller!.show({ allowBack: true });
+    const includeVideos = byId<HTMLInputElement>("ambient-include-videos");
+
+    expect(includeVideos.checked).toBe(false);
+    expect(includeVideos.getAttribute("aria-disabled")).toBe("true");
+  });
+
   it("chooses when the playback buttons fade, defaulting to 5 seconds, and saves Never", () => {
     const { settingsStore } = mount();
     controller!.show({ allowBack: true });

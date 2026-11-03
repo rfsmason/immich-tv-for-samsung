@@ -787,6 +787,12 @@ button.settings-section-button[data-dirty] .button-row-label::after {
     0 0 0 13px var(--focus-ring);
 }
 
+/* A locked checkbox (Include videos under the OLED keep-awake) dims only
+   its label, so its focus ring stays at full strength; its hint says why. */
+.choice-field input[aria-disabled="true"] + span > .field-label {
+  opacity: var(--disabled-opacity);
+}
+
 .focusable {
   min-height: 78px;
   border: 4px solid var(--control-border);

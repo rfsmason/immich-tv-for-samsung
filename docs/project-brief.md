@@ -523,7 +523,7 @@ Success criterion: the television can reliably display Immich content for an ext
 
 #### OLED screensaver note (3 November 2026)
 
-[Issue #15](https://github.com/rfsmason/immich-tv-for-samsung/issues/15): on a Samsung OLED TV (S90F), the TV's burn-in Screen Saver interrupts slideshows and ambient mode after about two minutes, although the app holds the screensaver off through AppCommon. Samsung says that Screen Saver can't be disabled and may not start during full-screen video. An opt-in Settings → Display → "Keep OLED screensaver away" plays a hidden black clip while photos show, and slideshows and ambient mode then show videos as stills ([ADR 0023](architecture/0023-oled-keep-awake.md)). It is unverified on an OLED TV until the reporter tests it.
+[Issue #15](https://github.com/rfsmason/immich-tv-for-samsung/issues/15): on a Samsung OLED TV (S90F), the TV's burn-in Screen Saver interrupts slideshows and ambient mode after about two minutes, although the app holds the screensaver off through AppCommon. Samsung says that Screen Saver can't be disabled and may not start during full-screen video. An opt-in Settings → Display → "Keep OLED screensaver away" plays a hidden black clip while photos show, slideshows then show videos as stills, and ambient mode leaves them out, with its Include videos turned off and locked ([ADR 0023](architecture/0023-oled-keep-awake.md)). It is unverified on an OLED TV until the reporter tests it.
 
 #### Store distribution note (1 November 2026)
 

@@ -19,10 +19,16 @@ const playbackButtonsHideChoices = playbackButtonsHideOptions.map((option) => ({
 // Settings > Display: high contrast, video autoplay, the OLED keep-awake
 // (ADR 0023), viewer overlays, the slideshow interval and when the playback
 // buttons fade.
-export function createDisplaySection(documentRef: Document): SettingsSection {
+export function createDisplaySection(
+  documentRef: Document,
+  options: { onOledKeepAwakeChange?(on: boolean): void } = {}
+): SettingsSection {
   const highContrastInput = requireElement<HTMLInputElement>(documentRef, "high-contrast");
   const autoplayVideosInput = requireElement<HTMLInputElement>(documentRef, "autoplay-videos");
   const oledKeepAwakeInput = requireElement<HTMLInputElement>(documentRef, "oled-keep-awake");
+  oledKeepAwakeInput.addEventListener("change", () => {
+    options.onOledKeepAwakeChange?.(oledKeepAwakeInput.checked);
+  });
   const showViewerDateInput = requireElement<HTMLInputElement>(documentRef, "show-viewer-date");
   const showViewerExifInput = requireElement<HTMLInputElement>(documentRef, "show-viewer-exif");
   const showViewerTimeInput = requireElement<HTMLInputElement>(documentRef, "show-viewer-time");

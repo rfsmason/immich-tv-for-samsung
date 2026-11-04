@@ -1,6 +1,7 @@
 name: TV report
 description: Tell us how Immich TV runs on your Samsung TV, whether it works or not.
 title: "TV report: "
+labels: ["tv-report"]
 body:
   - type: markdown
     attributes:

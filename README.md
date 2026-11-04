@@ -2,6 +2,8 @@
 
 Immich TV for Samsung is an unofficial, TV-first, read-only Samsung Tizen Web Application for browsing an Immich photo library.
 
+**Want to try it on your TV?** See the [beta install guide](docs/beta-testing.md). The rest of this README is for developers.
+
 The app installs as a native Tizen Web Application on the Samsung QE55Q950R. It connects directly to an Immich server and offers Home, Photos, Albums, People and Memories browsing, Search by people, dates, type, place and albums, a full-screen viewer with video and Live Photo playback, a slideshow, and Settings, all operable with the Samsung Smart Remote.
 
 ## Current Status

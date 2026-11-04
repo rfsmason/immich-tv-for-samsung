@@ -1,0 +1,26 @@
+name: Feature request or question
+description: Suggest an idea for the app, or ask a question about it.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. The app is a read-only viewer for now: uploading, editing and deleting are deliberately left out.
+
+        This repository is public, so please don't include your server address, API key, or photos from your library.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Is this an idea or a question?
+      options:
+        - An idea for the app
+        - A question
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: What you'd like, or want to know. For an idea, say what you'd use it for and how you'd expect it to work with the remote.
+    validations:
+      required: true

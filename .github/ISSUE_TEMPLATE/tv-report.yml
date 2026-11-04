@@ -1,0 +1,72 @@
+name: TV report
+description: Tell us how Immich TV runs on your Samsung TV, whether it works or not.
+title: "TV report: "
+labels: ["tv-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing. Reports from different TVs help us know where the app works.
+
+        This repository is public, so please don't include your server address, API key, or photos from your library.
+  - type: input
+    id: model
+    attributes:
+      label: TV model
+      description: The model code, from the label on the back of the TV or its Support menu.
+      placeholder: QE55Q950RBTXXU
+    validations:
+      required: true
+  - type: input
+    id: year
+    attributes:
+      label: Model year
+      placeholder: "2019"
+    validations:
+      required: true
+  - type: input
+    id: tizen
+    attributes:
+      label: Tizen version
+      description: If you know it. Leave it empty if not.
+      placeholder: "5.0"
+  - type: input
+    id: app-version
+    attributes:
+      label: Immich TV version
+      placeholder: 0.1.1 (beta 2)
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How you installed it
+      options:
+        - Apps2Samsung catalogue
+        - Apps2Samsung, custom .wgt
+        - Tizen Studio
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: immich
+    attributes:
+      label: Immich server version
+      placeholder: 3.3.5
+  - type: dropdown
+    id: overall
+    attributes:
+      label: Overall
+      options:
+        - Everything I tried worked
+        - Mostly works, with some problems
+        - Doesn't work
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: What you tried
+      description: For example browsing, the viewer, slideshows, videos, ambient mode or Search. Say what worked and what didn't, and what happened instead.
+    validations:
+      required: true

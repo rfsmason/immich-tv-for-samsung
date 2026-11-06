@@ -787,6 +787,12 @@ button.settings-section-button[data-dirty] .button-row-label::after {
     0 0 0 13px var(--focus-ring);
 }
 
+/* A locked checkbox (Include videos under the OLED keep-awake) dims only
+   its label, so its focus ring stays at full strength; its hint says why. */
+.choice-field input[aria-disabled="true"] + span > .field-label {
+  opacity: var(--disabled-opacity);
+}
+
 .focusable {
   min-height: 78px;
   border: 4px solid var(--control-border);
@@ -3333,4 +3339,17 @@ h2.support-title {
   color: var(--text-primary);
   font-size: 34px;
   font-weight: 800;
+}
+
+/* The OLED keep-awake clip (ADR 0023): full screen, behind everything. It
+   plays only while the viewer's slideshow or ambient mode covers it with an
+   opaque layer, and without a source it draws nothing. */
+.keep-awake-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }

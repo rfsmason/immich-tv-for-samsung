@@ -6,6 +6,7 @@ import type { ConnectionService } from "../app/connection-service";
 import type { AppSettingsStore } from "../storage/app-settings-store";
 import { createConnectionSection } from "./settings/connection-section";
 import type { AmbientSettings } from "../domain/ambient";
+import { readEffectiveAmbientSettings, type AppSettings } from "../domain/app-settings";
 import { createAmbientSection } from "./settings/ambient-section";
 import { createDisplaySection } from "./settings/display-section";
 import { createHomeSection } from "./settings/home-section";
@@ -80,7 +81,9 @@ export function mountConnectionScreen(
   const ambient = createAmbientSection(documentRef);
   const sections: SettingsSection[] = [
     connection,
-    createDisplaySection(documentRef),
+    createDisplaySection(documentRef, {
+      onOledKeepAwakeChange: (on) => ambient.setVideosAllowed(!on)
+    }),
     createHomeSection(documentRef),
     ambient
   ];
@@ -237,15 +240,7 @@ export function mountConnectionScreen(
   function saveSettings(exitAfterSave: boolean): boolean {
     try {
       const settings = options.service.save(connection.readConnection());
-      const changes = sections.reduce(
-        (merged, section) => ({ ...merged, ...section.readAppSettings() }),
-        {}
-      );
-      // Settings kept elsewhere (for example sort orders) are saved as they are.
-      const appSettings = options.settingsStore.save({
-        ...options.settingsStore.load(),
-        ...changes
-      });
+      const appSettings = options.settingsStore.save(readFormAppSettings());
 
       connection.showSavedConnection(settings);
       sections.forEach((section) => section.showAppSettings(appSettings));
@@ -263,9 +258,21 @@ export function mountConnectionScreen(
     }
   }
 
+  // The form's current choices, saved or not, over the saved settings.
+  // Settings kept elsewhere (for example sort orders) stay as they are.
+  function readFormAppSettings(): AppSettings {
+    const changes = sections.reduce(
+      (merged, section) => ({ ...merged, ...section.readAppSettings() }),
+      {}
+    );
+
+    return { ...options.settingsStore.load(), ...changes };
+  }
+
   function handleAction(action: string | null): void {
     if (action === "start-ambient") {
-      options.onStartAmbient?.(ambient.current());
+      // Applies the OLED keep-awake's rule as the idle start does (ADR 0023).
+      options.onStartAmbient?.(readEffectiveAmbientSettings(readFormAppSettings()));
       return;
     }
 
@@ -369,7 +376,11 @@ export function mountConnectionScreen(
         connection.enableTextEntry(activeElement);
       } else if (isCheckboxInput(activeElement) && keyCode === remoteKeys.enter) {
         event.preventDefault();
-        activeElement.checked = !activeElement.checked;
+        // A locked checkbox stays reachable, so its hint can say why.
+        if (activeElement.getAttribute("aria-disabled") !== "true") {
+          activeElement.checked = !activeElement.checked;
+          activeElement.dispatchEvent(new Event("change", { bubbles: true }));
+        }
       } else if (keyCode === remoteKeys.left) {
         event.preventDefault();
         connection.disableTextEntry();

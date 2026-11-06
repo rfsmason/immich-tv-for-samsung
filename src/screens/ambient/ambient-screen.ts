@@ -67,7 +67,9 @@ export function mountAmbientScreen(options: AmbientScreenOptions): AmbientScreen
   const video = requireElement<HTMLVideoElement>(documentRef, "ambient-video");
   const timers = createAmbientTimers();
   const playerTimers = createAmbientTimers();
-  const hold = (options.passiveViewing || noPassiveViewing).createHold();
+  // Ambient mode shows photos, and videos only with the OLED keep-awake off
+  // (ADR 0023).
+  const hold = (options.passiveViewing || noPassiveViewing).createHold("photos");
   const now = options.now || (() => new Date());
   let player: AmbientPlayer | null = null;
   let active = false;

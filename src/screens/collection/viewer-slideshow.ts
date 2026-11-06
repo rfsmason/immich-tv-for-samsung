@@ -1,3 +1,4 @@
+import { slideshowPlaysVideos } from "../../domain/app-settings";
 import type { Logger } from "../../logging/logger";
 import type { AppSettingsStore } from "../../storage/app-settings-store";
 import { getNextSlideshowIndex } from "../asset-viewer-window";
@@ -17,6 +18,7 @@ import type { ViewerCollection, ViewerElements, ViewerState } from "./viewer-typ
 // Live Photos (stills) keep the interval. A video that doesn't start or
 // reports an error is skipped after the interval, and one that stops making
 // progress for slideshowVideoStallMs is skipped at once (ADR 0006, ADR 0020).
+// With the OLED keep-awake on, videos show as stills instead (ADR 0023).
 
 // How long a slideshow video may go without progress before it is skipped.
 export const slideshowVideoStallMs = 20000;
@@ -162,7 +164,7 @@ export function stopViewerSlideshow(context: SlideshowContext): void {
 function playsInFull(context: SlideshowContext): boolean {
   return (
     context.state.selectedAsset?.asset.type === "video" &&
-    context.settingsStore.load().autoplayVideos
+    slideshowPlaysVideos(context.settingsStore.load())
   );
 }
 

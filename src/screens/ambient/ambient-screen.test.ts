@@ -67,10 +67,13 @@ function fixture(options: { failing?: (id: string) => boolean; noPassive?: boole
   video.pause = vi.fn();
   video.load = vi.fn();
 
+  const keepAwake = { set: vi.fn() };
+
   screen = mountAmbientScreen({
     now: () => new Date(2026, 9, 26, 7, 5),
     onExit,
     passiveViewing: createPassiveViewing({
+      keepAwake,
       logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
       windowRef: { webapis: options.noPassive ? undefined : { appcommon: { setScreenSaver } } }
     }),
@@ -91,6 +94,8 @@ function fixture(options: { failing?: (id: string) => boolean; noPassive?: boole
   return {
     counts: () => ({ created, live: live.size, revoked }),
     onExit,
+    // What the OLED keep-awake was asked for, in order.
+    keepAwake: () => keepAwake.set.mock.calls.map(([active]) => active as boolean),
     screensaver: () => setScreenSaver.mock.calls.map(([state]) => state as number),
     service,
     shownSources,
@@ -348,9 +353,12 @@ describe("leaving ambient mode", () => {
     await vi.advanceTimersByTimeAsync(25000);
 
     expect(f.screensaver()).toEqual([0]);
+    // Ambient mode holds as photos, so the OLED keep-awake is asked to play.
+    expect(f.keepAwake()).toEqual([true]);
     screen!.stop();
 
     expect(f.screensaver()).toEqual([0, 1]);
+    expect(f.keepAwake()).toEqual([true, false]);
     expect(byId("ambient-screen").hidden).toBe(true);
     expect(screen!.timerCount()).toBe(0);
     expect(f.counts().live).toBe(0);

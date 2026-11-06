@@ -24,7 +24,7 @@ import type { SupportPage } from "../screens/settings/support-qr";
 import { showSplashSupport } from "../screens/splash-support";
 import { applyContrastTheme } from "../screens/theme";
 import type { AppSettingsStore } from "../storage/app-settings-store";
-import { readEnabledHomeRails } from "../domain/app-settings";
+import { readEffectiveAmbientSettings, readEnabledHomeRails } from "../domain/app-settings";
 import type { AlbumService } from "./album-service";
 import { createAmbientController } from "./ambient-controller";
 import { createAmbientSource } from "./ambient-sources";
@@ -408,7 +408,7 @@ export function composeApplication(dependencies: ApplicationDependencies): Appli
       route = { kind: "ambient", returnTo: route };
     },
     screen: ambientScreen,
-    settings: () => settingsStore.load().ambient
+    settings: () => readEffectiveAmbientSettings(settingsStore.load())
   });
 
   // Ambient mode starts by itself only over a browsing screen: never over

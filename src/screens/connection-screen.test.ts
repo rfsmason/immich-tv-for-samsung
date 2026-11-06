@@ -240,7 +240,7 @@ describe("Settings remote navigation and actions", () => {
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);
     pressKey(remoteKeys.enter); // High contrast on.
-    for (let step = 0; step < 5; step += 1) pressKey(remoteKeys.down);
+    for (let step = 0; step < 6; step += 1) pressKey(remoteKeys.down);
     // Arriving only focuses the interval; OK opens its list on the current value.
     expect(document.activeElement).toBe(byId("slideshow-interval"));
     pressKey(remoteKeys.enter);
@@ -261,12 +261,88 @@ describe("Settings remote navigation and actions", () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 
+  it("turns the OLED keep-awake on from Display, below Autoplay videos, and saves it", () => {
+    const { settingsStore } = mount();
+    controller!.show({ allowBack: true });
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.right);
+    pressKey(remoteKeys.down);
+    pressKey(remoteKeys.down);
+    expect(document.activeElement).toBe(byId("oled-keep-awake"));
+    expect(byId<HTMLInputElement>("oled-keep-awake").checked).toBe(false);
+    pressKey(remoteKeys.enter);
+    expect(byId<HTMLInputElement>("oled-keep-awake").checked).toBe(true);
+
+    byId("settings-save").focus();
+    pressKey(remoteKeys.enter);
+    expect(settingsStore.save).toHaveBeenCalledWith(
+      expect.objectContaining({ oledKeepAwake: true })
+    );
+  });
+
+  it("turns ambient Include videos off and locks it while the OLED keep-awake is ticked", () => {
+    const { settingsStore } = mount({
+      appSettings: {
+        ...defaultAppSettings,
+        ambient: { ...defaultAppSettings.ambient, includeVideos: true }
+      }
+    });
+    controller!.show({ allowBack: true });
+    const includeVideos = byId<HTMLInputElement>("ambient-include-videos");
+    const hint = byId("ambient-include-videos-hint");
+    expect(includeVideos.checked).toBe(true);
+
+    byId("oled-keep-awake").focus();
+    pressKey(remoteKeys.enter);
+    expect(includeVideos.checked).toBe(false);
+    expect(includeVideos.getAttribute("aria-disabled")).toBe("true");
+    expect(hint.textContent).toBe("Off while Keep OLED screensaver away is on, in Display.");
+
+    // Still reachable, but neither Enter nor a click ticks it.
+    includeVideos.focus();
+    pressKey(remoteKeys.enter);
+    includeVideos.click();
+    expect(includeVideos.checked).toBe(false);
+
+    // Unticking the keep-awake before saving brings the choice back.
+    byId("oled-keep-awake").focus();
+    pressKey(remoteKeys.enter);
+    expect(includeVideos.checked).toBe(true);
+    expect(includeVideos.hasAttribute("aria-disabled")).toBe(false);
+    expect(hint.textContent).toBe("Videos play muted, for up to a minute each.");
+
+    pressKey(remoteKeys.enter);
+    byId("settings-save").focus();
+    pressKey(remoteKeys.enter);
+    expect(settingsStore.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ambient: expect.objectContaining({ includeVideos: false }),
+        oledKeepAwake: true
+      })
+    );
+  });
+
+  it("shows Include videos locked when the OLED keep-awake was saved on", () => {
+    mount({
+      appSettings: {
+        ...defaultAppSettings,
+        ambient: { ...defaultAppSettings.ambient, includeVideos: true },
+        oledKeepAwake: true
+      }
+    });
+    controller!.show({ allowBack: true });
+    const includeVideos = byId<HTMLInputElement>("ambient-include-videos");
+
+    expect(includeVideos.checked).toBe(false);
+    expect(includeVideos.getAttribute("aria-disabled")).toBe("true");
+  });
+
   it("chooses when the playback buttons fade, defaulting to 5 seconds, and saves Never", () => {
     const { settingsStore } = mount();
     controller!.show({ allowBack: true });
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);
-    for (let step = 0; step < 6; step += 1) pressKey(remoteKeys.down);
+    for (let step = 0; step < 7; step += 1) pressKey(remoteKeys.down);
     expect(document.activeElement).toBe(byId("playback-buttons-hide"));
     expect(byId("playback-buttons-hide").textContent).toContain("After 5 seconds");
 
@@ -290,7 +366,7 @@ describe("Settings remote navigation and actions", () => {
     controller!.show({ allowBack: true });
     pressKey(remoteKeys.down);
     pressKey(remoteKeys.right);
-    for (let step = 0; step < 5; step += 1) pressKey(remoteKeys.down);
+    for (let step = 0; step < 6; step += 1) pressKey(remoteKeys.down);
     expect(document.activeElement).toBe(interval());
     expect(list()).toBeNull();
 
@@ -408,6 +484,27 @@ describe("Settings remote navigation and actions", () => {
       })
     );
     expect(f.onAppSettingsSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves videos out of Start now while the OLED keep-awake is ticked, saved or not", () => {
+    const f = mount();
+    controller!.show({ allowBack: true });
+    const includeVideos = byId<HTMLInputElement>("ambient-include-videos");
+    if (!includeVideos.checked) includeVideos.click();
+
+    byId("ambient-start").focus();
+    pressKey(remoteKeys.enter);
+    expect(f.onStartAmbient).toHaveBeenLastCalledWith(
+      expect.objectContaining({ includeVideos: true })
+    );
+
+    byId<HTMLInputElement>("oled-keep-awake").click();
+    byId("ambient-start").focus();
+    pressKey(remoteKeys.enter);
+    expect(f.onStartAmbient).toHaveBeenLastCalledWith(
+      expect.objectContaining({ includeVideos: false })
+    );
+    expect(f.settingsStore.save).not.toHaveBeenCalled();
   });
 
   it("comes back from the album picker with the album and unsaved choices kept", () => {

@@ -37,6 +37,7 @@ describe("app settings store", () => {
       autoplayVideos: false,
       highContrast: false,
       homeRails: allRailsOn,
+      oledKeepAwake: false,
       playbackButtonsHide: 5,
       showFaceTags: false,
       showViewerDate: true,
@@ -82,6 +83,7 @@ describe("app settings store", () => {
       autoplayVideos: true,
       highContrast: true,
       homeRails: { ...allRailsOn, people: false },
+      oledKeepAwake: true,
       playbackButtonsHide: "never" as const,
       showFaceTags: true,
       showViewerDate: false,
@@ -113,6 +115,7 @@ describe("app settings store", () => {
       autoplayVideos: true,
       highContrast: false,
       homeRails: allRailsOn,
+      oledKeepAwake: false,
       playbackButtonsHide: 5,
       showFaceTags: false,
       showViewerDate: true,
@@ -183,8 +186,9 @@ describe("app settings store", () => {
     expect(store.load().playbackButtonsHide).toBe(5);
   });
 
-  it("migrates version 4 settings to version 5 unchanged, with the supporter toggle off", () => {
-    // Version 4 had every current setting except the supporter toggle.
+  it("migrates version 4 settings unchanged, with the supporter toggle off", () => {
+    // Version 4 had every current setting except the supporter toggle and the
+    // OLED keep-awake.
     const version4: Partial<typeof defaultAppSettings> = {
       ...defaultAppSettings,
       autoplayVideos: true,
@@ -193,21 +197,58 @@ describe("app settings store", () => {
       slideshowIntervalSeconds: 20
     };
     delete version4.supporter;
+    delete version4.oledKeepAwake;
     const storage = createMemoryStorage({
       "immich-tv.app-settings": JSON.stringify({ ...version4, schemaVersion: 4 })
     });
     const store = createLocalAppSettingsStore(storage);
 
-    expect(appSettingsSchemaVersion).toBe(5);
-    expect(store.load()).toEqual({ ...version4, supporter: false });
+    expect(store.load()).toEqual({ ...version4, oledKeepAwake: false, supporter: false });
 
     store.save({ ...store.load(), supporter: true });
 
     expect(JSON.parse(storage.values["immich-tv.app-settings"]!)).toMatchObject({
-      schemaVersion: 5,
+      schemaVersion: appSettingsSchemaVersion,
       supporter: true
     });
-    expect(store.load()).toEqual({ ...version4, supporter: true });
+    expect(store.load()).toEqual({ ...version4, oledKeepAwake: false, supporter: true });
+  });
+
+  it("migrates version 5 settings to version 6 unchanged, with the OLED keep-awake off", () => {
+    // Version 5 had every current setting except the OLED keep-awake.
+    const version5: Partial<typeof defaultAppSettings> = {
+      ...defaultAppSettings,
+      ambient: { ...defaultAppSettings.ambient, includeVideos: true },
+      autoplayVideos: true,
+      supporter: true
+    };
+    delete version5.oledKeepAwake;
+    const storage = createMemoryStorage({
+      "immich-tv.app-settings": JSON.stringify({ ...version5, schemaVersion: 5 })
+    });
+    const store = createLocalAppSettingsStore(storage);
+
+    expect(appSettingsSchemaVersion).toBe(6);
+    expect(store.load()).toEqual({ ...version5, oledKeepAwake: false });
+
+    store.save({ ...store.load(), oledKeepAwake: true });
+
+    expect(JSON.parse(storage.values["immich-tv.app-settings"]!)).toMatchObject({
+      oledKeepAwake: true,
+      schemaVersion: 6
+    });
+    expect(store.load()).toEqual({ ...version5, oledKeepAwake: true });
+  });
+
+  it("turns the OLED keep-awake on only when it was explicitly turned on", () => {
+    const load = (value: unknown) =>
+      createLocalAppSettingsStore(
+        createMemoryStorage({
+          "immich-tv.app-settings": JSON.stringify({ oledKeepAwake: value, schemaVersion: 6 })
+        })
+      ).load().oledKeepAwake;
+
+    expect([true, false, "true", 1, null].map(load)).toEqual([true, false, false, false, false]);
   });
 
   it("counts as a supporter only when the toggle was explicitly turned on", () => {

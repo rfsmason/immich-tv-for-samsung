@@ -16,11 +16,19 @@ const playbackButtonsHideChoices = playbackButtonsHideOptions.map((option) => ({
   value: String(option)
 }));
 
-// Settings > Display: high contrast, video autoplay, viewer overlays, the
-// slideshow interval and when the playback buttons fade.
-export function createDisplaySection(documentRef: Document): SettingsSection {
+// Settings > Display: high contrast, video autoplay, the OLED keep-awake
+// (ADR 0023), viewer overlays, the slideshow interval and when the playback
+// buttons fade.
+export function createDisplaySection(
+  documentRef: Document,
+  options: { onOledKeepAwakeChange?(on: boolean): void } = {}
+): SettingsSection {
   const highContrastInput = requireElement<HTMLInputElement>(documentRef, "high-contrast");
   const autoplayVideosInput = requireElement<HTMLInputElement>(documentRef, "autoplay-videos");
+  const oledKeepAwakeInput = requireElement<HTMLInputElement>(documentRef, "oled-keep-awake");
+  oledKeepAwakeInput.addEventListener("change", () => {
+    options.onOledKeepAwakeChange?.(oledKeepAwakeInput.checked);
+  });
   const showViewerDateInput = requireElement<HTMLInputElement>(documentRef, "show-viewer-date");
   const showViewerExifInput = requireElement<HTMLInputElement>(documentRef, "show-viewer-exif");
   const showViewerTimeInput = requireElement<HTMLInputElement>(documentRef, "show-viewer-time");
@@ -51,6 +59,7 @@ export function createDisplaySection(documentRef: Document): SettingsSection {
       return {
         autoplayVideos: autoplayVideosInput.checked,
         highContrast: highContrastInput.checked,
+        oledKeepAwake: oledKeepAwakeInput.checked,
         playbackButtonsHide: readPlaybackButtonsHide(),
         showViewerDate: showViewerDateInput.checked,
         showViewerExif: showViewerExifInput.checked,
@@ -61,6 +70,7 @@ export function createDisplaySection(documentRef: Document): SettingsSection {
     showAppSettings(settings) {
       autoplayVideosInput.checked = settings.autoplayVideos;
       highContrastInput.checked = settings.highContrast;
+      oledKeepAwakeInput.checked = settings.oledKeepAwake;
       showViewerDateInput.checked = settings.showViewerDate;
       showViewerExifInput.checked = settings.showViewerExif;
       showViewerTimeInput.checked = settings.showViewerTime;
@@ -71,6 +81,7 @@ export function createDisplaySection(documentRef: Document): SettingsSection {
       return {
         autoplayVideos: autoplayVideosInput.checked,
         highContrast: highContrastInput.checked,
+        oledKeepAwake: oledKeepAwakeInput.checked,
         showViewerDate: showViewerDateInput.checked,
         showViewerExif: showViewerExifInput.checked,
         showViewerTime: showViewerTimeInput.checked,

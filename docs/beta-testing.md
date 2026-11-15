@@ -7,6 +7,7 @@ The app only reads from your Immich server: it never uploads, edits or deletes a
 Reported working on:
 
 - **Samsung Q950R** (QLED, 2019, Tizen 5.0): the development TV, where every release is tested.
+- **Samsung CU8000** (Crystal UHD, 2023, Tizen 8.0), reported by a contributor, who also builds and installs it from source with Tizen Studio ([issue #20](https://github.com/rfsmason/immich-tv-for-samsung/issues/20)).
 - **Samsung S90F** (OLED, 2025), reported by a beta tester. On Samsung OLED TVs the TV's own burn-in screensaver can interrupt slideshows and ambient mode after about 2 minutes. **Fixed in 0.1.2 (beta 3):** turn on **Settings → Display → Keep OLED screensaver away** ([issue #15](https://github.com/rfsmason/immich-tv-for-samsung/issues/15)).
 
 If it works on your TV, or doesn't, please tell us with a [TV report](https://github.com/rfsmason/immich-tv-for-samsung/issues/new?template=tv-report.yml).
